@@ -7,7 +7,7 @@ from pygments.formatters.img import ImageFormatter
 from pygments.lexers import get_lexer_by_name, guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
 
-from .colors import PANEL_BG_HEX
+from .colors import CODE_BG_HEX
 
 
 def detect_lexer(code: str, lang: Optional[str], filename: Optional[str]) -> Tuple[str, object]:
@@ -52,9 +52,9 @@ def render_code_image(code: str, lang: Optional[str], filename_hint: Optional[st
         font_size=18,
         line_numbers=False,
         image_format="PNG",
-        image_pad=0,
-        background_color=PANEL_BG_HEX,
-        hl_color=PANEL_BG_HEX,
+        image_pad=12,
+        background_color=CODE_BG_HEX,
+        hl_color=CODE_BG_HEX,
     )
     buf = io.BytesIO()
     highlight(code, lexer, formatter, outfile=buf)

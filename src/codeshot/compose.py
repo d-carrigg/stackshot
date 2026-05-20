@@ -46,38 +46,38 @@ def compose_panels(
 
     panel_widths = [img.width + 2 * pad for (img, _, _), pad in zip(items, pads)]
     panel_heights = [img.height + 2 * pad for (img, _, _), pad in zip(items, pads)]
-    panel_h = max(panel_heights)
+    max_panel_h = max(panel_heights)
 
     n = len(items)
     arrow_span = (n - 1) * (gutter + arrow_width + gutter)
     total_w = margin * 2 + sum(panel_widths) + arrow_span
-    total_h = top_pad + panel_h + bottom_pad
+    total_h = top_pad + max_panel_h + bottom_pad
 
     canvas = Image.new("RGBA", (total_w, total_h), DEFAULT_BG + (255,))
     draw = ImageDraw.Draw(canvas)
 
     x = margin
-    for i, ((img, title, is_image), pad, pw) in enumerate(zip(items, pads, panel_widths)):
+    for i, ((img, title, is_image), pad, pw, ph) in enumerate(zip(items, pads, panel_widths, panel_heights)):
         panel_x = x
         panel_y = top_pad
         draw_bg = not (no_inner_border and is_image)
         if draw_bg:
             draw.rounded_rectangle(
-                [panel_x, panel_y, panel_x + pw, panel_y + panel_h],
+                [panel_x, panel_y, panel_x + pw, panel_y + ph],
                 radius=PANEL_RADIUS,
                 fill=PANEL_BG + (255,),
             )
         if title:
             draw.text((panel_x + pad, margin), title, font=title_font, fill=TEXT)
         code_x = panel_x + pad
-        code_y = panel_y + (panel_h - img.height) // 2
+        code_y = panel_y + pad
         canvas.alpha_composite(img.convert("RGBA"), (code_x, code_y))
 
         x += pw
         if i < n - 1:
             ax1 = x + gutter
             ax2 = x + gutter + arrow_width
-            shaft_y = top_pad + panel_h // 2
+            shaft_y = top_pad + max_panel_h // 2
             draw.line([(ax1, shaft_y), (ax2, shaft_y)], fill=ARROW + (255,), width=6)
             head = 16
             draw.polygon([
@@ -118,8 +118,8 @@ def compose_side_by_side(
 
     left_inner_h = left_img.height + left_panel_pad * 2
     right_inner_h = right_img.height + right_panel_pad * 2
-    panel_h = max(left_inner_h, right_inner_h)
-    total_h = top_pad + panel_h + bottom_pad
+    max_panel_h = max(left_inner_h, right_inner_h)
+    total_h = top_pad + max_panel_h + bottom_pad
     arrow_width = 90
 
     total_w = (
@@ -142,12 +142,12 @@ def compose_side_by_side(
     left_panel_x = margin
     left_panel_y = top_pad
     left_panel_w = left_img.width + left_panel_pad * 2
-    left_panel_h = panel_h
+    left_panel_h = left_inner_h
 
     right_panel_x = margin + left_panel_w + gutter + arrow_width + gutter
     right_panel_y = top_pad
     right_panel_w = right_img.width + right_panel_pad * 2
-    right_panel_h = panel_h
+    right_panel_h = right_inner_h
 
     draw_left_bg = not (no_inner_border and left_is_image)
     draw_right_bg = not (no_inner_border and right_is_image)
@@ -163,14 +163,14 @@ def compose_side_by_side(
         )
 
     left_code_x = left_panel_x + left_panel_pad
-    left_code_y = left_panel_y + (panel_h - left_img.height) // 2
+    left_code_y = left_panel_y + left_panel_pad
     canvas.alpha_composite(left_img, (left_code_x, left_code_y))
 
     right_code_x = right_panel_x + right_panel_pad
-    right_code_y = right_panel_y + (panel_h - right_img.height) // 2
+    right_code_y = right_panel_y + right_panel_pad
     canvas.alpha_composite(right_img, (right_code_x, right_code_y))
 
-    arrow_center_y = top_pad + panel_h // 2
+    arrow_center_y = top_pad + max_panel_h // 2
     arrow_x1 = left_panel_x + left_panel_w + gutter
     arrow_x2 = right_panel_x - gutter
     shaft_y = arrow_center_y
