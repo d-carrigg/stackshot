@@ -152,6 +152,7 @@ def test_sample_code_to_gif(docs_img, monkeypatch):
         "--title", "Code", "Output",
         "--out", str(out_path),
         "--no-clip",
+        "--no-border",
     ]
     monkeypatch.setattr("sys.argv", argv)
     main()
