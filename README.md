@@ -21,24 +21,32 @@ uv run codeshot --help
 
 ### Interactive (recommended)
 
-Run `codeshot` with no arguments. Paste code/markdown to fill a block,
-end with two blank lines (or Ctrl+D). Copy an image into the clipboard
-and codeshot picks it up automatically — no command, no action key.
+Run `codeshot` with no arguments. Each block opens a multi-line editor:
+
+- Arrow keys move the cursor (including across lines)
+- **Enter** submits the block
+- **Alt+Enter** (or **Ctrl+J**) inserts a newline
+- Type `:cancel` on its own line to abort
+
+Copy an image into the clipboard and codeshot picks it up automatically
+at the next block boundary — no command, no action key.
 
 ```text
 $ codeshot --out out.png
 --- Block 1 ---
-[Image 1]                     # ← clipboard image, auto-advanced
+[Image 1]                     ← clipboard image, auto-advanced
 --- Block 2 ---
-// some code
-\n
-\n
+def hi():
+    print("hello")            ← Alt+Enter for newline, Enter to submit
 [a]dd / [d]one / [e]dit N / [r]emove N / [q]uit: a
 ```
 
 Clipboard images are fetched via `wl-paste` or `xclip`; whatever's on
 the clipboard at the start of a block prompt becomes the next panel.
 The same image is only added once — copy a new image to add another.
+
+When stdin isn't a TTY (piped input, scripts), the editor falls back to
+line-based input: two blank lines or Ctrl+D end a block.
 
 ### Markdown syntax
 

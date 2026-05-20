@@ -79,3 +79,15 @@ def test_text_only_path_unchanged_when_clipboard_empty(tmp_path: Path, monkeypat
     output = capsys.readouterr().out
     assert "[Image" not in output
     assert out.exists() and out.stat().st_size > 0
+
+
+def test_prompt_toolkit_session_builds():
+    """Smoke-test the TTY editor's keybindings — Enter submits, Ctrl+J
+    and Alt+Enter insert a newline. Catches import / binding typos."""
+    from prompt_toolkit.keys import Keys
+
+    session = interactive_mod._build_session()
+    bound = {tuple(b.keys) for b in session.key_bindings.bindings}
+    assert (Keys.Enter,) in bound or (Keys.ControlM,) in bound
+    assert (Keys.ControlJ,) in bound
+    assert (Keys.Escape, Keys.Enter) in bound or (Keys.Escape, Keys.ControlM) in bound

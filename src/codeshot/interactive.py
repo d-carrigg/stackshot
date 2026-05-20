@@ -23,6 +23,41 @@ from .markdown import Panel, parse_markdown
 CLIPBOARD_POLL_SECONDS = 0.25
 
 
+def _build_session():
+    """Lazy-import prompt_toolkit so test/non-TTY paths don't pay the cost."""
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.key_binding import KeyBindings
+
+    kb = KeyBindings()
+
+    @kb.add("enter")
+    def _submit(event):
+        event.current_buffer.validate_and_handle()
+
+    # Newline insertion: Alt+Enter and Ctrl+J. Most terminals don't
+    # distinguish Shift+Enter from Enter, so we use the portable
+    # equivalents instead.
+    @kb.add("escape", "enter")
+    @kb.add("c-j")
+    def _newline(event):
+        event.current_buffer.insert_text("\n")
+
+    return PromptSession(multiline=True, key_bindings=kb)
+
+
+_session = None
+
+
+def _read_text_block_tty() -> Optional[str]:
+    global _session
+    if _session is None:
+        _session = _build_session()
+    try:
+        return _session.prompt("")
+    except (EOFError, KeyboardInterrupt):
+        return None
+
+
 def _clipboard_image_snapshot() -> Optional[tuple[str, Image.Image]]:
     img = try_get_clipboard_image()
     if img is None:
@@ -48,30 +83,58 @@ def _save_clipboard_image_as_panel(img: Image.Image, panels: list[Panel]) -> Non
     panels.append(Panel(code="", is_image=True, image_path=tmp.name))
 
 
-def _read_block_or_image(
+def _check_clipboard_for_new_image(
+    panels: list[Panel], last_image_hash: Optional[str]
+) -> Optional[tuple[str, str, Optional[str]]]:
+    snap = _clipboard_image_snapshot()
+    if snap is None:
+        return None
+    h, img = snap
+    if h == last_image_hash:
+        return None
+    _save_clipboard_image_as_panel(img, panels)
+    print(f"[Image {len(panels)}]")
+    return "image", panels[-1].image_path or "", h
+
+
+def _read_block_or_image_tty(
     panels: list[Panel], last_image_hash: Optional[str]
 ) -> tuple[str, str, Optional[str]]:
-    """Block input loop with concurrent clipboard polling.
+    """TTY path: full multi-line editor via prompt_toolkit. Clipboard is
+    checked before showing the prompt and again after submission if no
+    text was typed — so a newly-copied image still becomes the next panel
+    on the very next Enter, without the user needing a command."""
+    pre = _check_clipboard_for_new_image(panels, last_image_hash)
+    if pre is not None:
+        return pre
 
-    Returns (kind, payload, new_last_hash):
-      kind="text":   payload is the typed text (no panel added here)
-      kind="image":  a new clipboard image was added to `panels`; payload is image path
-      kind="cancel": user typed :cancel
-    """
+    text = _read_text_block_tty()
+    if text is None:
+        return "cancel", "", last_image_hash
+    if text.strip() == ":cancel":
+        return "cancel", "", last_image_hash
+
+    if not text.strip():
+        post = _check_clipboard_for_new_image(panels, last_image_hash)
+        if post is not None:
+            return post
+
+    return "text", text, last_image_hash
+
+
+def _read_block_or_image_polling(
+    panels: list[Panel], last_image_hash: Optional[str]
+) -> tuple[str, str, Optional[str]]:
+    """Non-TTY path (pipes, tests): line-based input with concurrent
+    clipboard polling, two-blank-lines or EOF to submit."""
     lines: list[str] = []
     blank_run = 0
 
     while True:
-        # Only poll the clipboard while no text has been typed yet — once the
-        # user starts typing this is a text block, not an image paste.
         if not lines:
-            snap = _clipboard_image_snapshot()
-            if snap is not None:
-                h, img = snap
-                if h != last_image_hash:
-                    _save_clipboard_image_as_panel(img, panels)
-                    print(f"[Image {len(panels)}]")
-                    return "image", panels[-1].image_path or "", h
+            result = _check_clipboard_for_new_image(panels, last_image_hash)
+            if result is not None:
+                return result
 
         if _stdin_ready(CLIPBOARD_POLL_SECONDS):
             line = sys.stdin.readline()
@@ -93,6 +156,19 @@ def _read_block_or_image(
     while lines and lines[-1] == "":
         lines.pop()
     return "text", "\n".join(lines), last_image_hash
+
+
+def _read_block_or_image(
+    panels: list[Panel], last_image_hash: Optional[str]
+) -> tuple[str, str, Optional[str]]:
+    is_tty = False
+    try:
+        is_tty = sys.stdin.isatty()
+    except (AttributeError, ValueError):
+        is_tty = False
+    if is_tty:
+        return _read_block_or_image_tty(panels, last_image_hash)
+    return _read_block_or_image_polling(panels, last_image_hash)
 
 
 def _panel_summary(panels: list[Panel]) -> None:
