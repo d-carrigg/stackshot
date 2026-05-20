@@ -56,9 +56,9 @@ exists). Bump and merge again to ship.
   (e.g. `print_loop.py`). When adding a sample, prefer a real file
   here over inline strings in `test_samples.py`. Recording scripts
   for animated samples live here too — e.g. `record_print_loop.sh`
-  regenerates `docs/img/print_loop.gif` via asciinema + agg, and the
-  produced `print_loop.cast` should be committed so the GIF can be
-  re-rendered without re-recording.
+  regenerates `docs/img/print_loop.gif` via asciinema + agg. The
+  intermediate `*.cast` files are gitignored — re-run the script to
+  regenerate them.
 - `CHANGELOG.md` — keep in lockstep with version bumps.
 
 ## Conventions
