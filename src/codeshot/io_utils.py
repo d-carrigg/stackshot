@@ -2,9 +2,9 @@ import io
 import os
 import shutil
 import subprocess
-from typing import Tuple
+from typing import Optional, Tuple
 
-from PIL import Image, ImageSequence
+from PIL import Image, ImageSequence, UnidentifiedImageError
 
 from .colors import DEFAULT_BG
 from .fonts import RESAMPLE_LANCZOS
@@ -146,6 +146,28 @@ def print_progress(current: int, total: int, label: str) -> None:
     filled = int(bar_len * pct / 100)
     bar = "#" * filled + "-" * (bar_len - filled)
     print(f"{label} [{bar}] {pct}% ({current}/{total})", end="\r", flush=True)
+
+
+def try_get_clipboard_image() -> Optional[Image.Image]:
+    """Best-effort fetch of an image from the system clipboard.
+    Returns None if no image is present or no clipboard tool is available."""
+    candidates = []
+    if shutil.which("wl-paste"):
+        candidates.append(["wl-paste", "--type", "image/png"])
+    if shutil.which("xclip"):
+        candidates.append(["xclip", "-selection", "clipboard", "-t", "image/png", "-o"])
+    for cmd in candidates:
+        try:
+            result = subprocess.run(cmd, capture_output=True, check=True)
+        except (subprocess.SubprocessError, FileNotFoundError):
+            continue
+        if not result.stdout:
+            continue
+        try:
+            return Image.open(io.BytesIO(result.stdout))
+        except (UnidentifiedImageError, OSError):
+            continue
+    return None
 
 
 def copy_to_clipboard(img: Image.Image) -> None:

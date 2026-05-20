@@ -1,10 +1,18 @@
+import tempfile
 from typing import Optional
 
 from PIL import Image
 
 from .compose import compose_panels
 from .highlight import render_code_image
-from .io_utils import copy_to_clipboard, expand_path, open_image, save_image, scale_image_to_max
+from .io_utils import (
+    copy_to_clipboard,
+    expand_path,
+    open_image,
+    save_image,
+    scale_image_to_max,
+    try_get_clipboard_image,
+)
 from .markdown import Panel, parse_markdown
 
 
@@ -42,10 +50,24 @@ def _panel_summary(panels: list[Panel]) -> None:
         print(f"  [{idx}] {t}  ({lang}, {ln} line{'s' if ln != 1 else ''})")
 
 
+def _add_clipboard_image_panel(panels: list[Panel]) -> bool:
+    """Attempt to add an image from the clipboard as a new panel.
+    Returns True on success, False if no image is on the clipboard."""
+    img = try_get_clipboard_image()
+    if img is None:
+        return False
+    tmp = tempfile.NamedTemporaryFile(prefix="codeshot-clip-", suffix=".png", delete=False)
+    img.convert("RGBA").save(tmp.name, format="PNG")
+    panels.append(Panel(code="", is_image=True, image_path=tmp.name))
+    print(f"[Image {len(panels)}] added from clipboard.")
+    return True
+
+
 def interactive_compose(args) -> None:
     print("Codeshot interactive mode")
     print("Paste code or markdown. Use ```lang fences to set syntax; the line above a fence becomes its title.")
-    print("End each block with two blank lines (or Ctrl+D). Type :cancel on its own line to abort.\n")
+    print("End each block with two blank lines (or Ctrl+D). Type 'i' at the action prompt to paste a clipboard image.")
+    print("Type :cancel on its own line to abort.\n")
 
     panels: list[Panel] = []
     action = ""
@@ -67,10 +89,16 @@ def interactive_compose(args) -> None:
             return
 
         while True:
-            action = input("\n[a]dd / [d]one / [e]dit N / [r]emove N / [q]uit: ").strip().lower()
+            action = input("\n[a]dd / [i]mage / [d]one / [e]dit N / [r]emove N / [q]uit: ").strip().lower()
             if action in ("", "a", "add"):
                 print()
                 break
+            if action in ("i", "image", "img"):
+                if _add_clipboard_image_panel(panels):
+                    print()
+                    break  # auto-advance to next block input
+                print("Clipboard has no image. Copy an image and try again.")
+                continue
             if action in ("d", "done"):
                 break
             if action in ("q", "quit", "cancel"):

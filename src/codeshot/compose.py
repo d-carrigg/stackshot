@@ -27,9 +27,9 @@ def compose_panels(
     if not items:
         raise ValueError("compose_panels requires at least one panel")
 
-    gutter = 40
-    margin = 70
-    title_gap = 18
+    gutter = 32
+    margin = 40
+    title_gap = 12
     arrow_width = 90
     base_panel_pad = 24
     title_font = load_font(24)
@@ -99,9 +99,9 @@ def compose_side_by_side(
     right_is_image: bool = False,
     no_inner_border: bool = False,
 ) -> Image.Image:
-    gutter = 40
-    margin = 70
-    title_gap = 18
+    gutter = 32
+    margin = 40
+    title_gap = 12
     title_font = load_font(24)
 
     draw_probe = Image.new("RGB", (10, 10))
@@ -194,9 +194,9 @@ def compute_layout(
     right_is_image: bool,
     no_inner_border: bool,
 ):
-    gutter = 40
-    margin = 70
-    title_gap = 18
+    gutter = 32
+    margin = 40
+    title_gap = 12
     title_font = load_font(24)
 
     draw_probe = Image.new("RGB", (10, 10))
