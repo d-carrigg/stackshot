@@ -5,7 +5,7 @@ description = "Compose code snippets, screenshots, and images into multi-panel i
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
-authors = [{ name = "dcarrigg" }]
+authors = [{ name = "d-carrigg" }]
 keywords = ["screenshot", "code", "image", "syntax-highlight", "cli", "pygments", "markdown"]
 classifiers = [
   "Development Status :: 4 - Beta",
