@@ -6,8 +6,11 @@
 - Interactive mode reacts to terminal paste: if the clipboard holds an
   image, the paste creates an image panel and auto-advances to the next
   block. Pasting text stays in the editor. Replaces the previous
-  "submit an empty block to grab the clipboard image" gesture in TTY
-  mode (non-TTY/piped path keeps empty-block grab for tests).
+  "submit an empty block to grab the clipboard image" gesture entirely
+  (TTY and non-TTY).
+- Clipboard image fetch is now cross-platform via Pillow's `ImageGrab`
+  (works on macOS, Windows, and Linux). Previous Linux-only
+  `wl-paste`/`xclip` subprocess loop is removed.
 
 ### Added
 - README covers PyPI (`uv tool install codeimg`), standalone GitHub

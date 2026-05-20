@@ -43,11 +43,12 @@ Run `codeimg` with no arguments. Each block opens a multi-line editor:
 - **Ctrl+C** to abort
 
 To insert an image as a panel: copy the image, then paste (your
-terminal's paste — usually **Ctrl+Shift+V**). If the clipboard has an
-image, it's added as the next panel and the editor auto-advances. If
-the clipboard has text, the paste behaves normally and you stay in the
-editor. Clipboard image grab is Linux-only (uses `wl-paste` or `xclip`);
-on macOS/Windows, pass the image as a file argument instead.
+terminal's paste — usually **Ctrl+Shift+V** on Linux/Windows, **Cmd+V**
+on macOS). If the clipboard has an image, it's added as the next panel
+and the editor auto-advances. If the clipboard has text, the paste
+behaves normally and you stay in the editor. (Clipboard image fetch
+uses Pillow's `ImageGrab`; on Linux it shells out to `wl-paste` or
+`xclip` — install one if image paste returns nothing.)
 
 ```text
 $ codeimg --out out.png
