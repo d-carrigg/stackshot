@@ -3,7 +3,13 @@ from typing import Optional
 from PIL import Image, ImageDraw
 
 from .colors import ARROW, DEFAULT_BG, PANEL_BG, PANEL_RADIUS, TEXT
-from .fonts import load_font
+from .fonts import RESAMPLE_LANCZOS, load_font
+
+
+SHAFT_HALF = 3   # half-thickness of the arrow shaft
+HEAD_LEN = 18    # how far the head extends past where the shaft ends
+HEAD_HALF = 11   # head base half-width (perpendicular to flight direction)
+SS = 4           # supersampling factor for arrow antialiasing
 
 
 def apply_rounded_corners(img: Image.Image, radius: int) -> Image.Image:
@@ -17,6 +23,53 @@ def apply_rounded_corners(img: Image.Image, radius: int) -> Image.Image:
     out = Image.new("RGBA", img.size, (0, 0, 0, 0))
     out.paste(img, (0, 0), mask)
     return out
+
+
+def _draw_arrow_supersampled(
+    canvas: Image.Image, points: list[tuple[int, int]], fill: tuple[int, int, int, int]
+) -> None:
+    """Render a polygon at SSx resolution and LANCZOS-downsample for clean
+    antialiased edges — PIL's draw.polygon is nearest-neighbor and looks
+    blocky at arrow scale otherwise."""
+    pad = 2
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    x_min, y_min = min(xs) - pad, min(ys) - pad
+    x_max, y_max = max(xs) + pad, max(ys) + pad
+    w, h = x_max - x_min, y_max - y_min
+    layer = Image.new("RGBA", (w * SS, h * SS), (0, 0, 0, 0))
+    scaled = [((p[0] - x_min) * SS, (p[1] - y_min) * SS) for p in points]
+    ImageDraw.Draw(layer).polygon(scaled, fill=fill)
+    layer = layer.resize((w, h), resample=RESAMPLE_LANCZOS)
+    canvas.alpha_composite(layer, (x_min, y_min))
+
+
+def _arrow_right(x1: int, x2: int, y: int) -> list[tuple[int, int]]:
+    """Polygon points for a right-pointing arrow from x1 to x2, centered on y."""
+    head_base_x = x2 - HEAD_LEN
+    return [
+        (x1, y - SHAFT_HALF),
+        (head_base_x, y - SHAFT_HALF),
+        (head_base_x, y - HEAD_HALF),
+        (x2, y),
+        (head_base_x, y + HEAD_HALF),
+        (head_base_x, y + SHAFT_HALF),
+        (x1, y + SHAFT_HALF),
+    ]
+
+
+def _arrow_down(y1: int, y2: int, x: int) -> list[tuple[int, int]]:
+    """Polygon points for a down-pointing arrow from y1 to y2, centered on x."""
+    head_base_y = y2 - HEAD_LEN
+    return [
+        (x - SHAFT_HALF, y1),
+        (x + SHAFT_HALF, y1),
+        (x + SHAFT_HALF, head_base_y),
+        (x + HEAD_HALF, head_base_y),
+        (x, y2),
+        (x - HEAD_HALF, head_base_y),
+        (x - SHAFT_HALF, head_base_y),
+    ]
 
 
 def compose_panels(
@@ -88,13 +141,7 @@ def compose_panels(
             ax1 = x + gutter
             ax2 = x + gutter + arrow_width
             shaft_y = top_pad + max_panel_h // 2
-            draw.line([(ax1, shaft_y), (ax2, shaft_y)], fill=ARROW + (255,), width=6)
-            head = 16
-            draw.polygon([
-                (ax2 - head, shaft_y - head),
-                (ax2, shaft_y),
-                (ax2 - head, shaft_y + head),
-            ], fill=ARROW + (255,))
+            _draw_arrow_supersampled(canvas, _arrow_right(ax1, ax2, shaft_y), ARROW + (255,))
             x += gutter + arrow_width + gutter
 
     return canvas
@@ -155,13 +202,7 @@ def _compose_panels_vertical(
             shaft_x = margin + max_panel_w // 2
             arrow_y1 = y
             arrow_y2 = y + arrow_height
-            draw.line([(shaft_x, arrow_y1), (shaft_x, arrow_y2)], fill=ARROW + (255,), width=6)
-            head = 16
-            draw.polygon([
-                (shaft_x - head, arrow_y2 - head),
-                (shaft_x, arrow_y2),
-                (shaft_x + head, arrow_y2 - head),
-            ], fill=ARROW + (255,))
+            _draw_arrow_supersampled(canvas, _arrow_down(arrow_y1, arrow_y2, shaft_x), ARROW + (255,))
             y += arrow_height + gutter
 
     return canvas
@@ -250,14 +291,7 @@ def compose_side_by_side(
     arrow_center_y = top_pad + max_panel_h // 2
     arrow_x1 = left_panel_x + left_panel_w + gutter
     arrow_x2 = right_panel_x - gutter
-    shaft_y = arrow_center_y
-    draw.line([(arrow_x1, shaft_y), (arrow_x2, shaft_y)], fill=ARROW + (255,), width=6)
-    head_size = 16
-    draw.polygon([
-        (arrow_x2 - head_size, shaft_y - head_size),
-        (arrow_x2, shaft_y),
-        (arrow_x2 - head_size, shaft_y + head_size),
-    ], fill=ARROW + (255,))
+    _draw_arrow_supersampled(canvas, _arrow_right(arrow_x1, arrow_x2, arrow_center_y), ARROW + (255,))
 
     return canvas
 
