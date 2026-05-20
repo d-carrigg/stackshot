@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.1 — 2026-05-20
+
+### Added
+- `THIRD_PARTY_LICENSES.md` collecting verbatim license texts for every
+  runtime dependency bundled into the standalone binaries: Pillow
+  (MIT-CMU), prompt_toolkit (BSD-3-Clause), Pygments (BSD-2-Clause),
+  wcwidth (MIT), and the optional `[ui]` extra tkinterdnd2 (MIT). The
+  Pillow section also carries the native-library notices (libjpeg,
+  libpng, libtiff, libwebp, FreeType, etc.) that Pillow vendors and
+  that ship inside the binaries.
+- `release.yml` now attaches `LICENSE` and `THIRD_PARTY_LICENSES.md` to
+  each GitHub Release once (from the Linux matrix job), alongside the
+  three platform binaries — closing the attribution gap for users who
+  only ever see the binary. Source/wheel installs were already
+  compliant via each dep's bundled LICENSE.
+
 ## 0.3.0 — 2026-05-20
 
 ### Changed
