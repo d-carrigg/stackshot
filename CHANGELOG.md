@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.1 — 2026-05-20
+
+### Fixed
+- Clipboard no longer auto-grabs whatever's already on the clipboard at app
+  launch. Images are only inserted when the user submits an empty block
+  (the explicit "paste" gesture).
+- Code images render directly on the panel background, removing the
+  Monokai-tinted fringe around glyph edges.
+- Arrows are now drawn as a single supersampled polygon (4× then LANCZOS
+  downsample), eliminating aliasing and the square-shaft artifact.
+
+### Changed
+- Default arrow color is now white (was mauve).
+- Removed the `:cancel` interactive command — Ctrl+C handles abort.
+- Image panels get rounded corners when `--no-border` is set.
+
+### Added
+- `--arrow-color` flag accepts hex (`#fff`, `#aabbcc`) or named colors.
+- `compose_panels` gains a `background=(r,g,b)` parameter for callers
+  that want to override the canvas color.
+
 ## 0.2.0 — 2026-05-20
 
 ### Changed (breaking)

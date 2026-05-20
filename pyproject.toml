@@ -1,6 +1,6 @@
 [project]
 name = "codeimg"
-version = "0.2.0"
+version = "0.2.1"
 description = "Side-by-side code/image screenshots from markdown — for READMEs, docs, blog posts"
 readme = "README.md"
 license = { file = "LICENSE" }
