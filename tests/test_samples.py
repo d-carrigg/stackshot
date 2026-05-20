@@ -23,14 +23,14 @@ def docs_img():
     return DOCS_IMG
 
 
-def render_markdown(md: str, vertical: bool = False) -> Image.Image:
+def render_markdown(md: str, vertical: bool = False, background=None) -> Image.Image:
     """Public-API render: parse markdown -> render each panel -> compose."""
     items = []
     for p in parse_markdown(md):
         img = render_code_image(p.code, p.lang, None)
         img = scale_image_to_max(img, 1200, 900)
         items.append((img, p.title, False))
-    return compose_panels(items, vertical=vertical)
+    return compose_panels(items, vertical=vertical, background=background)
 
 
 def test_sample_single_panel(docs_img):
@@ -86,10 +86,11 @@ def test_sample_vertical(docs_img):
 
 
 def test_sample_markdown_to_rendered(docs_img):
-    """Markdown input on the left, what codeimg rendered from it on the
-    right. The inner render also goes through the public flow so a
-    regression in parse_markdown or compose_panels shows up in BOTH the
-    Output side and the test result."""
+    """Markdown input on top, what codeimg rendered from it below. The
+    inner Output panel stays horizontal (it's the original Request →
+    Response demo). The inner render also goes through the public flow
+    so a regression in parse_markdown or compose_panels shows up in
+    BOTH the Output side and the test result."""
     inner_md = (
         "Request\n"
         "```powershell\n"
@@ -103,7 +104,10 @@ def test_sample_markdown_to_rendered(docs_img):
         "```\n"
     )
 
-    inner_rendered = render_markdown(inner_md)
+    # Render inner with a slightly darker canvas so the inner image
+    # reads as a distinct region against the outer demo's default bg
+    # without going full-black.
+    inner_rendered = render_markdown(inner_md, background=(22, 22, 33))
     tmp = docs_img / "_rendered-tmp.png"
     save_image(inner_rendered, str(tmp))
 
@@ -119,6 +123,6 @@ def test_sample_markdown_to_rendered(docs_img):
     out = compose_panels([
         (md_img, "Input (markdown)", False),
         (output_img, "Output", True),
-    ])
+    ], vertical=True, no_inner_border=True)
     save_image(out, str(docs_img / "markdown-demo.png"))
     tmp.unlink(missing_ok=True)
