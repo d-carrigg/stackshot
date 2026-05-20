@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.4 — 2026-05-20
+
+### Added
+- `docs/examples/record_print_loop.sh` — one-command regeneration of
+  the README's `print_loop.gif` sample via asciinema + agg.
+- `*.cast` is now gitignored; recordings are kept local and the
+  committed GIFs are the source of truth.
+
 ## 0.2.3 — 2026-05-20
 
 ### Fixed
