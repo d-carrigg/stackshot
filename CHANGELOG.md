@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 — 2026-05-20
+## 0.2.5 — 2026-05-20
 
 ### Added
 - `--scale FLOAT` CLI flag (default `2.0`) — a single multiplier that
@@ -8,7 +8,7 @@
   max-size bounds together so layout proportions stay identical. Code
   panels rasterize natively at the higher size via Pygments (no LANCZOS
   blur on glyphs); image panels are upscaled via LANCZOS. Use
-  `--scale 1` to reproduce the pre-0.3.0 compact sizing; `--scale 3`
+  `--scale 1` to reproduce the pre-0.2.5 compact sizing; `--scale 3`
   for ~1080p-class output.
 
 ### Changed
@@ -25,7 +25,7 @@
 
 ### Known gaps
 - `--ui` (desktop preview window) does not yet honor `--scale` and
-  still renders at the pre-0.3.0 compact sizing. CLI invocations
+  still renders at the pre-0.2.5 compact sizing. CLI invocations
   (the primary path) pick up the new default automatically.
 
 ## 0.2.4 — 2026-05-20
