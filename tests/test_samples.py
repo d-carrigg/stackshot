@@ -86,10 +86,11 @@ def test_sample_vertical(docs_img):
 
 
 def test_sample_markdown_to_rendered(docs_img):
-    """Markdown input on the left, what codeimg rendered from it on the
-    right. The inner render also goes through the public flow so a
-    regression in parse_markdown or compose_panels shows up in BOTH the
-    Output side and the test result."""
+    """Markdown input on top, what codeimg rendered from it below. The
+    inner Output panel stays horizontal (it's the original Request →
+    Response demo). The inner render also goes through the public flow
+    so a regression in parse_markdown or compose_panels shows up in
+    BOTH the Output side and the test result."""
     inner_md = (
         "Request\n"
         "```powershell\n"
@@ -119,6 +120,6 @@ def test_sample_markdown_to_rendered(docs_img):
     out = compose_panels([
         (md_img, "Input (markdown)", False),
         (output_img, "Output", True),
-    ])
+    ], vertical=True)
     save_image(out, str(docs_img / "markdown-demo.png"))
     tmp.unlink(missing_ok=True)
