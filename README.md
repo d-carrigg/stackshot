@@ -1,4 +1,4 @@
-# codeshot
+# codeimg
 
 Generate side-by-side code/image screenshots from markdown. Useful for
 docs, README hero shots, blog posts, and request/response diagrams.
@@ -14,25 +14,25 @@ uv tool install .
 Or run inside the project without installing globally:
 
 ```bash
-uv run codeshot --help
+uv run codeimg --help
 ```
 
 ## Use
 
 ### Interactive (recommended)
 
-Run `codeshot` with no arguments. Each block opens a multi-line editor:
+Run `codeimg` with no arguments. Each block opens a multi-line editor:
 
 - Arrow keys move the cursor (including across lines)
 - **Enter** submits the block
 - **Alt+Enter** (or **Ctrl+J**) inserts a newline
 - Type `:cancel` on its own line to abort
 
-Copy an image into the clipboard and codeshot picks it up automatically
+Copy an image into the clipboard and codeimg picks it up automatically
 at the next block boundary — no command, no action key.
 
 ```text
-$ codeshot --out out.png
+$ codeimg --out out.png
 --- Block 1 ---
 [Image 1]                     ← clipboard image, auto-advanced
 --- Block 2 ---
@@ -73,19 +73,36 @@ top-to-bottom with a downward arrow between them.
 
 ### From the command line
 
+Pass one or more positional panel inputs. Each one is auto-detected:
+
+- an existing **image file** (`.png`, `.jpg`, `.gif`, `.webp`, …) → image panel
+- an existing **code file** → code panel, language inferred from extension
+- `path:N` or `path:N-M` (or `path:N:M`) → slice the file to those lines
+- anything else → literal code string
+
 ```bash
-codeshot --left 'print("hi")' --right 'hi' --out out.png
-codeshot --left-image input.png --right-image output.png --no-border --out diff.png
-codeshot --left 'def add(a, b): return a + b' --out single.png   # no --right => single panel
+codeimg 'print("hi")' 'hi' --out out.png
+codeimg input.png output.png --no-border --out diff.png
+codeimg src/cli.py:1-30 --out top.png
+codeimg before.py after.py --title Before After --out diff.png
+codeimg 'def add(a, b): return a + b' --out single.png    # one arg => single panel
 ```
 
-Useful flags: `--left-lang`, `--right-lang` (language hints), `--no-border`
-(skip the inner card around images), `--out` (`.png`, `.webp`, `.gif`).
+Per-panel metadata uses parallel lists:
+
+- `--title T1 T2 ...` — panel titles
+- `--lang py rust ...` — language hints (override extension guess)
+- `--file foo.py bar.rs ...` — filename hints for lexer guessing
+- `--max-width 800 1200 ...` — per-panel max content width
+
+Other flags: `--vertical` (stack top-to-bottom), `--no-border` (no inner card
+around images), `--no-clip` (skip clipboard copy, default copies),
+`--out` (`.png`, `.webp`, `.gif`).
 
 ## As a library
 
 ```python
-from codeshot import Panel, compose_panels, parse_markdown, render_code_image
+from codeimg import Panel, compose_panels, parse_markdown, render_code_image
 
 panels = parse_markdown(open("README.md").read())
 items = [(render_code_image(p.code, p.lang, None), p.title, False) for p in panels]

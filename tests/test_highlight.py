@@ -1,4 +1,4 @@
-from codeshot.highlight import render_code_image
+from codeimg.highlight import render_code_image
 
 
 def test_render_code_image_has_transparent_bg_so_it_blends_on_panel():

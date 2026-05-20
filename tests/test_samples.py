@@ -10,8 +10,8 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from codeshot import compose_panels, parse_markdown, render_code_image
-from codeshot.io_utils import open_image, save_image, scale_image_to_max
+from codeimg import compose_panels, parse_markdown, render_code_image
+from codeimg.io_utils import open_image, save_image, scale_image_to_max
 
 
 DOCS_IMG = Path(__file__).resolve().parents[1] / "docs" / "img"
@@ -86,7 +86,7 @@ def test_sample_vertical(docs_img):
 
 
 def test_sample_markdown_to_rendered(docs_img):
-    """Markdown input on the left, what codeshot rendered from it on the
+    """Markdown input on the left, what codeimg rendered from it on the
     right. The inner render also goes through the public flow so a
     regression in parse_markdown or compose_panels shows up in BOTH the
     Output side and the test result."""

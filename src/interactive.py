@@ -78,7 +78,7 @@ def _stdin_ready(timeout: float) -> bool:
 
 
 def _save_clipboard_image_as_panel(img: Image.Image, panels: list[Panel]) -> None:
-    tmp = tempfile.NamedTemporaryFile(prefix="codeshot-clip-", suffix=".png", delete=False)
+    tmp = tempfile.NamedTemporaryFile(prefix="codeimg-clip-", suffix=".png", delete=False)
     img.convert("RGBA").save(tmp.name, format="PNG")
     panels.append(Panel(code="", is_image=True, image_path=tmp.name))
 
@@ -183,7 +183,7 @@ def _panel_summary(panels: list[Panel]) -> None:
 
 
 def interactive_compose(args) -> None:
-    print("Codeshot interactive mode")
+    print("Codeimg interactive mode")
     print("Paste code or markdown — ```lang fences set syntax, the line above is the title.")
     print("End a text block with two blank lines (or Ctrl+D).")
     print("Paste an image into your clipboard and it's added automatically as the next panel.")
@@ -262,19 +262,26 @@ def interactive_compose(args) -> None:
         print("No panels, nothing to render.")
         return
 
+    max_w = getattr(args, "max_width", None) or []
+    max_w = max_w[0] if max_w else 1200
+    max_h = getattr(args, "max_height", 1200)
+
     items: list[tuple[Image.Image, Optional[str], bool]] = []
     for p in panels:
         if p.is_image and p.image_path:
             img = open_image(p.image_path).convert("RGBA")
-            img = scale_image_to_max(img, args.max_left_width, args.max_panel_height)
+            img = scale_image_to_max(img, max_w, max_h)
             items.append((img, p.title, True))
         else:
             img = render_code_image(p.code, p.lang, None)
-            img = scale_image_to_max(img, args.max_left_width, args.max_panel_height)
+            img = scale_image_to_max(img, max_w, max_h)
             items.append((img, p.title, False))
 
     final = compose_panels(items, no_inner_border=args.no_border, vertical=getattr(args, "vertical", False))
     out_path = expand_path(args.out)
     save_image(final, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
-    copy_to_clipboard(final)
-    print(f"\nSaved {out_path} and copied to clipboard.")
+    if not getattr(args, "no_clip", False):
+        copy_to_clipboard(final)
+        print(f"\nSaved {out_path} and copied to clipboard.")
+    else:
+        print(f"\nSaved {out_path}.")

@@ -1,7 +1,7 @@
 import pytest
 from PIL import Image
 
-from codeshot.compose import compose_panels, compose_side_by_side
+from codeimg.compose import compose_panels, compose_side_by_side
 
 
 def _solid(w, h, color=(50, 60, 70, 255)):

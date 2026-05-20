@@ -1,0 +1,59 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  # PyPI publish is disabled until the repo is public and trusted publishing
+  # is configured on PyPI. To enable:
+  #   1. Make the repo public (or upgrade to a PyPI org plan that supports private).
+  #   2. Configure trusted publisher at https://pypi.org/manage/account/publishing/
+  #      (owner=d-carrigg, project=codeimg, workflow=release.yml, environment=pypi).
+  #   3. Create GitHub Environment named `pypi` (Settings → Environments).
+  #   4. Uncomment the publish-pypi job below.
+  #   5. Add `needs: publish-pypi` back to build-binaries.
+  #
+  # publish-pypi:
+  #   runs-on: ubuntu-latest
+  #   environment: pypi
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: astral-sh/setup-uv@v3
+  #     - run: uv build
+  #     - run: uv publish --trusted-publishing always
+
+  build-binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,  asset: codeimg-linux-x86_64,       ext: "" }
+          - { os: macos-latest,   asset: codeimg-macos-arm64,        ext: "" }
+          - { os: windows-latest, asset: codeimg-windows-x86_64.exe, ext: ".exe" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync
+      - run: uv pip install pyinstaller
+      - name: Stage package for PyInstaller
+        shell: bash
+        run: |
+          python -c "import shutil, os; shutil.rmtree('codeimg', ignore_errors=True); shutil.copytree('src', 'codeimg')"
+      - name: Build binary
+        shell: bash
+        run: |
+          uv run pyinstaller --onefile --name codeimg \
+            --collect-all pygments --collect-all prompt_toolkit \
+            codeimg/__main__.py
+      - name: Rename for platform
+        shell: bash
+        run: mv "dist/codeimg${{ matrix.ext }}" "dist/${{ matrix.asset }}"
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ matrix.asset }}
+          fail_on_unmatched_files: true

@@ -3,8 +3,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from codeshot import interactive as interactive_mod
-from codeshot.cli import main
+from codeimg import interactive as interactive_mod
+from codeimg.cli import main
 
 
 def _set_clipboard(monkeypatch, sequence):
@@ -22,7 +22,7 @@ def _set_clipboard(monkeypatch, sequence):
 
 
 def _run(monkeypatch, argv, stdin):
-    monkeypatch.setattr("sys.argv", ["codeshot", *argv])
+    monkeypatch.setattr("sys.argv", ["codeimg", *argv])
     monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
     main()
 

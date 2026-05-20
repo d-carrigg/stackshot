@@ -59,13 +59,13 @@ def launch_ui() -> None:
         return
 
     root = tk.Tk()
-    root.title("Codeshot")
+    root.title("Codeimg")
 
     left_image_path = tk.StringVar()
     right_image_path = tk.StringVar()
     left_title = tk.StringVar(value="Request")
     right_title = tk.StringVar(value="Response")
-    out_path = tk.StringVar(value="codeshot.png")
+    out_path = tk.StringVar(value="codeimg.png")
     no_border = tk.BooleanVar(value=False)
     sequential = tk.BooleanVar(value=False)
     webp_quality = tk.IntVar(value=90)
@@ -181,9 +181,9 @@ def launch_ui() -> None:
         a = current_args()
         try:
             _generate_static(a)
-            messagebox.showinfo("Codeshot", f"Saved {expand_path(a.out)}")
+            messagebox.showinfo("Codeimg", f"Saved {expand_path(a.out)}")
         except (OSError, ValueError, RuntimeError) as e:
-            messagebox.showerror("Codeshot", str(e))
+            messagebox.showerror("Codeimg", str(e))
 
     ttk.Button(frm, text="Generate", command=do_generate).grid(row=11, column=0, pady=8)
     ttk.Button(frm, text="Close", command=root.destroy).grid(row=11, column=2, pady=8, sticky="e")

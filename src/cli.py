@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+from typing import Optional
 
 from PIL import Image, UnidentifiedImageError
 from PIL import features as PIL_FEATURES
@@ -21,158 +22,211 @@ from .io_utils import (
     scale_frames_consistently,
     scale_image_to_max,
 )
+from .panel_input import ResolvedPanel, resolve_panel
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate a side-by-side image: code → code, image → image, or mix")
-    parser.add_argument("--left", help="Left code block string. If omitted and no --left-image, you'll be prompted.")
-    parser.add_argument("--right", help="Right code block string. If omitted and no --right-image, you'll be prompted.")
-    parser.add_argument("--left-lang", help="Hint language for left code (e.g., python, http, json)")
-    parser.add_argument("--right-lang", help="Hint language for right code")
-    parser.add_argument("--left-file", help="Filename hint for left code (for lexer guess)")
-    parser.add_argument("--right-file", help="Filename hint for right code")
-    parser.add_argument("--left-image", help="Path to an image file for the left panel")
-    parser.add_argument("--right-image", help="Path to an image file for the right panel")
-    parser.add_argument("--no-border", action="store_true", help="Remove inner card borders when a side is an image")
-    parser.add_argument("--vertical", action="store_true", help="Stack panels top-to-bottom with downward arrows instead of side-by-side")
-    parser.add_argument("--left-title", help="Optional title above the left panel", default="Request")
-    parser.add_argument("--right-title", help="Optional title above the right panel", default="Response")
-    parser.add_argument("--out", help="Output image path (.png, .webp, or .gif)", default="codeshot.png")
-    parser.add_argument("--sequential", action="store_true", help="Animate left frames first (right frozen), then right frames (left frozen)")
-    parser.add_argument("--max-left-width", type=int, default=1200, help="Max width for left panel content (per frame)")
-    parser.add_argument("--max-right-width", type=int, default=1200, help="Max width for right panel content (per frame)")
-    parser.add_argument("--max-panel-height", type=int, default=1200, help="Max height for each panel content (per frame)")
-    parser.add_argument("--webp-quality", type=int, default=90, help="Animated/static WebP quality (0-100)")
-    parser.add_argument("--webp-method", type=int, default=4, help="Animated/static WebP method (0=fast..6=best)")
-    parser.add_argument("--ui", action="store_true", help="Launch a simple UI for interactive use")
+DEFAULT_MAX_WIDTH = 1200
+DEFAULT_MAX_HEIGHT = 1200
 
-    args = parser.parse_args()
 
-    if args.ui:
-        from .ui import launch_ui
-        launch_ui()
-        return
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="codeimg",
+        description="Generate side-by-side code/image panels with arrows between them.",
+    )
+    parser.add_argument(
+        "panels", nargs="*",
+        help="Panel inputs. Each is one of: image path, code file path, "
+             "`path:N` or `path:N-M` for a line range, or literal code. "
+             "Omit to enter interactive mode.",
+    )
+    parser.add_argument("--title", nargs="*", default=[], help="Per-panel titles (parallel list).")
+    parser.add_argument("--lang", nargs="*", default=[], help="Per-panel language hints for code panels.")
+    parser.add_argument("--file", nargs="*", default=[], help="Per-panel filename hints (for lexer guessing).")
+    parser.add_argument(
+        "--max-width", nargs="*", type=int, default=[],
+        help=f"Per-panel max content width. Default {DEFAULT_MAX_WIDTH} each.",
+    )
+    parser.add_argument(
+        "--max-height", type=int, default=DEFAULT_MAX_HEIGHT,
+        help=f"Max content height applied to every panel. Default {DEFAULT_MAX_HEIGHT}.",
+    )
+    parser.add_argument("--no-border", action="store_true", help="Remove inner card borders when a panel is an image.")
+    parser.add_argument("--vertical", action="store_true", help="Stack panels top-to-bottom with downward arrows.")
+    parser.add_argument("--out", default="codeimg.png", help="Output image path (.png, .webp, or .gif).")
+    parser.add_argument("--no-clip", action="store_true", help="Skip copying the output to the clipboard.")
+    parser.add_argument(
+        "--sequential", action="store_true",
+        help="(2-panel animated only) Animate left frames first, then right.",
+    )
+    parser.add_argument("--webp-quality", type=int, default=90, help="Animated/static WebP quality (0-100).")
+    parser.add_argument("--webp-method", type=int, default=4, help="Animated/static WebP method (0=fast..6=best).")
+    parser.add_argument("--ui", action="store_true", help="Launch the desktop UI.")
+    return parser
 
-    has_any_input = any([args.left, args.right, args.left_image, args.right_image])
-    if not has_any_input:
-        interactive_compose(args)
-        return
 
-    if args.left_image:
+def _zip_pad(items: list, fillvalue, name: str, n_panels: int):
+    if len(items) > n_panels:
+        raise SystemExit(
+            f"--{name} got {len(items)} values but there are only {n_panels} panel(s)."
+        )
+    return list(items) + [fillvalue] * (n_panels - len(items))
+
+
+def _max_width_for(idx: int, widths: list[int]) -> int:
+    if not widths:
+        return DEFAULT_MAX_WIDTH
+    if idx < len(widths):
+        return widths[idx]
+    return widths[-1]
+
+
+def _resolve_all(specs: list[str]) -> list[ResolvedPanel]:
+    out = []
+    for s in specs:
         try:
-            left_base = open_image(args.left_image)
-        except (FileNotFoundError, UnidentifiedImageError, OSError) as e:
-            raise SystemExit(f"Failed to open --left-image '{args.left_image}': {e}") from e
-        left_frames, left_durations, left_anim = get_frames_and_durations(left_base)
-        left_frames = scale_frames_consistently(left_frames, args.max_left_width, args.max_panel_height)
-    else:
-        left_code = args.left or ""
-        left_img_static = render_code_image(left_code, args.left_lang, args.left_file)
-        left_img_static = scale_image_to_max(left_img_static, args.max_left_width, args.max_panel_height)
-        left_frames, left_durations, left_anim = [left_img_static], [100], False
+            out.append(resolve_panel(s))
+        except OSError as e:
+            raise SystemExit(f"Failed to read panel input '{s}': {e}") from e
+    return out
 
-    if args.right_image:
+
+def _open_image_or_die(path: str, label: str) -> Image.Image:
+    try:
+        return open_image(path)
+    except (FileNotFoundError, UnidentifiedImageError, OSError) as e:
+        raise SystemExit(f"Failed to open {label} '{path}': {e}") from e
+
+
+def _render_static_panel(
+    rp: ResolvedPanel, lang: Optional[str], file_hint: Optional[str], max_w: int, max_h: int,
+) -> Image.Image:
+    if rp.is_image:
+        img = _open_image_or_die(rp.image_path or "", "image")
+        return scale_image_to_max(img.convert("RGBA"), max_w, max_h)
+    img = render_code_image(rp.code, lang, file_hint or rp.filename_hint)
+    return scale_image_to_max(img, max_w, max_h)
+
+
+def _save_and_maybe_clip(img: Image.Image, args) -> str:
+    out_path = expand_path(args.out)
+    save_image(img, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
+    if not args.no_clip:
+        copy_to_clipboard(img)
+        print(f"Saved {out_path} and copied to clipboard.")
+    else:
+        print(f"Saved {out_path}.")
+    return out_path
+
+
+def _has_animated_image(resolved: list[ResolvedPanel]) -> bool:
+    for rp in resolved:
+        if not rp.is_image or not rp.image_path:
+            continue
         try:
-            right_base = open_image(args.right_image)
-        except (FileNotFoundError, UnidentifiedImageError, OSError) as e:
-            raise SystemExit(f"Failed to open --right-image '{args.right_image}': {e}") from e
-        right_frames, right_durations, right_anim = get_frames_and_durations(right_base)
-        right_frames = scale_frames_consistently(right_frames, args.max_right_width, args.max_panel_height)
-    elif args.right is not None:
-        right_img_static = render_code_image(args.right, args.right_lang, args.right_file)
-        right_img_static = scale_image_to_max(right_img_static, args.max_right_width, args.max_panel_height)
-        right_frames, right_durations, right_anim = [right_img_static], [100], False
-    else:
-        items = [(left_frames[0], args.left_title, bool(args.left_image))]
-        final_img = compose_panels(items, no_inner_border=args.no_border, vertical=args.vertical)
-        out_path = expand_path(args.out)
-        save_image(final_img, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
-        copy_to_clipboard(final_img)
-        print(f"Saved {out_path} and copied to clipboard.")
-        return
+            with Image.open(rp.image_path) as im:
+                if getattr(im, "is_animated", False) and getattr(im, "n_frames", 1) > 1:
+                    return True
+        except (FileNotFoundError, UnidentifiedImageError, OSError):
+            continue
+    return False
 
-    is_animated_output = left_anim or right_anim
 
-    if not is_animated_output:
-        if args.vertical:
-            items = [
-                (left_frames[0], args.left_title, bool(args.left_image)),
-                (right_frames[0], args.right_title, bool(args.right_image)),
-            ]
-            final_img = compose_panels(items, no_inner_border=args.no_border, vertical=True)
-        else:
-            final_img = compose_side_by_side(
-                left_frames[0], right_frames[0],
-                args.left_title, args.right_title,
-                left_is_image=bool(args.left_image), right_is_image=bool(args.right_image),
-                no_inner_border=args.no_border,
-            )
-        out_path = expand_path(args.out)
-        save_image(final_img, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
-        copy_to_clipboard(final_img)
-        print(f"Saved {out_path} and copied to clipboard.")
-        return
+def _run_static(args, resolved: list[ResolvedPanel]) -> None:
+    n = len(resolved)
+    titles = _zip_pad(args.title, None, "title", n)
+    langs = _zip_pad(args.lang, None, "lang", n)
+    files = _zip_pad(args.file, None, "file", n)
+    if args.max_width:
+        _zip_pad(args.max_width, None, "max-width", n)  # validate length only
+
+    items: list[tuple[Image.Image, Optional[str], bool]] = []
+    for i, rp in enumerate(resolved):
+        img = _render_static_panel(rp, langs[i], files[i], _max_width_for(i, args.max_width), args.max_height)
+        items.append((img, titles[i], rp.is_image))
+
+    final = compose_panels(items, no_inner_border=args.no_border, vertical=args.vertical)
+    _save_and_maybe_clip(final, args)
+
+
+def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
+    if len(resolved) != 2:
+        raise SystemExit(
+            "Animated input is only supported with exactly 2 panels."
+        )
+    titles = _zip_pad(args.title, None, "title", 2)
+    langs = _zip_pad(args.lang, None, "lang", 2)
+    files = _zip_pad(args.file, None, "file", 2)
+    left, right = resolved
+
+    def _frames_for(rp: ResolvedPanel, lang, fhint, max_w):
+        if rp.is_image:
+            base = _open_image_or_die(rp.image_path or "", "image")
+            frames, durs, anim = get_frames_and_durations(base)
+            frames = scale_frames_consistently(frames, max_w, args.max_height)
+            return frames, durs, anim
+        img = render_code_image(rp.code, lang, fhint or rp.filename_hint)
+        img = scale_image_to_max(img, max_w, args.max_height)
+        return [img], [100], False
+
+    left_frames, left_durs, left_anim = _frames_for(left, langs[0], files[0], _max_width_for(0, args.max_width))
+    right_frames, right_durs, right_anim = _frames_for(right, langs[1], files[1], _max_width_for(1, args.max_width))
 
     composed_frames: list[Image.Image] = []
-    composed_durations: list[int] = []
+    composed_durs: list[int] = []
+
     if args.sequential:
         right_freeze = right_frames[0]
         for i in range(len(left_frames)):
             print_progress(i + 1, len(left_frames), "Composing (left segment)")
-            frame = compose_side_by_side(
-                left_frames[i], right_freeze, args.left_title, args.right_title,
-                left_is_image=bool(args.left_image), right_is_image=bool(args.right_image),
+            composed_frames.append(compose_side_by_side(
+                left_frames[i], right_freeze, titles[0], titles[1],
+                left_is_image=left.is_image, right_is_image=right.is_image,
                 no_inner_border=args.no_border,
-            )
-            composed_frames.append(frame)
-            composed_durations.append(left_durations[i] if i < len(left_durations) else 100)
+            ))
+            composed_durs.append(left_durs[i] if i < len(left_durs) else 100)
         left_freeze = left_frames[-1]
         for i in range(len(right_frames)):
             print_progress(i + 1, len(right_frames), "Composing (right segment)")
-            frame = compose_side_by_side(
-                left_freeze, right_frames[i], args.left_title, args.right_title,
-                left_is_image=bool(args.left_image), right_is_image=bool(args.right_image),
+            composed_frames.append(compose_side_by_side(
+                left_freeze, right_frames[i], titles[0], titles[1],
+                left_is_image=left.is_image, right_is_image=right.is_image,
                 no_inner_border=args.no_border,
-            )
-            composed_frames.append(frame)
-            composed_durations.append(right_durations[i] if i < len(right_durations) else 100)
+            ))
+            composed_durs.append(right_durs[i] if i < len(right_durs) else 100)
     else:
-        total_frames = max(len(left_frames), len(right_frames))
-        for i in range(total_frames):
-            print_progress(i + 1, total_frames, "Composing")
-            frame = compose_side_by_side(
+        total = max(len(left_frames), len(right_frames))
+        for i in range(total):
+            print_progress(i + 1, total, "Composing")
+            composed_frames.append(compose_side_by_side(
                 left_frames[i % len(left_frames)],
                 right_frames[i % len(right_frames)],
-                args.left_title, args.right_title,
-                left_is_image=bool(args.left_image), right_is_image=bool(args.right_image),
+                titles[0], titles[1],
+                left_is_image=left.is_image, right_is_image=right.is_image,
                 no_inner_border=args.no_border,
-            )
-            composed_frames.append(frame)
-            ld = left_durations[i % len(left_durations)] if left_durations else 100
-            rd = right_durations[i % len(right_durations)] if right_durations else 100
-            composed_durations.append(min(ld, rd))
+            ))
+            ld = left_durs[i % len(left_durs)] if left_durs else 100
+            rd = right_durs[i % len(right_durs)] if right_durs else 100
+            composed_durs.append(min(ld, rd))
 
     first_size = composed_frames[0].size
-    normalized_frames: list[Image.Image] = []
+    normalized: list[Image.Image] = []
     for f in composed_frames:
         if f.size == first_size:
-            normalized_frames.append(f)
+            normalized.append(f)
         else:
             canvas = Image.new("RGBA", first_size, DEFAULT_BG + (255,))
             canvas.alpha_composite(f, (0, 0))
-            normalized_frames.append(canvas)
+            normalized.append(canvas)
 
     out_path_req = expand_path(args.out)
     root, ext = os.path.splitext(out_path_req)
     ext_lower = ext.lower()
-    if ext_lower in (".gif", ".webp"):
-        out_path = out_path_req
-    else:
-        out_path = root + ".webp"
+    out_path = out_path_req if ext_lower in (".gif", ".webp") else root + ".webp"
 
     if out_path.lower().endswith(".gif"):
         print("Saving GIF... This may take a while for large outputs.")
-        save_animated_gif(normalized_frames, composed_durations, out_path)
+        save_animated_gif(normalized, composed_durs, out_path)
         print("".ljust(100), end="\r")
         print(f"Saved animated GIF {out_path}.")
     else:
@@ -182,16 +236,39 @@ def main() -> None:
             fallback = os.path.splitext(out_path)[0] + ".gif"
             print("Animated WebP not supported by your Pillow/decoder; falling back to GIF...")
             print("Saving GIF... This may take a while for large outputs.")
-            save_animated_gif(normalized_frames, composed_durations, fallback)
+            save_animated_gif(normalized, composed_durs, fallback)
             print("".ljust(100), end="\r")
             print(f"Saved animated GIF {fallback}.")
         else:
             print("Saving WebP... This may take a while for large outputs.")
             t0 = time.time()
-            save_animated_webp(normalized_frames, composed_durations, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
+            save_animated_webp(normalized, composed_durs, out_path,
+                               webp_quality=args.webp_quality, webp_method=args.webp_method)
             elapsed = int(time.time() - t0)
             print("".ljust(100), end="\r")
             print(f"Saved animated WebP {out_path} in {elapsed}s.")
+
+
+def main() -> None:
+    parser = _build_parser()
+    args = parser.parse_args()
+
+    if args.ui:
+        from .ui import launch_ui
+        launch_ui()
+        return
+
+    if not args.panels:
+        interactive_compose(args)
+        return
+
+    resolved = _resolve_all(args.panels)
+
+    if _has_animated_image(resolved):
+        _run_animated_two_panel(args, resolved)
+        return
+
+    _run_static(args, resolved)
 
 
 if __name__ == "__main__":
