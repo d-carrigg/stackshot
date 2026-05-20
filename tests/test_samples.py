@@ -11,10 +11,13 @@ import pytest
 from PIL import Image
 
 from codeimg import compose_panels, parse_markdown, render_code_image
+from codeimg.cli import main
 from codeimg.io_utils import open_image, save_image, scale_image_to_max
 
 
-DOCS_IMG = Path(__file__).resolve().parents[1] / "docs" / "img"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DOCS_IMG = REPO_ROOT / "docs" / "img"
+DOCS_EXAMPLES = REPO_ROOT / "docs" / "examples"
 
 
 @pytest.fixture(scope="module")
@@ -126,3 +129,30 @@ def test_sample_markdown_to_rendered(docs_img):
     ], vertical=True, no_inner_border=True)
     save_image(out, str(docs_img / "markdown-demo.png"))
     tmp.unlink(missing_ok=True)
+
+
+def test_sample_code_to_gif(docs_img, monkeypatch):
+    """Compose the print_loop.py example with a user-recorded terminal
+    GIF into an animated code -> output sample. Skips when the recording
+    isn't checked in yet — drop the GIF at docs/img/print_loop.gif and
+    re-run to refresh docs/img/code-to-gif.gif."""
+    code_src = DOCS_EXAMPLES / "print_loop.py"
+    recording = docs_img / "print_loop.gif"
+    if not recording.exists():
+        pytest.skip(
+            f"Record the terminal output to {recording} (running "
+            f"{code_src.relative_to(REPO_ROOT)}) to refresh this sample."
+        )
+
+    out_path = docs_img / "code-to-gif.gif"
+    argv = [
+        "codeimg",
+        str(code_src),
+        str(recording),
+        "--title", "Code", "Output",
+        "--out", str(out_path),
+        "--no-clip",
+    ]
+    monkeypatch.setattr("sys.argv", argv)
+    main()
+    assert out_path.exists() and out_path.stat().st_size > 0

@@ -85,6 +85,23 @@ top-to-bottom with a downward arrow between them.
 
 ![vertical](docs/img/vertical.png)
 
+### Animated output (code → gif)
+
+If one of the panels is an animated GIF or WebP, codeimg produces an
+animated output frame-by-frame. Example: `docs/examples/print_loop.py`
+is a short script; record its terminal output as `docs/img/print_loop.gif`,
+then:
+
+```bash
+codeimg docs/examples/print_loop.py docs/img/print_loop.gif \
+  --title Code Output --out docs/img/code-to-gif.gif
+```
+
+![code to gif](docs/img/code-to-gif.gif)
+
+(The sample test `test_sample_code_to_gif` regenerates this artifact
+once the recording is committed; until then it skips.)
+
 ### From the command line
 
 Pass one or more positional panel inputs. Each one is auto-detected:
