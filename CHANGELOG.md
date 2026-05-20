@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.0 — 2026-05-20
+
+### Changed
+- `--ui` window is rebuilt from scratch. It's now a clean dark editor
+  matching the output palette, with:
+  - N-panel support (not just 2) with `+ Add panel` / per-panel remove,
+    backed by `compose_panels`.
+  - Per-panel title entry and a real code editor (the previous build
+    created the text widgets but never gridded them — the fields were
+    invisible).
+  - Drag-and-drop image files onto a panel to convert it to an image
+    panel, plus a Browse button (works without the optional extra).
+  - Background and arrow color pickers, horizontal/vertical layout
+    toggle, no-inner-border toggle, and a scale selector (1.0–3.0) that
+    drives the saved output's resolution.
+  - Live debounced preview, Save As (PNG/WebP), clipboard copy on save.
+- The 0.2.5 "Known gap" — `--ui` ignoring `--scale` — is resolved; the
+  new UI has its own scale picker that defaults to `2.0` to match the
+  CLI default.
+
+### Added
+- `codeimg[ui]` extra installs `tkinterdnd2` for cross-platform
+  drag-and-drop. Without it the UI still runs (Browse-only); with it,
+  files dropped onto a panel set the image.
+
 ## 0.2.5 — 2026-05-20
 
 ### Added
