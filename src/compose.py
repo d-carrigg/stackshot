@@ -77,15 +77,18 @@ def compose_panels(
     no_inner_border: bool = False,
     vertical: bool = False,
     background: Optional[tuple[int, int, int]] = None,
+    arrow_color: Optional[tuple[int, int, int]] = None,
 ) -> Image.Image:
     """Compose 1+ panels with arrows between them.
     `vertical=True` stacks them top-to-bottom with downward arrows.
-    `background` overrides the default canvas color."""
+    `background` overrides the default canvas color.
+    `arrow_color` overrides the default arrow color."""
     bg = background if background is not None else DEFAULT_BG
+    arrow = arrow_color if arrow_color is not None else ARROW
     if not items:
         raise ValueError("compose_panels requires at least one panel")
     if vertical:
-        return _compose_panels_vertical(items, no_inner_border, bg)
+        return _compose_panels_vertical(items, no_inner_border, bg, arrow)
 
     gutter = 32
     margin = 40
@@ -141,7 +144,7 @@ def compose_panels(
             ax1 = x + gutter
             ax2 = x + gutter + arrow_width
             shaft_y = top_pad + max_panel_h // 2
-            _draw_arrow_supersampled(canvas, _arrow_right(ax1, ax2, shaft_y), ARROW + (255,))
+            _draw_arrow_supersampled(canvas, _arrow_right(ax1, ax2, shaft_y), arrow + (255,))
             x += gutter + arrow_width + gutter
 
     return canvas
@@ -151,6 +154,7 @@ def _compose_panels_vertical(
     items: list[tuple[Image.Image, Optional[str], bool]],
     no_inner_border: bool,
     bg: tuple[int, int, int],
+    arrow: tuple[int, int, int],
 ) -> Image.Image:
     margin = 40
     gutter = 16
@@ -202,7 +206,7 @@ def _compose_panels_vertical(
             shaft_x = margin + max_panel_w // 2
             arrow_y1 = y
             arrow_y2 = y + arrow_height
-            _draw_arrow_supersampled(canvas, _arrow_down(arrow_y1, arrow_y2, shaft_x), ARROW + (255,))
+            _draw_arrow_supersampled(canvas, _arrow_down(arrow_y1, arrow_y2, shaft_x), arrow + (255,))
             y += arrow_height + gutter
 
     return canvas
@@ -216,7 +220,9 @@ def compose_side_by_side(
     left_is_image: bool = False,
     right_is_image: bool = False,
     no_inner_border: bool = False,
+    arrow_color: Optional[tuple[int, int, int]] = None,
 ) -> Image.Image:
+    arrow = arrow_color if arrow_color is not None else ARROW
     gutter = 32
     margin = 40
     title_gap = 12
@@ -291,7 +297,7 @@ def compose_side_by_side(
     arrow_center_y = top_pad + max_panel_h // 2
     arrow_x1 = left_panel_x + left_panel_w + gutter
     arrow_x2 = right_panel_x - gutter
-    _draw_arrow_supersampled(canvas, _arrow_right(arrow_x1, arrow_x2, arrow_center_y), ARROW + (255,))
+    _draw_arrow_supersampled(canvas, _arrow_right(arrow_x1, arrow_x2, arrow_center_y), arrow + (255,))
 
     return canvas
 

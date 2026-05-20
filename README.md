@@ -97,7 +97,8 @@ Per-panel metadata uses parallel lists:
 - `--max-width 800 1200 ...` — per-panel max content width
 
 Other flags: `--vertical` (stack top-to-bottom), `--no-border` (no inner card
-around images), `--no-clip` (skip clipboard copy, default copies),
+around images), `--arrow-color` (hex like `#aabbcc` or named like `white`),
+`--no-clip` (skip clipboard copy, default copies),
 `--out` (`.png`, `.webp`, `.gif`).
 
 ## As a library

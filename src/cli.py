@@ -3,7 +3,7 @@ import os
 import time
 from typing import Optional
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageColor, UnidentifiedImageError
 from PIL import features as PIL_FEATURES
 
 from .colors import DEFAULT_BG
@@ -53,6 +53,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-border", action="store_true", help="Remove inner card borders when a panel is an image.")
     parser.add_argument("--vertical", action="store_true", help="Stack panels top-to-bottom with downward arrows.")
+    parser.add_argument("--arrow-color", help="Arrow color: hex (#fff, #aabbcc) or named (e.g. white, cyan). Default white.")
     parser.add_argument("--out", default="codeimg.png", help="Output image path (.png, .webp, or .gif).")
     parser.add_argument("--no-clip", action="store_true", help="Skip copying the output to the clipboard.")
     parser.add_argument(
@@ -71,6 +72,17 @@ def _zip_pad(items: list, fillvalue, name: str, n_panels: int):
             f"--{name} got {len(items)} values but there are only {n_panels} panel(s)."
         )
     return list(items) + [fillvalue] * (n_panels - len(items))
+
+
+def _parse_color(spec: Optional[str], flag: str) -> Optional[tuple[int, int, int]]:
+    """Parse a hex (#fff, #aabbcc) or named color into an (r,g,b) tuple."""
+    if not spec:
+        return None
+    try:
+        rgb = ImageColor.getrgb(spec)
+    except ValueError as e:
+        raise SystemExit(f"--{flag}: invalid color '{spec}' ({e}).") from e
+    return rgb[:3]
 
 
 def _max_width_for(idx: int, widths: list[int]) -> int:
@@ -145,7 +157,8 @@ def _run_static(args, resolved: list[ResolvedPanel]) -> None:
         img = _render_static_panel(rp, langs[i], files[i], _max_width_for(i, args.max_width), args.max_height)
         items.append((img, titles[i], rp.is_image))
 
-    final = compose_panels(items, no_inner_border=args.no_border, vertical=args.vertical)
+    arrow_color = _parse_color(args.arrow_color, "arrow-color")
+    final = compose_panels(items, no_inner_border=args.no_border, vertical=args.vertical, arrow_color=arrow_color)
     _save_and_maybe_clip(final, args)
 
 
@@ -172,6 +185,7 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
     left_frames, left_durs, left_anim = _frames_for(left, langs[0], files[0], _max_width_for(0, args.max_width))
     right_frames, right_durs, right_anim = _frames_for(right, langs[1], files[1], _max_width_for(1, args.max_width))
 
+    arrow_color = _parse_color(args.arrow_color, "arrow-color")
     composed_frames: list[Image.Image] = []
     composed_durs: list[int] = []
 
@@ -182,7 +196,7 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
             composed_frames.append(compose_side_by_side(
                 left_frames[i], right_freeze, titles[0], titles[1],
                 left_is_image=left.is_image, right_is_image=right.is_image,
-                no_inner_border=args.no_border,
+                no_inner_border=args.no_border, arrow_color=arrow_color,
             ))
             composed_durs.append(left_durs[i] if i < len(left_durs) else 100)
         left_freeze = left_frames[-1]
@@ -191,7 +205,7 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
             composed_frames.append(compose_side_by_side(
                 left_freeze, right_frames[i], titles[0], titles[1],
                 left_is_image=left.is_image, right_is_image=right.is_image,
-                no_inner_border=args.no_border,
+                no_inner_border=args.no_border, arrow_color=arrow_color,
             ))
             composed_durs.append(right_durs[i] if i < len(right_durs) else 100)
     else:
@@ -203,7 +217,7 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
                 right_frames[i % len(right_frames)],
                 titles[0], titles[1],
                 left_is_image=left.is_image, right_is_image=right.is_image,
-                no_inner_border=args.no_border,
+                no_inner_border=args.no_border, arrow_color=arrow_color,
             ))
             ld = left_durs[i % len(left_durs)] if left_durs else 100
             rd = right_durs[i % len(right_durs)] if right_durs else 100
