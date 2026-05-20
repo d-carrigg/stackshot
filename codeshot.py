@@ -38,9 +38,11 @@ from pygments.util import ClassNotFound
 
 DEFAULT_BG = (18, 18, 20)
 PANEL_BG = (32, 33, 36)
+PANEL_BG_HEX = "#%02x%02x%02x" % PANEL_BG
 TEXT = (235, 235, 245)
 SUBTLE = (160, 160, 175)
 ARROW = (130, 130, 255)
+PANEL_RADIUS = 18
 
 TITLE_FONT_NAME_CANDIDATES = [
     "Inter-SemiBold.ttf",
@@ -92,6 +94,23 @@ def detect_lexer(code: str, lang: Optional[str], filename: Optional[str]) -> Tup
         return "text", get_lexer_by_name("text")
 
 
+def _strip_bg(img: Image.Image) -> Image.Image:
+    """Make a flat-colored image background transparent.
+    Samples the corner pixel as the bg color."""
+    img = img.convert("RGBA")
+    bg = img.getpixel((0, 0))
+    if not isinstance(bg, tuple) or len(bg) < 3:
+        return img
+    br, bg_, bb = bg[0], bg[1], bg[2]
+    pixels = list(img.getdata())
+    new_pixels = [
+        (r, g, b, 0) if (r == br and g == bg_ and b == bb) else (r, g, b, a)
+        for (r, g, b, a) in pixels
+    ]
+    img.putdata(new_pixels)
+    return img
+
+
 def render_code_image(code: str, lang: Optional[str], filename_hint: Optional[str]) -> Image.Image:
     _, lexer = detect_lexer(code, lang, filename_hint)
     formatter = ImageFormatter(
@@ -100,15 +119,14 @@ def render_code_image(code: str, lang: Optional[str], filename_hint: Optional[st
         font_size=18,
         line_numbers=False,
         image_format="PNG",
-        line_number_bg=DEFAULT_BG,
-        background_color="#202124",
-        line_number_fg="#888",
-        hl_color="#2a2e34",
+        image_pad=0,
+        background_color=PANEL_BG_HEX,
+        hl_color=PANEL_BG_HEX,
     )
     buf = io.BytesIO()
     highlight(code, lexer, formatter, outfile=buf)
     buf.seek(0)
-    return Image.open(buf).convert("RGBA")
+    return _strip_bg(Image.open(buf))
 
 
 @dataclass
@@ -117,6 +135,150 @@ class BlockSpec:
     title: Optional[str]
     lang: Optional[str]
     filename: Optional[str]
+
+
+@dataclass
+class Panel:
+    code: str
+    title: Optional[str] = None
+    lang: Optional[str] = None
+    is_image: bool = False
+    image_path: Optional[str] = None
+
+
+def apply_rounded_corners(img: Image.Image, radius: int) -> Image.Image:
+    if radius <= 0:
+        return img.convert("RGBA")
+    img = img.convert("RGBA")
+    mask = Image.new("L", img.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        [0, 0, img.size[0], img.size[1]], radius=radius, fill=255
+    )
+    out = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    out.paste(img, (0, 0), mask)
+    return out
+
+
+def parse_markdown(text: str) -> list[Panel]:
+    """Parse markdown-ish input into panels.
+
+    Fenced ```lang ... ``` blocks become code panels with that lang.
+    The non-empty line(s) immediately preceding a fence become its title.
+    Plain text outside fences becomes an auto-detected code panel.
+    """
+    lines = text.split("\n")
+    panels: list[Panel] = []
+    plain: list[str] = []
+    i = 0
+
+    def flush_plain_as_panel():
+        nonlocal plain
+        body = "\n".join(plain).strip("\n")
+        if body.strip():
+            panels.append(Panel(code=body.rstrip(), title=None, lang=None))
+        plain = []
+
+    while i < len(lines):
+        line = lines[i]
+        if line.lstrip().startswith("```"):
+            # Pull title from trailing non-empty lines of `plain`
+            while plain and plain[-1].strip() == "":
+                plain.pop()
+            title_lines: list[str] = []
+            while plain and plain[-1].strip():
+                title_lines.insert(0, plain.pop())
+            if plain:
+                flush_plain_as_panel()
+            title = "\n".join(title_lines).strip() or None
+            lang = line.lstrip()[3:].strip() or None
+            i += 1
+            code_lines: list[str] = []
+            while i < len(lines) and not lines[i].lstrip().startswith("```"):
+                code_lines.append(lines[i])
+                i += 1
+            if i < len(lines):
+                i += 1  # consume closing fence
+            panels.append(Panel(
+                code="\n".join(code_lines).rstrip("\n"),
+                title=title,
+                lang=lang,
+            ))
+        else:
+            plain.append(line)
+            i += 1
+    flush_plain_as_panel()
+    return panels
+
+
+def compose_panels(
+    items: list[tuple[Image.Image, Optional[str], bool]],
+    no_inner_border: bool = False,
+) -> Image.Image:
+    """Compose 1+ panels horizontally with arrows between them."""
+    if not items:
+        raise ValueError("compose_panels requires at least one panel")
+
+    gutter = 40
+    margin = 70
+    title_gap = 18
+    arrow_width = 90
+    base_panel_pad = 24
+    title_font = load_font(24)
+
+    pads = [0 if (no_inner_border and is_img) else base_panel_pad for (_, _, is_img) in items]
+
+    dp = ImageDraw.Draw(Image.new("RGB", (10, 10)))
+    title_h = max(
+        (dp.textbbox((0, 0), t, font=title_font)[3] if t else 0)
+        for (_, t, _) in items
+    )
+    top_pad = margin + (title_h + title_gap if title_h else 0)
+    bottom_pad = margin
+
+    panel_widths = [img.width + 2 * pad for (img, _, _), pad in zip(items, pads)]
+    panel_heights = [img.height + 2 * pad for (img, _, _), pad in zip(items, pads)]
+    panel_h = max(panel_heights)
+
+    n = len(items)
+    arrow_span = (n - 1) * (gutter + arrow_width + gutter)
+    total_w = margin * 2 + sum(panel_widths) + arrow_span
+    total_h = top_pad + panel_h + bottom_pad
+
+    canvas = Image.new("RGBA", (total_w, total_h), DEFAULT_BG + (255,))
+    draw = ImageDraw.Draw(canvas)
+
+    x = margin
+    for i, ((img, title, is_image), pad, pw) in enumerate(zip(items, pads, panel_widths)):
+        panel_x = x
+        panel_y = top_pad
+        draw_bg = not (no_inner_border and is_image)
+        if draw_bg:
+            draw.rounded_rectangle(
+                [panel_x, panel_y, panel_x + pw, panel_y + panel_h],
+                radius=PANEL_RADIUS,
+                fill=PANEL_BG + (255,),
+            )
+        if title:
+            draw.text((panel_x + pad, margin), title, font=title_font, fill=TEXT)
+        code_x = panel_x + pad
+        code_y = panel_y + (panel_h - img.height) // 2
+        canvas.alpha_composite(img.convert("RGBA"), (code_x, code_y))
+
+        x += pw
+        if i < n - 1:
+            ax1 = x + gutter
+            ax2 = x + gutter + arrow_width
+            shaft_y = top_pad + panel_h // 2
+            draw.line([(ax1, shaft_y), (ax2, shaft_y)], fill=ARROW + (255,), width=6)
+            head = 16
+            draw.polygon([
+                (ax2 - head, shaft_y - head),
+                (ax2, shaft_y),
+                (ax2 - head, shaft_y + head),
+            ], fill=ARROW + (255,))
+            x += gutter + arrow_width + gutter
+
+    return canvas
 
 
 def compose_side_by_side(
@@ -210,17 +372,6 @@ def compose_side_by_side(
         (arrow_x2, shaft_y),
         (arrow_x2 - head_size, shaft_y + head_size),
     ], fill=ARROW + (255,))
-
-    # Soft outer glow
-    glow = Image.new("RGBA", (total_w, total_h), (0, 0, 0, 0))
-    glow_draw = ImageDraw.Draw(glow)
-    glow_margin = 40
-    glow_draw.rounded_rectangle(
-        [glow_margin, glow_margin, total_w - glow_margin, total_h - glow_margin],
-        radius=24,
-        fill=(180, 120, 255, 18),
-    )
-    canvas = Image.alpha_composite(canvas, glow)
 
     return canvas
 
@@ -451,20 +602,127 @@ def copy_to_clipboard(img: Image.Image) -> None:
     print("Note: Could not find wl-copy or xclip to copy image to clipboard.")
 
 
-def read_stdin_multiline(prompt: str) -> str:
-    print(prompt)
-    print("Finish input with a single line containing only EOF (Ctrl+D won't be captured here).")
-    print("Type EOF on its own line and press Enter:")
-    lines = []
+def read_block_input() -> Optional[str]:
+    """Read multi-line input. Ends on two consecutive blank lines or Ctrl+D.
+    Returns None if the user types ':cancel'."""
+    lines: list[str] = []
+    blank_run = 0
     while True:
         try:
             line = input()
         except EOFError:
+            print()
             break
-        if line.strip() == "EOF":
+        if line.strip() == ":cancel":
+            return None
+        if line == "":
+            blank_run += 1
+            if blank_run >= 2:
+                break
+            lines.append(line)
+        else:
+            blank_run = 0
+            lines.append(line)
+    while lines and lines[-1] == "":
+        lines.pop()
+    return "\n".join(lines)
+
+
+def _panel_summary(panels: list[Panel]) -> None:
+    for idx, p in enumerate(panels):
+        t = p.title or "(no title)"
+        lang = p.lang or "auto"
+        ln = len(p.code.splitlines()) or 1
+        print(f"  [{idx}] {t}  ({lang}, {ln} line{'s' if ln != 1 else ''})")
+
+
+def interactive_compose(args) -> None:
+    print("Codeshot interactive mode")
+    print("Paste code or markdown. Use ```lang fences to set syntax; the line above a fence becomes its title.")
+    print("End each block with two blank lines (or Ctrl+D). Type :cancel on its own line to abort.\n")
+
+    panels: list[Panel] = []
+    while True:
+        label = f"Block {len(panels) + 1}" if not panels else f"Add block {len(panels) + 1} (Enter empty to finish)"
+        print(f"--- {label} ---")
+        text = read_block_input()
+        if text is None:
+            print("Cancelled.")
+            return
+        if text.strip():
+            parsed = parse_markdown(text)
+            if parsed:
+                panels.extend(parsed)
+                print(f"\nAdded {len(parsed)} panel(s):")
+                _panel_summary(panels)
+        elif not panels:
+            print("Empty input, exiting.")
+            return
+
+        while True:
+            action = input("\n[a]dd / [d]one / [e]dit N / [r]emove N / [q]uit: ").strip().lower()
+            if action in ("", "a", "add"):
+                print()
+                break
+            if action in ("d", "done"):
+                break
+            if action in ("q", "quit", "cancel"):
+                print("Cancelled.")
+                return
+            parts = action.split()
+            if len(parts) == 2 and parts[0] in ("e", "edit", "r", "remove"):
+                try:
+                    idx = int(parts[1])
+                except ValueError:
+                    print("Invalid index.")
+                    continue
+                if not 0 <= idx < len(panels):
+                    print("Out of range.")
+                    continue
+                if parts[0] in ("r", "remove"):
+                    panels.pop(idx)
+                    print(f"Removed [{idx}].")
+                    _panel_summary(panels)
+                    if not panels:
+                        print("All panels removed, exiting.")
+                        return
+                    continue
+                print(f"Re-enter content for panel [{idx}] (two blank lines to finish):")
+                new_text = read_block_input()
+                if not new_text or not new_text.strip():
+                    print("Unchanged.")
+                    continue
+                new_parsed = parse_markdown(new_text)
+                if not new_parsed:
+                    print("Unchanged.")
+                    continue
+                panels[idx:idx + 1] = new_parsed
+                _panel_summary(panels)
+                continue
+            print("Unknown command.")
+        if action in ("d", "done"):
             break
-        lines.append(line)
-    return "\n".join(lines).rstrip("\n")
+
+    if not panels:
+        print("No panels, nothing to render.")
+        return
+
+    items: list[tuple[Image.Image, Optional[str], bool]] = []
+    for p in panels:
+        if p.is_image and p.image_path:
+            img = open_image(p.image_path).convert("RGBA")
+            img = scale_image_to_max(img, args.max_left_width, args.max_panel_height)
+            items.append((img, p.title, True))
+        else:
+            img = render_code_image(p.code, p.lang, None)
+            img = scale_image_to_max(img, args.max_left_width, args.max_panel_height)
+            items.append((img, p.title, False))
+
+    final = compose_panels(items, no_inner_border=args.no_border)
+    out_path = expand_path(args.out)
+    save_image(final, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
+    copy_to_clipboard(final)
+    print(f"\nSaved {out_path} and copied to clipboard.")
 
 
 def launch_ui() -> None:
@@ -771,6 +1029,11 @@ def build_from_args() -> None:
         launch_ui()
         return
 
+    has_any_input = any([args.left, args.right, args.left_image, args.right_image])
+    if not has_any_input:
+        interactive_compose(args)
+        return
+
     # Prepare left side (image or rendered code) as frames
     if args.left_image:
         try:
@@ -780,7 +1043,7 @@ def build_from_args() -> None:
         left_frames, left_durations, left_anim = get_frames_and_durations(left_base)
         left_frames = scale_frames_consistently(left_frames, args.max_left_width, args.max_panel_height)
     else:
-        left_code = args.left or read_stdin_multiline("Paste LEFT code block:")
+        left_code = args.left or ""
         left_img_static = render_code_image(left_code, args.left_lang, args.left_file)
         left_img_static = scale_image_to_max(left_img_static, args.max_left_width, args.max_panel_height)
         left_frames, left_durations, left_anim = [left_img_static], [100], False
@@ -793,11 +1056,19 @@ def build_from_args() -> None:
             raise SystemExit(f"Failed to open --right-image '{args.right_image}': {e}") from e
         right_frames, right_durations, right_anim = get_frames_and_durations(right_base)
         right_frames = scale_frames_consistently(right_frames, args.max_right_width, args.max_panel_height)
-    else:
-        right_code = args.right or read_stdin_multiline("Paste RIGHT code block:")
-        right_img_static = render_code_image(right_code, args.right_lang, args.right_file)
+    elif args.right is not None:
+        right_img_static = render_code_image(args.right, args.right_lang, args.right_file)
         right_img_static = scale_image_to_max(right_img_static, args.max_right_width, args.max_panel_height)
         right_frames, right_durations, right_anim = [right_img_static], [100], False
+    else:
+        # Single-panel mode: no right side provided.
+        items = [(left_frames[0], args.left_title, bool(args.left_image))]
+        final_img = compose_panels(items, no_inner_border=args.no_border)
+        out_path = expand_path(args.out)
+        save_image(final_img, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
+        copy_to_clipboard(final_img)
+        print(f"Saved {out_path} and copied to clipboard.")
+        return
 
     is_animated_output = left_anim or right_anim
 
