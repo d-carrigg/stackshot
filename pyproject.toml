@@ -1,9 +1,19 @@
 [project]
 name = "codeshot"
 version = "0.1.0"
-description = "Add your description here"
+description = "Side-by-side code/image screenshots"
 requires-python = ">=3.12"
 dependencies = [
     "pillow>=10.4.0",
     "pygments>=2.18.0",
 ]
+
+[project.scripts]
+codeshot = "codeshot.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
