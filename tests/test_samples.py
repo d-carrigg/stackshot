@@ -57,6 +57,29 @@ def test_sample_two_panels(docs_img):
     save_image(out, str(docs_img / "two-panels.png"))
 
 
+def test_sample_vertical(docs_img):
+    """Vertical layout: title above first block, downward arrow, second
+    block with no title — mirrors the example in the README."""
+    block1 = _render(
+        "New-BinWips -ScriptBlock {\n"
+        "    $name = Read-Host \"What is your name?\"\n"
+        "    echo \"Hello $name!\"\n"
+        "} -OutFile MyApp",
+        "powershell",
+    )
+    block2 = _render(
+        "$ ./MyApp\n"
+        "What is your name?: BinWips\n"
+        "Hello BinWips!",
+        "bash",
+    )
+    out = compose_panels(
+        [(block1, "Creates PSBinary", False), (block2, None, False)],
+        vertical=True,
+    )
+    save_image(out, str(docs_img / "vertical.png"))
+
+
 def test_sample_markdown_to_rendered(docs_img):
     """Self-referential: the left panel shows the markdown input syntax,
     the right panel shows what codeshot produced from it."""

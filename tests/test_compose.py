@@ -37,3 +37,13 @@ def test_compose_side_by_side_produces_image_wider_than_inputs():
     right = _solid(60, 30)
     out = compose_side_by_side(left, right, "L", "R")
     assert out.width > left.width + right.width
+
+
+def test_compose_panels_vertical_is_taller_and_narrower_than_horizontal():
+    a = _solid(120, 40)
+    b = _solid(100, 30)
+    items = [(a, "A", False), (b, "B", False)]
+    horiz = compose_panels(items, vertical=False)
+    vert = compose_panels(items, vertical=True)
+    assert vert.height > horiz.height
+    assert vert.width < horiz.width

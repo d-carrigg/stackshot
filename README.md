@@ -64,6 +64,13 @@ If only one block is supplied, no arrow or empty right card is drawn.
 
 ![two panels](docs/img/two-panels.png)
 
+### Vertical layout
+
+Pass `--vertical` (works in CLI and interactive mode) to stack panels
+top-to-bottom with a downward arrow between them.
+
+![vertical](docs/img/vertical.png)
+
 ### From the command line
 
 ```bash

@@ -34,6 +34,7 @@ def main() -> None:
     parser.add_argument("--left-image", help="Path to an image file for the left panel")
     parser.add_argument("--right-image", help="Path to an image file for the right panel")
     parser.add_argument("--no-border", action="store_true", help="Remove inner card borders when a side is an image")
+    parser.add_argument("--vertical", action="store_true", help="Stack panels top-to-bottom with downward arrows instead of side-by-side")
     parser.add_argument("--left-title", help="Optional title above the left panel", default="Request")
     parser.add_argument("--right-title", help="Optional title above the right panel", default="Response")
     parser.add_argument("--out", help="Output image path (.png, .webp, or .gif)", default="codeshot.png")
@@ -83,7 +84,7 @@ def main() -> None:
         right_frames, right_durations, right_anim = [right_img_static], [100], False
     else:
         items = [(left_frames[0], args.left_title, bool(args.left_image))]
-        final_img = compose_panels(items, no_inner_border=args.no_border)
+        final_img = compose_panels(items, no_inner_border=args.no_border, vertical=args.vertical)
         out_path = expand_path(args.out)
         save_image(final_img, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
         copy_to_clipboard(final_img)
@@ -93,12 +94,19 @@ def main() -> None:
     is_animated_output = left_anim or right_anim
 
     if not is_animated_output:
-        final_img = compose_side_by_side(
-            left_frames[0], right_frames[0],
-            args.left_title, args.right_title,
-            left_is_image=bool(args.left_image), right_is_image=bool(args.right_image),
-            no_inner_border=args.no_border,
-        )
+        if args.vertical:
+            items = [
+                (left_frames[0], args.left_title, bool(args.left_image)),
+                (right_frames[0], args.right_title, bool(args.right_image)),
+            ]
+            final_img = compose_panels(items, no_inner_border=args.no_border, vertical=True)
+        else:
+            final_img = compose_side_by_side(
+                left_frames[0], right_frames[0],
+                args.left_title, args.right_title,
+                left_is_image=bool(args.left_image), right_is_image=bool(args.right_image),
+                no_inner_border=args.no_border,
+            )
         out_path = expand_path(args.out)
         save_image(final_img, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
         copy_to_clipboard(final_img)

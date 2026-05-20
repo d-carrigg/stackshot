@@ -273,7 +273,7 @@ def interactive_compose(args) -> None:
             img = scale_image_to_max(img, args.max_left_width, args.max_panel_height)
             items.append((img, p.title, False))
 
-    final = compose_panels(items, no_inner_border=args.no_border)
+    final = compose_panels(items, no_inner_border=args.no_border, vertical=getattr(args, "vertical", False))
     out_path = expand_path(args.out)
     save_image(final, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
     copy_to_clipboard(final)

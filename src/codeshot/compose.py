@@ -22,10 +22,14 @@ def apply_rounded_corners(img: Image.Image, radius: int) -> Image.Image:
 def compose_panels(
     items: list[tuple[Image.Image, Optional[str], bool]],
     no_inner_border: bool = False,
+    vertical: bool = False,
 ) -> Image.Image:
-    """Compose 1+ panels horizontally with arrows between them."""
+    """Compose 1+ panels with arrows between them.
+    `vertical=True` stacks them top-to-bottom with downward arrows."""
     if not items:
         raise ValueError("compose_panels requires at least one panel")
+    if vertical:
+        return _compose_panels_vertical(items, no_inner_border)
 
     gutter = 32
     margin = 40
@@ -86,6 +90,69 @@ def compose_panels(
                 (ax2 - head, shaft_y + head),
             ], fill=ARROW + (255,))
             x += gutter + arrow_width + gutter
+
+    return canvas
+
+
+def _compose_panels_vertical(
+    items: list[tuple[Image.Image, Optional[str], bool]],
+    no_inner_border: bool,
+) -> Image.Image:
+    margin = 40
+    gutter = 16
+    title_gap = 10
+    arrow_height = 56
+    base_panel_pad = 24
+    title_font = load_font(24)
+
+    pads = [0 if (no_inner_border and is_img) else base_panel_pad for (_, _, is_img) in items]
+    panel_widths = [img.width + 2 * pad for (img, _, _), pad in zip(items, pads)]
+    panel_heights = [img.height + 2 * pad for (img, _, _), pad in zip(items, pads)]
+    max_panel_w = max(panel_widths)
+
+    dp = ImageDraw.Draw(Image.new("RGB", (10, 10)))
+    title_heights = [
+        (dp.textbbox((0, 0), t, font=title_font)[3] + title_gap if t else 0)
+        for (_, t, _) in items
+    ]
+
+    n = len(items)
+    arrow_block = gutter + arrow_height + gutter
+    total_h = margin + sum(title_heights) + sum(panel_heights) + (n - 1) * arrow_block + margin
+    total_w = margin * 2 + max_panel_w
+
+    canvas = Image.new("RGBA", (total_w, total_h), DEFAULT_BG + (255,))
+    draw = ImageDraw.Draw(canvas)
+
+    y = margin
+    for i, ((img, title, is_image), pad, ph, th) in enumerate(
+        zip(items, pads, panel_heights, title_heights)
+    ):
+        if title:
+            draw.text((margin, y), title, font=title_font, fill=TEXT)
+            y += th
+        draw_bg = not (no_inner_border and is_image)
+        if draw_bg:
+            draw.rounded_rectangle(
+                [margin, y, margin + max_panel_w, y + ph],
+                radius=PANEL_RADIUS,
+                fill=PANEL_BG + (255,),
+            )
+        canvas.alpha_composite(img.convert("RGBA"), (margin + pad, y + pad))
+        y += ph
+        if i < n - 1:
+            y += gutter
+            shaft_x = margin + max_panel_w // 2
+            arrow_y1 = y
+            arrow_y2 = y + arrow_height
+            draw.line([(shaft_x, arrow_y1), (shaft_x, arrow_y2)], fill=ARROW + (255,), width=6)
+            head = 16
+            draw.polygon([
+                (shaft_x - head, arrow_y2 - head),
+                (shaft_x, arrow_y2),
+                (shaft_x + head, arrow_y2 - head),
+            ], fill=ARROW + (255,))
+            y += arrow_height + gutter
 
     return canvas
 
