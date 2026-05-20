@@ -57,3 +57,11 @@ jobs:
         with:
           files: dist/${{ matrix.asset }}
           fail_on_unmatched_files: true
+      - name: Attach license bundle to release
+        if: matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            LICENSE
+            THIRD_PARTY_LICENSES.md
+          fail_on_unmatched_files: true
