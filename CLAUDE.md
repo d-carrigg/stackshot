@@ -54,7 +54,11 @@ exists). Bump and merge again to ship.
   `tests/test_samples.py` — running the suite refreshes them in place.
 - `docs/examples/` — source files used as panel inputs in samples
   (e.g. `print_loop.py`). When adding a sample, prefer a real file
-  here over inline strings in `test_samples.py`.
+  here over inline strings in `test_samples.py`. Recording scripts
+  for animated samples live here too — e.g. `record_print_loop.sh`
+  regenerates `docs/img/print_loop.gif` via asciinema + agg, and the
+  produced `print_loop.cast` should be committed so the GIF can be
+  re-rendered without re-recording.
 - `CHANGELOG.md` — keep in lockstep with version bumps.
 
 ## Conventions

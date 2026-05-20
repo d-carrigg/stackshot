@@ -88,19 +88,15 @@ top-to-bottom with a downward arrow between them.
 ### Animated output (code → gif)
 
 If one of the panels is an animated GIF or WebP, codeimg produces an
-animated output frame-by-frame. Example: `docs/examples/print_loop.py`
-is a short script; record its terminal output as `docs/img/print_loop.gif`,
-then:
-
-```bash
-codeimg docs/examples/print_loop.py docs/img/print_loop.gif \
-  --title Code Output --out docs/img/code-to-gif.gif
-```
+animated output frame-by-frame.
 
 ![code to gif](docs/img/code-to-gif.gif)
 
-(The sample test `test_sample_code_to_gif` regenerates this artifact
-once the recording is committed; until then it skips.)
+Reproduce: `docs/examples/print_loop.py` is the script;
+`docs/examples/record_print_loop.sh` records it with asciinema + agg
+to refresh `docs/img/print_loop.gif`, and
+`uv run pytest tests/test_samples.py::test_sample_code_to_gif`
+composes the code + recording into `docs/img/code-to-gif.gif`.
 
 ### From the command line
 
