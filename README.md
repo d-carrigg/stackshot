@@ -42,10 +42,12 @@ Run `codeimg` with no arguments. Each block opens a multi-line editor:
 - **Alt+Enter** (or **Ctrl+J**) inserts a newline
 - **Ctrl+C** to abort
 
-To insert a clipboard image as a panel: copy the image, then submit an
-empty block (press Enter on a blank line). Clipboard image grab is
-Linux-only (uses `wl-paste` or `xclip`); on macOS/Windows, pass the
-image as a file argument instead.
+To insert an image as a panel: copy the image, then paste (your
+terminal's paste — usually **Ctrl+Shift+V**). If the clipboard has an
+image, it's added as the next panel and the editor auto-advances. If
+the clipboard has text, the paste behaves normally and you stay in the
+editor. Clipboard image grab is Linux-only (uses `wl-paste` or `xclip`);
+on macOS/Windows, pass the image as a file argument instead.
 
 ```text
 $ codeimg --out out.png
@@ -54,7 +56,7 @@ def hi():
     print("hello")            ← Alt+Enter for newline, Enter to submit
 [a]dd / [d]one / [e]dit N / [r]emove N / [q]uit: a
 --- Add block 2 ---
-                              ← Enter on blank line; clipboard image grabbed
+                              ← paste while an image is on the clipboard
 [Image 2]
 ```
 

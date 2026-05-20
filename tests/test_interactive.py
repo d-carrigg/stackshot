@@ -102,7 +102,7 @@ def test_text_only_path_unchanged_when_clipboard_empty(tmp_path: Path, monkeypat
 
 def test_prompt_toolkit_session_builds():
     """Smoke-test the TTY editor's keybindings — Enter submits, Ctrl+J
-    and Alt+Enter insert a newline. Catches import / binding typos."""
+    and Alt+Enter insert a newline, BracketedPaste is intercepted."""
     from prompt_toolkit.keys import Keys
 
     session = interactive_mod._build_session()
@@ -110,3 +110,21 @@ def test_prompt_toolkit_session_builds():
     assert (Keys.Enter,) in bound or (Keys.ControlM,) in bound
     assert (Keys.ControlJ,) in bound
     assert (Keys.Escape, Keys.Enter) in bound or (Keys.Escape, Keys.ControlM) in bound
+    assert (Keys.BracketedPaste,) in bound
+
+
+def test_paste_action_returns_image_when_clipboard_has_image():
+    """When clipboard holds an image, pasting should produce an image
+    panel regardless of the pasted text."""
+    img = Image.new("RGB", (10, 10), (1, 2, 3))
+    kind, payload = interactive_mod._paste_action("some pasted text", img)
+    assert kind == "image"
+    assert payload is img
+
+
+def test_paste_action_returns_text_when_clipboard_has_no_image():
+    """No image on clipboard means a normal text paste — the pasted
+    text is forwarded to the buffer."""
+    kind, payload = interactive_mod._paste_action("print('hi')", None)
+    assert kind == "text"
+    assert payload == "print('hi')"

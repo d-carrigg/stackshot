@@ -19,10 +19,27 @@ from .io_utils import (
 from .markdown import Panel, parse_markdown
 
 
+class _PastedImage:
+    """Sentinel returned from the prompt when the user pastes while an
+    image is on the clipboard. Carries the PIL Image back to the caller."""
+    def __init__(self, img: Image.Image):
+        self.img = img
+
+
+def _paste_action(pasted_text: str, clipboard_image: Optional[Image.Image]):
+    """Decide what a paste event should do. If the clipboard holds an
+    image, the paste becomes an image panel; otherwise the pasted text
+    is inserted into the buffer."""
+    if clipboard_image is not None:
+        return ("image", clipboard_image)
+    return ("text", pasted_text)
+
+
 def _build_session():
     """Lazy-import prompt_toolkit so test/non-TTY paths don't pay the cost."""
     from prompt_toolkit import PromptSession
     from prompt_toolkit.key_binding import KeyBindings
+    from prompt_toolkit.keys import Keys
 
     kb = KeyBindings()
 
@@ -38,13 +55,23 @@ def _build_session():
     def _newline(event):
         event.current_buffer.insert_text("\n")
 
+    @kb.add(Keys.BracketedPaste)
+    def _paste(event):
+        kind, payload = _paste_action(event.data, try_get_clipboard_image())
+        if kind == "image":
+            event.app.exit(result=_PastedImage(payload))
+            return
+        event.current_buffer.insert_text(payload)
+
     return PromptSession(multiline=True, key_bindings=kb)
 
 
 _session = None
 
 
-def _read_text_block_tty() -> Optional[str]:
+def _read_text_block_tty():
+    """Returns str (text submitted), _PastedImage (image pasted), or None
+    (cancelled)."""
     global _session
     if _session is None:
         _session = _build_session()
@@ -86,19 +113,17 @@ def _check_clipboard_for_new_image(
 def _read_block_or_image_tty(
     panels: list[Panel], last_image_hash: Optional[str]
 ) -> tuple[str, str, Optional[str]]:
-    """TTY path: full multi-line editor via prompt_toolkit. Submitting an
-    empty block grabs the current clipboard image if there is one — this
-    is the explicit "paste image" gesture."""
-    text = _read_text_block_tty()
-    if text is None:
+    """TTY path: full multi-line editor via prompt_toolkit. Pasting while
+    an image is on the clipboard immediately adds it as the next panel
+    and advances; pasting text stays in the editor."""
+    result = _read_text_block_tty()
+    if result is None:
         return "cancel", "", last_image_hash
-
-    if not text.strip():
-        post = _check_clipboard_for_new_image(panels, last_image_hash)
-        if post is not None:
-            return post
-
-    return "text", text, last_image_hash
+    if isinstance(result, _PastedImage):
+        _save_clipboard_image_as_panel(result.img, panels)
+        print(f"[Image {len(panels)}]")
+        return "image", panels[-1].image_path or "", last_image_hash
+    return "text", result, last_image_hash
 
 
 def _read_block_or_image_polling(
@@ -162,7 +187,7 @@ def interactive_compose(args) -> None:
     print("Codeimg interactive mode")
     print("Paste code or markdown — ```lang fences set syntax, the line above is the title.")
     print("End a text block with two blank lines (or Ctrl+D).")
-    print("To insert a clipboard image, copy it then submit an empty block (Enter on a blank line).")
+    print("Paste an image to add it as a panel (image pastes auto-advance to the next block).")
     print("Ctrl+C to abort.\n")
 
     panels: list[Panel] = []

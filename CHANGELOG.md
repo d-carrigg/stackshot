@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.2 — 2026-05-20
+
+### Changed
+- Interactive mode reacts to terminal paste: if the clipboard holds an
+  image, the paste creates an image panel and auto-advances to the next
+  block. Pasting text stays in the editor. Replaces the previous
+  "submit an empty block to grab the clipboard image" gesture in TTY
+  mode (non-TTY/piped path keeps empty-block grab for tests).
+
+### Added
+- README covers PyPI (`uv tool install codeimg`), standalone GitHub
+  Release binaries, and from-source install.
+- Auto-tag workflow: pushing to `main` with a bumped version in
+  `pyproject.toml` creates a `v<version>` tag, which triggers the
+  existing release/binary build.
+- `CLAUDE.md` documents the feature-branch → bump → PR → auto-tag flow.
+
 ## 0.2.1 — 2026-05-20
 
 ### Fixed
