@@ -23,13 +23,16 @@ def compose_panels(
     items: list[tuple[Image.Image, Optional[str], bool]],
     no_inner_border: bool = False,
     vertical: bool = False,
+    background: Optional[tuple[int, int, int]] = None,
 ) -> Image.Image:
     """Compose 1+ panels with arrows between them.
-    `vertical=True` stacks them top-to-bottom with downward arrows."""
+    `vertical=True` stacks them top-to-bottom with downward arrows.
+    `background` overrides the default canvas color."""
+    bg = background if background is not None else DEFAULT_BG
     if not items:
         raise ValueError("compose_panels requires at least one panel")
     if vertical:
-        return _compose_panels_vertical(items, no_inner_border)
+        return _compose_panels_vertical(items, no_inner_border, bg)
 
     gutter = 32
     margin = 40
@@ -57,7 +60,7 @@ def compose_panels(
     total_w = margin * 2 + sum(panel_widths) + arrow_span
     total_h = top_pad + max_panel_h + bottom_pad
 
-    canvas = Image.new("RGBA", (total_w, total_h), DEFAULT_BG + (255,))
+    canvas = Image.new("RGBA", (total_w, total_h), bg + (255,))
     draw = ImageDraw.Draw(canvas)
 
     x = margin
@@ -75,7 +78,10 @@ def compose_panels(
             draw.text((panel_x + pad, margin), title, font=title_font, fill=TEXT)
         code_x = panel_x + pad
         code_y = panel_y + pad
-        canvas.alpha_composite(img.convert("RGBA"), (code_x, code_y))
+        img_to_paste = img.convert("RGBA")
+        if no_inner_border and is_image:
+            img_to_paste = apply_rounded_corners(img_to_paste, PANEL_RADIUS)
+        canvas.alpha_composite(img_to_paste, (code_x, code_y))
 
         x += pw
         if i < n - 1:
@@ -97,6 +103,7 @@ def compose_panels(
 def _compose_panels_vertical(
     items: list[tuple[Image.Image, Optional[str], bool]],
     no_inner_border: bool,
+    bg: tuple[int, int, int],
 ) -> Image.Image:
     margin = 40
     gutter = 16
@@ -121,7 +128,7 @@ def _compose_panels_vertical(
     total_h = margin + sum(title_heights) + sum(panel_heights) + (n - 1) * arrow_block + margin
     total_w = margin * 2 + max_panel_w
 
-    canvas = Image.new("RGBA", (total_w, total_h), DEFAULT_BG + (255,))
+    canvas = Image.new("RGBA", (total_w, total_h), bg + (255,))
     draw = ImageDraw.Draw(canvas)
 
     y = margin
@@ -138,7 +145,10 @@ def _compose_panels_vertical(
                 radius=PANEL_RADIUS,
                 fill=PANEL_BG + (255,),
             )
-        canvas.alpha_composite(img.convert("RGBA"), (margin + pad, y + pad))
+        img_to_paste = img.convert("RGBA")
+        if no_inner_border and is_image:
+            img_to_paste = apply_rounded_corners(img_to_paste, PANEL_RADIUS)
+        canvas.alpha_composite(img_to_paste, (margin + pad, y + pad))
         y += ph
         if i < n - 1:
             y += gutter
