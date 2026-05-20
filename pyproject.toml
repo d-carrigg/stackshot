@@ -1,6 +1,6 @@
 [project]
 name = "codeimg"
-version = "0.2.5"
+version = "0.3.0"
 description = "Compose code snippets, screenshots, and images into multi-panel illustrations — for READMEs, docs, blog posts, and tutorials"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -26,6 +26,9 @@ dependencies = [
   "prompt-toolkit>=3.0.43",
   "pygments>=2.20.0",
 ]
+
+[project.optional-dependencies]
+ui = ["tkinterdnd2>=0.4.3"]
 
 [project.urls]
 Homepage = "https://github.com/d-carrigg/codeimg"
