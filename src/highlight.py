@@ -35,18 +35,25 @@ def detect_lexer(code: str, lang: Optional[str], filename: Optional[str]) -> Tup
         return "text", get_lexer_by_name("text")
 
 
-def render_code_image(code: str, lang: Optional[str], filename_hint: Optional[str]) -> Image.Image:
+def render_code_image(
+    code: str,
+    lang: Optional[str],
+    filename_hint: Optional[str],
+    scale: float = 1.0,
+) -> Image.Image:
     """Render `code` to an RGBA image with the same background as the
     surrounding panel, so antialiased glyph edges blend cleanly when
-    composited (no Monokai-tinted fringe)."""
+    composited (no Monokai-tinted fringe). `scale` rasterizes the
+    font natively at the higher size instead of upscaling after — no
+    LANCZOS blur on glyphs."""
     _, lexer = detect_lexer(code, lang, filename_hint)
     formatter = ImageFormatter(
         style=_PanelMonokai,
         font_name="DejaVu Sans Mono",
-        font_size=18,
+        font_size=max(1, round(18 * scale)),
         line_numbers=False,
         image_format="PNG",
-        image_pad=12,
+        image_pad=max(0, round(12 * scale)),
     )
     buf = io.BytesIO()
     highlight(code, lexer, formatter, outfile=buf)

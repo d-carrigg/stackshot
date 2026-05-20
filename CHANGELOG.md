@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.3.0 — 2026-05-20
+
+### Added
+- `--scale FLOAT` CLI flag (default `2.0`) — a single multiplier that
+  scales fonts, paddings, gutters, arrow dimensions, and the per-panel
+  max-size bounds together so layout proportions stay identical. Code
+  panels rasterize natively at the higher size via Pygments (no LANCZOS
+  blur on glyphs); image panels are upscaled via LANCZOS. Use
+  `--scale 1` to reproduce the pre-0.3.0 compact sizing; `--scale 3`
+  for ~1080p-class output.
+
+### Changed
+- Default output is now HD-quality. The committed sample PNGs in
+  `docs/img/` regenerate at roughly 2× their previous dimensions (e.g.
+  `vertical.png` 608×483 → 1216×951). Pass `--scale 1` to opt back into
+  the old sizing.
+- `compose_panels`, `compose_side_by_side`, `compute_layout`, and
+  `render_code_image` gained a `scale: float = 1.0` keyword argument.
+  Library callers don't need to change unless they want crisper output.
+- New `io_utils.fit_image` / `fit_frames` helpers handle the
+  bounds-scaling and optional LANCZOS upscale for image panels,
+  used by the CLI and interactive paths.
+
+### Known gaps
+- `--ui` (desktop preview window) does not yet honor `--scale` and
+  still renders at the pre-0.3.0 compact sizing. CLI invocations
+  (the primary path) pick up the new default automatically.
+
 ## 0.2.4 — 2026-05-20
 
 ### Added

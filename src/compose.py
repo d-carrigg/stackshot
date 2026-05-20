@@ -6,10 +6,17 @@ from .colors import ARROW, DEFAULT_BG, PANEL_BG, PANEL_RADIUS, TEXT
 from .fonts import RESAMPLE_LANCZOS, load_font
 
 
+# Layout constants are expressed at scale=1.0. Every consumer multiplies
+# by the active scale factor so a single --scale knob drives crispness
+# without breaking layout proportions.
 SHAFT_HALF = 3   # half-thickness of the arrow shaft
 HEAD_LEN = 18    # how far the head extends past where the shaft ends
 HEAD_HALF = 11   # head base half-width (perpendicular to flight direction)
 SS = 4           # supersampling factor for arrow antialiasing
+
+
+def _s(v: float, scale: float) -> int:
+    return max(1, round(v * scale))
 
 
 def apply_rounded_corners(img: Image.Image, radius: int) -> Image.Image:
@@ -44,31 +51,37 @@ def _draw_arrow_supersampled(
     canvas.alpha_composite(layer, (x_min, y_min))
 
 
-def _arrow_right(x1: int, x2: int, y: int) -> list[tuple[int, int]]:
+def _arrow_right(
+    x1: int, x2: int, y: int,
+    shaft_half: int, head_len: int, head_half: int,
+) -> list[tuple[int, int]]:
     """Polygon points for a right-pointing arrow from x1 to x2, centered on y."""
-    head_base_x = x2 - HEAD_LEN
+    head_base_x = x2 - head_len
     return [
-        (x1, y - SHAFT_HALF),
-        (head_base_x, y - SHAFT_HALF),
-        (head_base_x, y - HEAD_HALF),
+        (x1, y - shaft_half),
+        (head_base_x, y - shaft_half),
+        (head_base_x, y - head_half),
         (x2, y),
-        (head_base_x, y + HEAD_HALF),
-        (head_base_x, y + SHAFT_HALF),
-        (x1, y + SHAFT_HALF),
+        (head_base_x, y + head_half),
+        (head_base_x, y + shaft_half),
+        (x1, y + shaft_half),
     ]
 
 
-def _arrow_down(y1: int, y2: int, x: int) -> list[tuple[int, int]]:
+def _arrow_down(
+    y1: int, y2: int, x: int,
+    shaft_half: int, head_len: int, head_half: int,
+) -> list[tuple[int, int]]:
     """Polygon points for a down-pointing arrow from y1 to y2, centered on x."""
-    head_base_y = y2 - HEAD_LEN
+    head_base_y = y2 - head_len
     return [
-        (x - SHAFT_HALF, y1),
-        (x + SHAFT_HALF, y1),
-        (x + SHAFT_HALF, head_base_y),
-        (x + HEAD_HALF, head_base_y),
+        (x - shaft_half, y1),
+        (x + shaft_half, y1),
+        (x + shaft_half, head_base_y),
+        (x + head_half, head_base_y),
         (x, y2),
-        (x - HEAD_HALF, head_base_y),
-        (x - SHAFT_HALF, head_base_y),
+        (x - head_half, head_base_y),
+        (x - shaft_half, head_base_y),
     ]
 
 
@@ -78,24 +91,32 @@ def compose_panels(
     vertical: bool = False,
     background: Optional[tuple[int, int, int]] = None,
     arrow_color: Optional[tuple[int, int, int]] = None,
+    scale: float = 1.0,
 ) -> Image.Image:
     """Compose 1+ panels with arrows between them.
     `vertical=True` stacks them top-to-bottom with downward arrows.
     `background` overrides the default canvas color.
-    `arrow_color` overrides the default arrow color."""
+    `arrow_color` overrides the default arrow color.
+    `scale` multiplies every layout constant (fonts, paddings, gutters,
+    arrow dims). Inputs are assumed to already be rendered at the same
+    scale."""
     bg = background if background is not None else DEFAULT_BG
     arrow = arrow_color if arrow_color is not None else ARROW
     if not items:
         raise ValueError("compose_panels requires at least one panel")
     if vertical:
-        return _compose_panels_vertical(items, no_inner_border, bg, arrow)
+        return _compose_panels_vertical(items, no_inner_border, bg, arrow, scale)
 
-    gutter = 32
-    margin = 40
-    title_gap = 12
-    arrow_width = 90
-    base_panel_pad = 24
-    title_font = load_font(24)
+    gutter = _s(32, scale)
+    margin = _s(40, scale)
+    title_gap = _s(12, scale)
+    arrow_width = _s(90, scale)
+    base_panel_pad = _s(24, scale)
+    title_font = load_font(_s(24, scale))
+    panel_radius = _s(PANEL_RADIUS, scale)
+    shaft_half = _s(SHAFT_HALF, scale)
+    head_len = _s(HEAD_LEN, scale)
+    head_half = _s(HEAD_HALF, scale)
 
     pads = [0 if (no_inner_border and is_img) else base_panel_pad for (_, _, is_img) in items]
 
@@ -127,7 +148,7 @@ def compose_panels(
         if draw_bg:
             draw.rounded_rectangle(
                 [panel_x, panel_y, panel_x + pw, panel_y + ph],
-                radius=PANEL_RADIUS,
+                radius=panel_radius,
                 fill=PANEL_BG + (255,),
             )
         if title:
@@ -136,7 +157,7 @@ def compose_panels(
         code_y = panel_y + pad
         img_to_paste = img.convert("RGBA")
         if no_inner_border and is_image:
-            img_to_paste = apply_rounded_corners(img_to_paste, PANEL_RADIUS)
+            img_to_paste = apply_rounded_corners(img_to_paste, panel_radius)
         canvas.alpha_composite(img_to_paste, (code_x, code_y))
 
         x += pw
@@ -144,7 +165,11 @@ def compose_panels(
             ax1 = x + gutter
             ax2 = x + gutter + arrow_width
             shaft_y = top_pad + max_panel_h // 2
-            _draw_arrow_supersampled(canvas, _arrow_right(ax1, ax2, shaft_y), arrow + (255,))
+            _draw_arrow_supersampled(
+                canvas,
+                _arrow_right(ax1, ax2, shaft_y, shaft_half, head_len, head_half),
+                arrow + (255,),
+            )
             x += gutter + arrow_width + gutter
 
     return canvas
@@ -155,13 +180,18 @@ def _compose_panels_vertical(
     no_inner_border: bool,
     bg: tuple[int, int, int],
     arrow: tuple[int, int, int],
+    scale: float = 1.0,
 ) -> Image.Image:
-    margin = 40
-    gutter = 16
-    title_gap = 10
-    arrow_height = 56
-    base_panel_pad = 24
-    title_font = load_font(24)
+    margin = _s(40, scale)
+    gutter = _s(16, scale)
+    title_gap = _s(10, scale)
+    arrow_height = _s(56, scale)
+    base_panel_pad = _s(24, scale)
+    title_font = load_font(_s(24, scale))
+    panel_radius = _s(PANEL_RADIUS, scale)
+    shaft_half = _s(SHAFT_HALF, scale)
+    head_len = _s(HEAD_LEN, scale)
+    head_half = _s(HEAD_HALF, scale)
 
     pads = [0 if (no_inner_border and is_img) else base_panel_pad for (_, _, is_img) in items]
     panel_widths = [img.width + 2 * pad for (img, _, _), pad in zip(items, pads)]
@@ -193,12 +223,12 @@ def _compose_panels_vertical(
         if draw_bg:
             draw.rounded_rectangle(
                 [margin, y, margin + max_panel_w, y + ph],
-                radius=PANEL_RADIUS,
+                radius=panel_radius,
                 fill=PANEL_BG + (255,),
             )
         img_to_paste = img.convert("RGBA")
         if no_inner_border and is_image:
-            img_to_paste = apply_rounded_corners(img_to_paste, PANEL_RADIUS)
+            img_to_paste = apply_rounded_corners(img_to_paste, panel_radius)
         canvas.alpha_composite(img_to_paste, (margin + pad, y + pad))
         y += ph
         if i < n - 1:
@@ -206,7 +236,11 @@ def _compose_panels_vertical(
             shaft_x = margin + max_panel_w // 2
             arrow_y1 = y
             arrow_y2 = y + arrow_height
-            _draw_arrow_supersampled(canvas, _arrow_down(arrow_y1, arrow_y2, shaft_x), arrow + (255,))
+            _draw_arrow_supersampled(
+                canvas,
+                _arrow_down(arrow_y1, arrow_y2, shaft_x, shaft_half, head_len, head_half),
+                arrow + (255,),
+            )
             y += arrow_height + gutter
 
     return canvas
@@ -221,12 +255,17 @@ def compose_side_by_side(
     right_is_image: bool = False,
     no_inner_border: bool = False,
     arrow_color: Optional[tuple[int, int, int]] = None,
+    scale: float = 1.0,
 ) -> Image.Image:
     arrow = arrow_color if arrow_color is not None else ARROW
-    gutter = 32
-    margin = 40
-    title_gap = 12
-    title_font = load_font(24)
+    gutter = _s(32, scale)
+    margin = _s(40, scale)
+    title_gap = _s(12, scale)
+    title_font = load_font(_s(24, scale))
+    panel_radius = _s(PANEL_RADIUS, scale)
+    shaft_half = _s(SHAFT_HALF, scale)
+    head_len = _s(HEAD_LEN, scale)
+    head_half = _s(HEAD_HALF, scale)
 
     draw_probe = Image.new("RGB", (10, 10))
     dp = ImageDraw.Draw(draw_probe)
@@ -234,7 +273,7 @@ def compose_side_by_side(
     right_title_h = dp.textbbox((0, 0), right_title or "", font=title_font)[3] if right_title else 0
     title_h = max(left_title_h, right_title_h)
 
-    base_panel_pad = 24
+    base_panel_pad = _s(24, scale)
     left_panel_pad = 0 if (no_inner_border and left_is_image) else base_panel_pad
     right_panel_pad = 0 if (no_inner_border and right_is_image) else base_panel_pad
     top_pad = margin + (title_h + title_gap if title_h else 0)
@@ -244,7 +283,7 @@ def compose_side_by_side(
     right_inner_h = right_img.height + right_panel_pad * 2
     max_panel_h = max(left_inner_h, right_inner_h)
     total_h = top_pad + max_panel_h + bottom_pad
-    arrow_width = 90
+    arrow_width = _s(90, scale)
 
     total_w = (
         margin
@@ -278,12 +317,12 @@ def compose_side_by_side(
     if draw_left_bg:
         draw.rounded_rectangle(
             [left_panel_x, left_panel_y, left_panel_x + left_panel_w, left_panel_y + left_panel_h],
-            radius=PANEL_RADIUS, fill=PANEL_BG + (255,),
+            radius=panel_radius, fill=PANEL_BG + (255,),
         )
     if draw_right_bg:
         draw.rounded_rectangle(
             [right_panel_x, right_panel_y, right_panel_x + right_panel_w, right_panel_y + right_panel_h],
-            radius=PANEL_RADIUS, fill=PANEL_BG + (255,),
+            radius=panel_radius, fill=PANEL_BG + (255,),
         )
 
     left_code_x = left_panel_x + left_panel_pad
@@ -297,7 +336,11 @@ def compose_side_by_side(
     arrow_center_y = top_pad + max_panel_h // 2
     arrow_x1 = left_panel_x + left_panel_w + gutter
     arrow_x2 = right_panel_x - gutter
-    _draw_arrow_supersampled(canvas, _arrow_right(arrow_x1, arrow_x2, arrow_center_y), arrow + (255,))
+    _draw_arrow_supersampled(
+        canvas,
+        _arrow_right(arrow_x1, arrow_x2, arrow_center_y, shaft_half, head_len, head_half),
+        arrow + (255,),
+    )
 
     return canvas
 
@@ -310,11 +353,12 @@ def compute_layout(
     left_is_image: bool,
     right_is_image: bool,
     no_inner_border: bool,
+    scale: float = 1.0,
 ):
-    gutter = 32
-    margin = 40
-    title_gap = 12
-    title_font = load_font(24)
+    gutter = _s(32, scale)
+    margin = _s(40, scale)
+    title_gap = _s(12, scale)
+    title_font = load_font(_s(24, scale))
 
     draw_probe = Image.new("RGB", (10, 10))
     dp = ImageDraw.Draw(draw_probe)
@@ -322,7 +366,7 @@ def compute_layout(
     right_title_h = dp.textbbox((0, 0), right_title or "", font=title_font)[3] if right_title else 0
     title_h = max(left_title_h, right_title_h)
 
-    base_panel_pad = 24
+    base_panel_pad = _s(24, scale)
     left_panel_pad = 0 if (no_inner_border and left_is_image) else base_panel_pad
     right_panel_pad = 0 if (no_inner_border and right_is_image) else base_panel_pad
     top_pad = margin + (title_h + title_gap if title_h else 0)
@@ -332,7 +376,7 @@ def compute_layout(
     right_inner_h = right_img.height + right_panel_pad * 2
     panel_h = max(left_inner_h, right_inner_h)
     total_h = top_pad + panel_h + bottom_pad
-    arrow_width = 90
+    arrow_width = _s(90, scale)
 
     total_w = (
         margin

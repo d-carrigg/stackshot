@@ -11,8 +11,8 @@ import pytest
 from PIL import Image
 
 from codeimg import compose_panels, parse_markdown, render_code_image
-from codeimg.cli import main
-from codeimg.io_utils import open_image, save_image, scale_image_to_max
+from codeimg.cli import DEFAULT_SCALE, main
+from codeimg.io_utils import fit_image, open_image, save_image
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -26,14 +26,18 @@ def docs_img():
     return DOCS_IMG
 
 
-def render_markdown(md: str, vertical: bool = False, background=None) -> Image.Image:
-    """Public-API render: parse markdown -> render each panel -> compose."""
+def render_markdown(
+    md: str, vertical: bool = False, background=None, scale: float = DEFAULT_SCALE,
+) -> Image.Image:
+    """Public-API render: parse markdown -> render each panel -> compose.
+    Mirrors the CLI's scaling: code rasterized natively at `scale`, max
+    bounds multiplied by `scale`."""
     items = []
     for p in parse_markdown(md):
-        img = render_code_image(p.code, p.lang, None)
-        img = scale_image_to_max(img, 1200, 900)
+        img = render_code_image(p.code, p.lang, None, scale=scale)
+        img = fit_image(img, 1200, 900, scale)
         items.append((img, p.title, False))
-    return compose_panels(items, vertical=vertical, background=background)
+    return compose_panels(items, vertical=vertical, background=background, scale=scale)
 
 
 def test_sample_single_panel(docs_img):
@@ -117,16 +121,19 @@ def test_sample_markdown_to_rendered(docs_img):
     # The literal markdown can't itself be parsed (it contains the
     # fences we want to display), so render the raw text directly with
     # the markdown lexer, then compose alongside the rendered image.
-    md_img = scale_image_to_max(
-        render_code_image(inner_md, "markdown", None), 1200, 900
+    scale = DEFAULT_SCALE
+    md_img = fit_image(
+        render_code_image(inner_md, "markdown", None, scale=scale),
+        1200, 900, scale,
     )
-    output_img = scale_image_to_max(
-        open_image(str(tmp)).convert("RGBA"), 1200, 900
+    # The rendered inner image is already at the same scale, so just cap it.
+    output_img = fit_image(
+        open_image(str(tmp)).convert("RGBA"), 1200, 900, scale,
     )
     out = compose_panels([
         (md_img, "Input (markdown)", False),
         (output_img, "Output", True),
-    ], vertical=True, no_inner_border=True)
+    ], vertical=True, no_inner_border=True, scale=scale)
     save_image(out, str(docs_img / "markdown-demo.png"))
     tmp.unlink(missing_ok=True)
 
