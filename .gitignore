@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 .idea/awsToolkit.xml
 codeshot.png
+*.egg-info/
