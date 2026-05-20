@@ -9,9 +9,9 @@ from .highlight import render_code_image
 from .io_utils import (
     copy_to_clipboard,
     expand_path,
+    fit_image,
     open_image,
     save_image,
-    scale_image_to_max,
     try_get_clipboard_image,
 )
 from .markdown import Panel, parse_markdown
@@ -229,19 +229,23 @@ def interactive_compose(args) -> None:
     max_w = getattr(args, "max_width", None) or []
     max_w = max_w[0] if max_w else 1200
     max_h = getattr(args, "max_height", 1200)
+    scale = getattr(args, "scale", 1.0)
 
     items: list[tuple[Image.Image, Optional[str], bool]] = []
     for p in panels:
         if p.is_image and p.image_path:
             img = open_image(p.image_path).convert("RGBA")
-            img = scale_image_to_max(img, max_w, max_h)
+            img = fit_image(img, max_w, max_h, scale, upscale=True)
             items.append((img, p.title, True))
         else:
-            img = render_code_image(p.code, p.lang, None)
-            img = scale_image_to_max(img, max_w, max_h)
+            img = render_code_image(p.code, p.lang, None, scale=scale)
+            img = fit_image(img, max_w, max_h, scale)
             items.append((img, p.title, False))
 
-    final = compose_panels(items, no_inner_border=args.no_border, vertical=getattr(args, "vertical", False))
+    final = compose_panels(
+        items, no_inner_border=args.no_border,
+        vertical=getattr(args, "vertical", False), scale=scale,
+    )
     out_path = expand_path(args.out)
     save_image(final, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
     if not getattr(args, "no_clip", False):

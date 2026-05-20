@@ -13,20 +13,21 @@ from .interactive import interactive_compose
 from .io_utils import (
     copy_to_clipboard,
     expand_path,
+    fit_frames,
+    fit_image,
     get_frames_and_durations,
     open_image,
     print_progress,
     save_animated_gif,
     save_animated_webp,
     save_image,
-    scale_frames_consistently,
-    scale_image_to_max,
 )
 from .panel_input import ResolvedPanel, resolve_panel
 
 
 DEFAULT_MAX_WIDTH = 1200
 DEFAULT_MAX_HEIGHT = 1200
+DEFAULT_SCALE = 2.0
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -62,6 +63,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--webp-quality", type=int, default=90, help="Animated/static WebP quality (0-100).")
     parser.add_argument("--webp-method", type=int, default=4, help="Animated/static WebP method (0=fast..6=best).")
+    parser.add_argument(
+        "--scale", type=float, default=DEFAULT_SCALE,
+        help=f"Resolution multiplier for fonts, padding, and panel sizes. "
+             f"1.0 = compact (pre-0.3.0 sizing); {DEFAULT_SCALE} = HD (default); 3.0 ≈ 1080p. "
+             f"Higher values render text natively at higher size — no upscale blur.",
+    )
     parser.add_argument("--ui", action="store_true", help="Launch the desktop UI.")
     return parser
 
@@ -111,13 +118,15 @@ def _open_image_or_die(path: str, label: str) -> Image.Image:
 
 
 def _render_static_panel(
-    rp: ResolvedPanel, lang: Optional[str], file_hint: Optional[str], max_w: int, max_h: int,
+    rp: ResolvedPanel, lang: Optional[str], file_hint: Optional[str],
+    max_w: int, max_h: int, scale: float,
 ) -> Image.Image:
     if rp.is_image:
         img = _open_image_or_die(rp.image_path or "", "image")
-        return scale_image_to_max(img.convert("RGBA"), max_w, max_h)
-    img = render_code_image(rp.code, lang, file_hint or rp.filename_hint)
-    return scale_image_to_max(img, max_w, max_h)
+        return fit_image(img.convert("RGBA"), max_w, max_h, scale, upscale=True)
+    # Code is rasterized natively at higher size; just cap to scaled bounds.
+    img = render_code_image(rp.code, lang, file_hint or rp.filename_hint, scale=scale)
+    return fit_image(img, max_w, max_h, scale)
 
 
 def _save_and_maybe_clip(img: Image.Image, args) -> str:
@@ -168,11 +177,17 @@ def _run_static(args, resolved: list[ResolvedPanel]) -> None:
 
     items: list[tuple[Image.Image, Optional[str], bool]] = []
     for i, rp in enumerate(resolved):
-        img = _render_static_panel(rp, langs[i], files[i], _max_width_for(i, args.max_width), args.max_height)
+        img = _render_static_panel(
+            rp, langs[i], files[i],
+            _max_width_for(i, args.max_width), args.max_height, args.scale,
+        )
         items.append((img, titles[i], rp.is_image))
 
     arrow_color = _parse_color(args.arrow_color, "arrow-color")
-    final = compose_panels(items, no_inner_border=args.no_border, vertical=args.vertical, arrow_color=arrow_color)
+    final = compose_panels(
+        items, no_inner_border=args.no_border, vertical=args.vertical,
+        arrow_color=arrow_color, scale=args.scale,
+    )
     _save_and_maybe_clip(final, args)
 
 
@@ -190,10 +205,10 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
         if rp.is_image:
             base = _open_image_or_die(rp.image_path or "", "image")
             frames, durs, anim = get_frames_and_durations(base)
-            frames = scale_frames_consistently(frames, max_w, args.max_height)
+            frames = fit_frames(frames, max_w, args.max_height, args.scale)
             return frames, durs, anim
-        img = render_code_image(rp.code, lang, fhint or rp.filename_hint)
-        img = scale_image_to_max(img, max_w, args.max_height)
+        img = render_code_image(rp.code, lang, fhint or rp.filename_hint, scale=args.scale)
+        img = fit_image(img, max_w, args.max_height, args.scale)
         return [img], [100], False
 
     left_frames, left_durs, left_anim = _frames_for(left, langs[0], files[0], _max_width_for(0, args.max_width))
@@ -211,6 +226,7 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
                 left_frames[i], right_freeze, titles[0], titles[1],
                 left_is_image=left.is_image, right_is_image=right.is_image,
                 no_inner_border=args.no_border, arrow_color=arrow_color,
+                scale=args.scale,
             ))
             composed_durs.append(left_durs[i] if i < len(left_durs) else 100)
         left_freeze = left_frames[-1]
@@ -220,6 +236,7 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
                 left_freeze, right_frames[i], titles[0], titles[1],
                 left_is_image=left.is_image, right_is_image=right.is_image,
                 no_inner_border=args.no_border, arrow_color=arrow_color,
+                scale=args.scale,
             ))
             composed_durs.append(right_durs[i] if i < len(right_durs) else 100)
     else:
@@ -232,6 +249,7 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
                 titles[0], titles[1],
                 left_is_image=left.is_image, right_is_image=right.is_image,
                 no_inner_border=args.no_border, arrow_color=arrow_color,
+                scale=args.scale,
             ))
             ld = left_durs[i % len(left_durs)] if left_durs else 100
             rd = right_durs[i % len(right_durs)] if right_durs else 100
@@ -280,6 +298,10 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
+
+    # `not (x > 0)` rejects NaN as well as 0 and negatives — `nan > 0` is False.
+    if not (args.scale > 0):
+        raise SystemExit(f"--scale must be > 0 (got {args.scale}).")
 
     if args.ui:
         from .ui import launch_ui

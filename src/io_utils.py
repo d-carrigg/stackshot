@@ -111,6 +111,40 @@ def get_frames_and_durations(img: Image.Image) -> Tuple[list[Image.Image], list[
     return frames, durations, True
 
 
+def upscale_image(img: Image.Image, scale: float) -> Image.Image:
+    """Upscale by `scale` via LANCZOS. Returns img unchanged when scale==1.0."""
+    if scale == 1.0 or scale <= 0:
+        return img
+    new_w = max(1, round(img.width * scale))
+    new_h = max(1, round(img.height * scale))
+    if new_w == img.width and new_h == img.height:
+        return img
+    return img.resize((new_w, new_h), resample=RESAMPLE_LANCZOS)
+
+
+def fit_image(
+    img: Image.Image, max_w: int, max_h: int, scale: float = 1.0, upscale: bool = False,
+) -> Image.Image:
+    """Cap `img` to bounds scaled by `scale`. Pass `upscale=True` for
+    image panels (LANCZOS-grow them by `scale` first); leave it False
+    for code panels, which `render_code_image` already rasterized at
+    the higher size natively."""
+    if upscale:
+        img = upscale_image(img, scale)
+    return scale_image_to_max(img, max(1, round(max_w * scale)), max(1, round(max_h * scale)))
+
+
+def fit_frames(frames: list[Image.Image], max_w: int, max_h: int, scale: float = 1.0) -> list[Image.Image]:
+    """Animated counterpart to `fit_image(upscale=True)`: every frame is
+    LANCZOS-upscaled by `scale`, then capped to bounds scaled by `scale`
+    using the first frame's dimensions so frames stay identically sized.
+    Only used for animated *image* panels — code panels are static."""
+    if not frames:
+        return frames
+    scaled = [upscale_image(f, scale) for f in frames]
+    return scale_frames_consistently(scaled, max(1, round(max_w * scale)), max(1, round(max_h * scale)))
+
+
 def scale_image_to_max(img: Image.Image, max_w: int, max_h: int) -> Image.Image:
     if max_w <= 0 and max_h <= 0:
         return img
