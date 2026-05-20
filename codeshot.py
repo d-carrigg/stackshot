@@ -1,4 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "pillow>=10.4.0",
+#     "pygments>=2.18.0",
+# ]
+# ///
 import argparse
 import io
 import os
@@ -9,7 +16,16 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageFont, ImageSequence, UnidentifiedImageError
+try:
+    from PIL import ImageTk  # for Tk preview
+except (ImportError, RuntimeError):
+    ImageTk = None
 from PIL import features as PIL_FEATURES
+try:
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+except (ImportError, RuntimeError):
+    tk = None  # UI optional
 from pygments import highlight
 from pygments.formatters.img import ImageFormatter
 from pygments.lexers import get_lexer_by_name, guess_lexer, guess_lexer_for_filename
@@ -209,6 +225,69 @@ def compose_side_by_side(
     return canvas
 
 
+def compute_layout(
+    left_img: Image.Image,
+    right_img: Image.Image,
+    left_title: Optional[str],
+    right_title: Optional[str],
+    left_is_image: bool,
+    right_is_image: bool,
+    no_inner_border: bool,
+):
+    gutter = 40
+    margin = 70
+    title_gap = 18
+    title_font = load_font(24)
+
+    draw_probe = Image.new("RGB", (10, 10))
+    dp = ImageDraw.Draw(draw_probe)
+    left_title_h = dp.textbbox((0, 0), left_title or "", font=title_font)[3] if left_title else 0
+    right_title_h = dp.textbbox((0, 0), right_title or "", font=title_font)[3] if right_title else 0
+    title_h = max(left_title_h, right_title_h)
+
+    base_panel_pad = 24
+    left_panel_pad = 0 if (no_inner_border and left_is_image) else base_panel_pad
+    right_panel_pad = 0 if (no_inner_border and right_is_image) else base_panel_pad
+    top_pad = margin + (title_h + title_gap if title_h else 0)
+    bottom_pad = margin
+
+    left_inner_h = left_img.height + left_panel_pad * 2
+    right_inner_h = right_img.height + right_panel_pad * 2
+    panel_h = max(left_inner_h, right_inner_h)
+    total_h = top_pad + panel_h + bottom_pad
+    arrow_width = 90
+
+    total_w = (
+        margin
+        + left_img.width + left_panel_pad * 2
+        + gutter + arrow_width + gutter
+        + right_img.width + right_panel_pad * 2
+        + margin
+    )
+
+    left_panel_x = margin
+    left_panel_y = top_pad
+    left_panel_w = left_img.width + left_panel_pad * 2
+    left_panel_h = panel_h
+
+    right_panel_x = margin + left_panel_w + gutter + arrow_width + gutter
+    right_panel_y = top_pad
+    right_panel_w = right_img.width + right_panel_pad * 2
+    right_panel_h = panel_h
+
+    left_title_xy = (margin + left_panel_pad, margin)
+    right_title_x = margin + left_img.width + left_panel_pad * 2 + gutter + arrow_width + gutter + right_panel_pad
+    right_title_xy = (right_title_x, margin)
+
+    return {
+        "total_size": (total_w, total_h),
+        "left_panel": (left_panel_x, left_panel_y, left_panel_w, left_panel_h, left_panel_pad),
+        "right_panel": (right_panel_x, right_panel_y, right_panel_w, right_panel_h, right_panel_pad),
+        "left_title_xy": left_title_xy,
+        "right_title_xy": right_title_xy,
+    }
+
+
 def save_image(img: Image.Image, out_path: str, webp_quality: int = 100, webp_method: int = 6) -> str:
     ext = os.path.splitext(out_path)[1].lower()
     fmt = "PNG" if ext not in (".webp",) else "WEBP"
@@ -388,6 +467,276 @@ def read_stdin_multiline(prompt: str) -> str:
     return "\n".join(lines).rstrip("\n")
 
 
+def launch_ui() -> None:
+    if tk is None:
+        print("UI dependencies not available. Tkinter is required.")
+        return
+
+    root = tk.Tk()
+    root.title("Codeshot")
+
+    # State
+    left_image_path = tk.StringVar()
+    right_image_path = tk.StringVar()
+    left_title = tk.StringVar(value="Request")
+    right_title = tk.StringVar(value="Response")
+    out_path = tk.StringVar(value="codeshot.png")
+    no_border = tk.BooleanVar(value=False)
+    sequential = tk.BooleanVar(value=False)
+    webp_quality = tk.IntVar(value=90)
+    webp_method = tk.IntVar(value=4)
+
+    def choose_left():
+        path = filedialog.askopenfilename(title="Choose left image")
+        if path:
+            left_image_path.set(path)
+
+    def choose_right():
+        path = filedialog.askopenfilename(title="Choose right image")
+        if path:
+            right_image_path.set(path)
+
+    def choose_out():
+        path = filedialog.asksaveasfilename(title="Save as", defaultextension=".png", filetypes=[
+            ("PNG", ".png"), ("WebP", ".webp"), ("GIF", ".gif"), ("All", ".*")
+        ])
+        if path:
+            out_path.set(path)
+
+    # Layout
+    frm = ttk.Frame(root, padding=10)
+    frm.grid(row=0, column=0, sticky="nsew")
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
+
+    # Compact top bar (Save / Options)
+    bar = ttk.Frame(frm)
+    bar.grid(row=0, column=0, columnspan=3, sticky="ew")
+    ttk.Button(bar, text="Save As...", command=choose_out).pack(side="left")
+    ttk.Checkbutton(bar, text="No inner border for images", variable=no_border).pack(side="left", padx=8)
+    ttk.Checkbutton(bar, text="Sequential", variable=sequential).pack(side="left", padx=8)
+    ttk.Label(bar, text="WebP q").pack(side="left")
+    ttk.Scale(bar, from_=0, to=100, orient="horizontal", variable=webp_quality, length=120).pack(side="left")
+    ttk.Label(bar, text="m").pack(side="left")
+    ttk.Scale(bar, from_=0, to=6, orient="horizontal", variable=webp_method, length=80).pack(side="left")
+    ttk.Button(bar, text="Generate", command=lambda: do_generate()).pack(side="right")
+
+    # Preview canvas becomes the main UI
+    preview_lbl = ttk.Label(frm)
+    preview_lbl.grid(row=1, column=0, columnspan=3, sticky="nsew")
+    frm.rowconfigure(1, weight=1)
+
+    # Overlay editors
+    left_title_entry = ttk.Entry(frm, textvariable=left_title)
+    right_title_entry = ttk.Entry(frm, textvariable=right_title)
+    left_txt = tk.Text(frm, height=6, width=50)
+    right_txt = tk.Text(frm, height=6, width=50)
+
+    _preview_img_ref = {"img": None}
+
+    def current_args():
+        @dataclass
+        class UIArgs:
+            left: Optional[str]
+            right: Optional[str]
+            left_lang: Optional[str]
+            right_lang: Optional[str]
+            left_file: Optional[str]
+            right_file: Optional[str]
+            left_image: Optional[str]
+            right_image: Optional[str]
+            left_title: str
+            right_title: str
+            out: str
+            sequential: bool
+            max_left_width: int
+            max_right_width: int
+            max_panel_height: int
+            webp_quality: int
+            webp_method: int
+            no_border: bool
+        return UIArgs(
+            left=left_txt.get("1.0", tk.END).rstrip("\n") if not left_image_path.get() else None,
+            right=right_txt.get("1.0", tk.END).rstrip("\n") if not right_image_path.get() else None,
+            left_lang=None,
+            right_lang=None,
+            left_file=None,
+            right_file=None,
+            left_image=left_image_path.get() or None,
+            right_image=right_image_path.get() or None,
+            left_title=left_title.get(),
+            right_title=right_title.get(),
+            out=out_path.get(),
+            sequential=sequential.get(),
+            max_left_width=1200,
+            max_right_width=1200,
+            max_panel_height=900,
+            webp_quality=int(webp_quality.get()),
+            webp_method=int(webp_method.get()),
+            no_border=no_border.get(),
+        )
+
+    def render_preview_img(args_obj) -> Image.Image:
+        # Build one-frame preview following generate_from_args but without saving
+        if args_obj.left_image:
+            left_base = open_image(args_obj.left_image)
+            left_frames, _, _ = get_frames_and_durations(left_base)
+            left_frames = scale_frames_consistently(left_frames, args_obj.max_left_width, args_obj.max_panel_height)
+            left_img_use = left_frames[0]
+        else:
+            left_code = args_obj.left or ""
+            left_img_use = render_code_image(left_code, args_obj.left_lang, args_obj.left_file)
+            left_img_use = scale_image_to_max(left_img_use, args_obj.max_left_width, args_obj.max_panel_height)
+
+        if args_obj.right_image:
+            right_base = open_image(args_obj.right_image)
+            right_frames, _, _ = get_frames_and_durations(right_base)
+            right_frames = scale_frames_consistently(right_frames, args_obj.max_right_width, args_obj.max_panel_height)
+            right_img_use = right_frames[0]
+        else:
+            right_code = args_obj.right or ""
+            right_img_use = render_code_image(right_code, args_obj.right_lang, args_obj.right_file)
+            right_img_use = scale_image_to_max(right_img_use, args_obj.max_right_width, args_obj.max_panel_height)
+
+        composed = compose_side_by_side(
+            left_img_use, right_img_use, args_obj.left_title, args_obj.right_title,
+            left_is_image=bool(args_obj.left_image), right_is_image=bool(args_obj.right_image), no_inner_border=args_obj.no_border,
+        )
+        return composed
+
+    def update_preview(*_):
+        if ImageTk is None:
+            return
+        try:
+            img = render_preview_img(current_args())
+            # Downscale preview if too large for screen
+            max_w, max_h = 1200, 700
+            img_disp = scale_image_to_max(img, max_w, max_h)
+            tk_img = ImageTk.PhotoImage(img_disp)
+            _preview_img_ref["img"] = tk_img
+            preview_lbl.configure(image=tk_img)
+            # Position inline editors over titles
+            args_obj = current_args()
+            layout = compute_layout(
+                img_disp.crop((0,0,1,1)).resize((img.width, img.height)),  # dummy sizes not used below
+                img_disp.crop((0,0,1,1)).resize((img.width, img.height)),
+                args_obj.left_title, args_obj.right_title,
+                bool(args_obj.left_image), bool(args_obj.right_image), args_obj.no_border,
+            )
+        except (OSError, ValueError, RuntimeError):
+            # Silent for preview; generation will report
+            pass
+
+    def do_generate():
+        a = current_args()
+
+        try:
+            # Reuse the core path using local variable binding
+            generate_from_args(a)
+            messagebox.showinfo("Codeshot", f"Saved {expand_path(a.out)}")
+        except (OSError, ValueError, RuntimeError) as e:
+            messagebox.showerror("Codeshot", str(e))
+
+    ttk.Button(frm, text="Generate", command=do_generate).grid(row=11, column=0, pady=8)
+    ttk.Button(frm, text="Close", command=root.destroy).grid(row=11, column=2, pady=8, sticky="e")
+
+    # Bind updates
+    left_title.trace_add("write", lambda *_: update_preview())
+    right_title.trace_add("write", lambda *_: update_preview())
+    left_image_path.trace_add("write", lambda *_: update_preview())
+    right_image_path.trace_add("write", lambda *_: update_preview())
+    no_border.trace_add("write", lambda *_: update_preview())
+    # Text widgets: key events
+    for widget in (left_txt, right_txt):
+        widget.bind("<KeyRelease>", update_preview)
+
+    update_preview()
+
+    root.mainloop()
+
+
+def generate_from_args(args) -> None:
+    # This function mirrors the build_from_args flow from the point after parsing
+    # Prepare left side (image or rendered code) as frames
+    if args.left_image:
+        left_base = open_image(args.left_image)
+        left_frames, left_durations, left_anim = get_frames_and_durations(left_base)
+        left_frames = scale_frames_consistently(left_frames, args.max_left_width, args.max_panel_height)
+    else:
+        left_code = args.left or ""
+        left_img_static = render_code_image(left_code, args.left_lang, args.left_file)
+        left_img_static = scale_image_to_max(left_img_static, args.max_left_width, args.max_panel_height)
+        left_frames, left_durations, left_anim = [left_img_static], [100], False
+
+    # Prepare right side (image or rendered code) as frames
+    if args.right_image:
+        right_base = open_image(args.right_image)
+        right_frames, right_durations, right_anim = get_frames_and_durations(right_base)
+        right_frames = scale_frames_consistently(right_frames, args.max_right_width, args.max_panel_height)
+    else:
+        right_code = args.right or ""
+        right_img_static = render_code_image(right_code, args.right_lang, args.right_file)
+        right_img_static = scale_image_to_max(right_img_static, args.max_right_width, args.max_panel_height)
+        right_frames, right_durations, right_anim = [right_img_static], [100], False
+
+    is_animated_output = left_anim or right_anim
+    if not is_animated_output:
+        final_img = compose_side_by_side(
+            left_frames[0], right_frames[0], args.left_title, args.right_title,
+            left_is_image=bool(args.left_image), right_is_image=bool(args.right_image), no_inner_border=args.no_border,
+        )
+        out_path = expand_path(args.out)
+        save_image(final_img, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
+        return
+
+    composed_frames: list[Image.Image] = []
+    composed_durations: list[int] = []
+    if args.sequential:
+        right_freeze = right_frames[0]
+        for i in range(len(left_frames)):
+            lf = left_frames[i]
+            frame = compose_side_by_side(
+                lf, right_freeze, args.left_title, args.right_title,
+                left_is_image=bool(args.left_image), right_is_image=bool(args.right_image), no_inner_border=args.no_border,
+            )
+            composed_frames.append(frame)
+            dur = left_durations[i] if i < len(left_durations) else 100
+            composed_durations.append(dur)
+        left_freeze = left_frames[-1]
+        for i in range(len(right_frames)):
+            rf = right_frames[i]
+            frame = compose_side_by_side(
+                left_freeze, rf, args.left_title, args.right_title,
+                left_is_image=bool(args.left_image), right_is_image=bool(args.right_image), no_inner_border=args.no_border,
+            )
+            composed_frames.append(frame)
+            dur = right_durations[i] if i < len(right_durations) else 100
+            composed_durations.append(dur)
+    else:
+        total_frames = max(len(left_frames), len(right_frames))
+        for i in range(total_frames):
+            lf = left_frames[i % len(left_frames)]
+            rf = right_frames[i % len(right_frames)]
+            frame = compose_side_by_side(
+                lf, rf, args.left_title, args.right_title,
+                left_is_image=bool(args.left_image), right_is_image=bool(args.right_image), no_inner_border=args.no_border,
+            )
+            composed_frames.append(frame)
+            ld = left_durations[i % len(left_durations)] if left_durations else 100
+            rd = right_durations[i % len(right_durations)] if right_durations else 100
+            composed_durations.append(min(ld, rd))
+
+    out_path_req = expand_path(args.out)
+    root, ext = os.path.splitext(out_path_req)
+    ext_lower = ext.lower()
+    if ext_lower in (".gif", ".webp"):
+        out_path = out_path_req
+    else:
+        out_path = root + ".webp"
+    if out_path.lower().endswith(".gif"):
+        save_animated_gif(composed_frames, composed_durations, out_path)
+    else:
+        save_animated_webp(composed_frames, composed_durations, out_path, webp_quality=args.webp_quality, webp_method=args.webp_method)
 def build_from_args() -> None:
     parser = argparse.ArgumentParser(description="Generate a side-by-side image: code → code, image → image, or mix")
     # Code inputs
@@ -413,8 +762,14 @@ def build_from_args() -> None:
     # Encoding tuning
     parser.add_argument("--webp-quality", type=int, default=90, help="Animated/static WebP quality (0-100)")
     parser.add_argument("--webp-method", type=int, default=4, help="Animated/static WebP method (0=fast..6=best)")
+    # UI
+    parser.add_argument("--ui", action="store_true", help="Launch a simple UI for interactive use")
 
     args = parser.parse_args()
+
+    if args.ui:
+        launch_ui()
+        return
 
     # Prepare left side (image or rendered code) as frames
     if args.left_image:
