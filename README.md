@@ -26,24 +26,25 @@ Run `codeimg` with no arguments. Each block opens a multi-line editor:
 - Arrow keys move the cursor (including across lines)
 - **Enter** submits the block
 - **Alt+Enter** (or **Ctrl+J**) inserts a newline
-- Type `:cancel` on its own line to abort
+- **Ctrl+C** to abort
 
-Copy an image into the clipboard and codeimg picks it up automatically
-at the next block boundary — no command, no action key.
+To insert a clipboard image as a panel: copy the image, then submit an
+empty block (press Enter on a blank line). The clipboard contents become
+the next panel.
 
 ```text
 $ codeimg --out out.png
 --- Block 1 ---
-[Image 1]                     ← clipboard image, auto-advanced
---- Block 2 ---
 def hi():
     print("hello")            ← Alt+Enter for newline, Enter to submit
 [a]dd / [d]one / [e]dit N / [r]emove N / [q]uit: a
+--- Add block 2 ---
+                              ← Enter on blank line; clipboard image grabbed
+[Image 2]
 ```
 
-Clipboard images are fetched via `wl-paste` or `xclip`; whatever's on
-the clipboard at the start of a block prompt becomes the next panel.
-The same image is only added once — copy a new image to add another.
+Clipboard images are fetched via `wl-paste` or `xclip`. The same image
+is only added once — copy a new image to add another.
 
 When stdin isn't a TTY (piped input, scripts), the editor falls back to
 line-based input: two blank lines or Ctrl+D end a block.

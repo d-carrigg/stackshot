@@ -1,6 +1,5 @@
 import hashlib
 import io
-import select
 import sys
 import tempfile
 from typing import Optional
@@ -18,9 +17,6 @@ from .io_utils import (
     try_get_clipboard_image,
 )
 from .markdown import Panel, parse_markdown
-
-
-CLIPBOARD_POLL_SECONDS = 0.25
 
 
 def _build_session():
@@ -67,16 +63,6 @@ def _clipboard_image_snapshot() -> Optional[tuple[str, Image.Image]]:
     return hashlib.sha1(buf.getvalue()).hexdigest(), img
 
 
-def _stdin_ready(timeout: float) -> bool:
-    """True if sys.stdin has a line waiting. Falls back to True when stdin
-    doesn't support select (e.g. StringIO in tests)."""
-    try:
-        ready, _, _ = select.select([sys.stdin], [], [], timeout)
-        return bool(ready)
-    except (OSError, ValueError, io.UnsupportedOperation):
-        return True
-
-
 def _save_clipboard_image_as_panel(img: Image.Image, panels: list[Panel]) -> None:
     tmp = tempfile.NamedTemporaryFile(prefix="codeimg-clip-", suffix=".png", delete=False)
     img.convert("RGBA").save(tmp.name, format="PNG")
@@ -100,18 +86,11 @@ def _check_clipboard_for_new_image(
 def _read_block_or_image_tty(
     panels: list[Panel], last_image_hash: Optional[str]
 ) -> tuple[str, str, Optional[str]]:
-    """TTY path: full multi-line editor via prompt_toolkit. Clipboard is
-    checked before showing the prompt and again after submission if no
-    text was typed — so a newly-copied image still becomes the next panel
-    on the very next Enter, without the user needing a command."""
-    pre = _check_clipboard_for_new_image(panels, last_image_hash)
-    if pre is not None:
-        return pre
-
+    """TTY path: full multi-line editor via prompt_toolkit. Submitting an
+    empty block grabs the current clipboard image if there is one — this
+    is the explicit "paste image" gesture."""
     text = _read_text_block_tty()
     if text is None:
-        return "cancel", "", last_image_hash
-    if text.strip() == ":cancel":
         return "cancel", "", last_image_hash
 
     if not text.strip():
@@ -125,37 +104,34 @@ def _read_block_or_image_tty(
 def _read_block_or_image_polling(
     panels: list[Panel], last_image_hash: Optional[str]
 ) -> tuple[str, str, Optional[str]]:
-    """Non-TTY path (pipes, tests): line-based input with concurrent
-    clipboard polling, two-blank-lines or EOF to submit."""
+    """Non-TTY path (pipes, tests): line-based input, two-blank-lines or
+    EOF to submit. Submitting an empty block grabs the current clipboard
+    image if there is one."""
     lines: list[str] = []
     blank_run = 0
 
     while True:
-        if not lines:
-            result = _check_clipboard_for_new_image(panels, last_image_hash)
-            if result is not None:
-                return result
-
-        if _stdin_ready(CLIPBOARD_POLL_SECONDS):
-            line = sys.stdin.readline()
-            if not line:  # EOF / Ctrl+D
+        line = sys.stdin.readline()
+        if not line:  # EOF / Ctrl+D
+            break
+        line = line.rstrip("\n")
+        if line == "":
+            blank_run += 1
+            if blank_run >= 2:
                 break
-            line = line.rstrip("\n")
-            if line.strip() == ":cancel":
-                return "cancel", "", last_image_hash
-            if line == "":
-                blank_run += 1
-                if blank_run >= 2:
-                    break
-                lines.append(line)
-            else:
-                blank_run = 0
-                lines.append(line)
-        # else: timeout — loop to re-poll clipboard
+            lines.append(line)
+        else:
+            blank_run = 0
+            lines.append(line)
 
     while lines and lines[-1] == "":
         lines.pop()
-    return "text", "\n".join(lines), last_image_hash
+    text = "\n".join(lines)
+    if not text.strip():
+        post = _check_clipboard_for_new_image(panels, last_image_hash)
+        if post is not None:
+            return post
+    return "text", text, last_image_hash
 
 
 def _read_block_or_image(
@@ -186,8 +162,8 @@ def interactive_compose(args) -> None:
     print("Codeimg interactive mode")
     print("Paste code or markdown — ```lang fences set syntax, the line above is the title.")
     print("End a text block with two blank lines (or Ctrl+D).")
-    print("Paste an image into your clipboard and it's added automatically as the next panel.")
-    print("Type :cancel on its own line to abort.\n")
+    print("To insert a clipboard image, copy it then submit an empty block (Enter on a blank line).")
+    print("Ctrl+C to abort.\n")
 
     panels: list[Panel] = []
     last_image_hash: Optional[str] = None
