@@ -1,7 +1,10 @@
 # codeimg
 
-Generate side-by-side code/image screenshots from markdown. Useful for
-docs, README hero shots, blog posts, and request/response diagrams.
+Compose code snippets, screenshots, and images into multi-panel
+illustrations — for READMEs, docs, blog posts, and tutorials. Pass
+panels as positional args (code, file paths, or images), or paste
+markdown interactively. Horizontal or vertical layouts with arrows
+between panels.
 
 ![markdown demo](docs/img/markdown-demo.png)
 

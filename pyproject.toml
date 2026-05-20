@@ -1,7 +1,7 @@
 [project]
 name = "codeimg"
 version = "0.2.1"
-description = "Side-by-side code/image screenshots from markdown — for READMEs, docs, blog posts"
+description = "Compose code snippets, screenshots, and images into multi-panel illustrations — for READMEs, docs, blog posts, and tutorials"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"

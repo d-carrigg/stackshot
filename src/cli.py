@@ -32,7 +32,7 @@ DEFAULT_MAX_HEIGHT = 1200
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="codeimg",
-        description="Generate side-by-side code/image panels with arrows between them.",
+        description="Compose code snippets, screenshots, and images into multi-panel illustrations.",
     )
     parser.add_argument(
         "panels", nargs="*",
