@@ -1,5 +1,3 @@
-import hashlib
-import io
 import sys
 import tempfile
 from typing import Optional
@@ -19,10 +17,27 @@ from .io_utils import (
 from .markdown import Panel, parse_markdown
 
 
+class _PastedImage:
+    """Sentinel returned from the prompt when the user pastes while an
+    image is on the clipboard. Carries the PIL Image back to the caller."""
+    def __init__(self, img: Image.Image):
+        self.img = img
+
+
+def _paste_action(pasted_text: str, clipboard_image: Optional[Image.Image]):
+    """Decide what a paste event should do. If the clipboard holds an
+    image, the paste becomes an image panel; otherwise the pasted text
+    is inserted into the buffer."""
+    if clipboard_image is not None:
+        return ("image", clipboard_image)
+    return ("text", pasted_text)
+
+
 def _build_session():
     """Lazy-import prompt_toolkit so test/non-TTY paths don't pay the cost."""
     from prompt_toolkit import PromptSession
     from prompt_toolkit.key_binding import KeyBindings
+    from prompt_toolkit.keys import Keys
 
     kb = KeyBindings()
 
@@ -38,13 +53,23 @@ def _build_session():
     def _newline(event):
         event.current_buffer.insert_text("\n")
 
+    @kb.add(Keys.BracketedPaste)
+    def _paste(event):
+        kind, payload = _paste_action(event.data, try_get_clipboard_image())
+        if kind == "image":
+            event.app.exit(result=_PastedImage(payload))
+            return
+        event.current_buffer.insert_text(payload)
+
     return PromptSession(multiline=True, key_bindings=kb)
 
 
 _session = None
 
 
-def _read_text_block_tty() -> Optional[str]:
+def _read_text_block_tty():
+    """Returns str (text submitted), _PastedImage (image pasted), or None
+    (cancelled)."""
     global _session
     if _session is None:
         _session = _build_session()
@@ -54,59 +79,30 @@ def _read_text_block_tty() -> Optional[str]:
         return None
 
 
-def _clipboard_image_snapshot() -> Optional[tuple[str, Image.Image]]:
-    img = try_get_clipboard_image()
-    if img is None:
-        return None
-    buf = io.BytesIO()
-    img.convert("RGBA").save(buf, format="PNG")
-    return hashlib.sha1(buf.getvalue()).hexdigest(), img
-
-
 def _save_clipboard_image_as_panel(img: Image.Image, panels: list[Panel]) -> None:
     tmp = tempfile.NamedTemporaryFile(prefix="codeimg-clip-", suffix=".png", delete=False)
     img.convert("RGBA").save(tmp.name, format="PNG")
     panels.append(Panel(code="", is_image=True, image_path=tmp.name))
 
 
-def _check_clipboard_for_new_image(
-    panels: list[Panel], last_image_hash: Optional[str]
-) -> Optional[tuple[str, str, Optional[str]]]:
-    snap = _clipboard_image_snapshot()
-    if snap is None:
-        return None
-    h, img = snap
-    if h == last_image_hash:
-        return None
-    _save_clipboard_image_as_panel(img, panels)
-    print(f"[Image {len(panels)}]")
-    return "image", panels[-1].image_path or "", h
+def _read_block_or_image_tty(panels: list[Panel]) -> tuple[str, str]:
+    """TTY path: full multi-line editor via prompt_toolkit. Pasting while
+    an image is on the clipboard immediately adds it as the next panel
+    and advances; pasting text stays in the editor."""
+    result = _read_text_block_tty()
+    if result is None:
+        return "cancel", ""
+    if isinstance(result, _PastedImage):
+        _save_clipboard_image_as_panel(result.img, panels)
+        print(f"[Image {len(panels)}]")
+        return "image", panels[-1].image_path or ""
+    return "text", result
 
 
-def _read_block_or_image_tty(
-    panels: list[Panel], last_image_hash: Optional[str]
-) -> tuple[str, str, Optional[str]]:
-    """TTY path: full multi-line editor via prompt_toolkit. Submitting an
-    empty block grabs the current clipboard image if there is one — this
-    is the explicit "paste image" gesture."""
-    text = _read_text_block_tty()
-    if text is None:
-        return "cancel", "", last_image_hash
-
-    if not text.strip():
-        post = _check_clipboard_for_new_image(panels, last_image_hash)
-        if post is not None:
-            return post
-
-    return "text", text, last_image_hash
-
-
-def _read_block_or_image_polling(
-    panels: list[Panel], last_image_hash: Optional[str]
-) -> tuple[str, str, Optional[str]]:
+def _read_block_or_image_polling() -> tuple[str, str]:
     """Non-TTY path (pipes, tests): line-based input, two-blank-lines or
-    EOF to submit. Submitting an empty block grabs the current clipboard
-    image if there is one."""
+    EOF to submit. Text-only — clipboard image insertion is paste-driven
+    and isn't reachable from a piped stdin."""
     lines: list[str] = []
     blank_run = 0
 
@@ -126,25 +122,18 @@ def _read_block_or_image_polling(
 
     while lines and lines[-1] == "":
         lines.pop()
-    text = "\n".join(lines)
-    if not text.strip():
-        post = _check_clipboard_for_new_image(panels, last_image_hash)
-        if post is not None:
-            return post
-    return "text", text, last_image_hash
+    return "text", "\n".join(lines)
 
 
-def _read_block_or_image(
-    panels: list[Panel], last_image_hash: Optional[str]
-) -> tuple[str, str, Optional[str]]:
+def _read_block_or_image(panels: list[Panel]) -> tuple[str, str]:
     is_tty = False
     try:
         is_tty = sys.stdin.isatty()
     except (AttributeError, ValueError):
         is_tty = False
     if is_tty:
-        return _read_block_or_image_tty(panels, last_image_hash)
-    return _read_block_or_image_polling(panels, last_image_hash)
+        return _read_block_or_image_tty(panels)
+    return _read_block_or_image_polling()
 
 
 def _panel_summary(panels: list[Panel]) -> None:
@@ -162,17 +151,16 @@ def interactive_compose(args) -> None:
     print("Codeimg interactive mode")
     print("Paste code or markdown — ```lang fences set syntax, the line above is the title.")
     print("End a text block with two blank lines (or Ctrl+D).")
-    print("To insert a clipboard image, copy it then submit an empty block (Enter on a blank line).")
+    print("Paste an image to add it as a panel (image pastes auto-advance to the next block).")
     print("Ctrl+C to abort.\n")
 
     panels: list[Panel] = []
-    last_image_hash: Optional[str] = None
     action = ""
 
     while True:
         label = f"Block {len(panels) + 1}" if not panels else f"Add block {len(panels) + 1} (Enter empty to finish)"
         print(f"--- {label} ---")
-        kind, payload, last_image_hash = _read_block_or_image(panels, last_image_hash)
+        kind, payload = _read_block_or_image(panels)
 
         if kind == "cancel":
             print("Cancelled.")
@@ -219,7 +207,7 @@ def interactive_compose(args) -> None:
                         return
                     continue
                 print(f"Re-enter content for panel [{idx}] (two blank lines to finish):")
-                kind2, payload2, last_image_hash = _read_block_or_image(panels, last_image_hash)
+                kind2, payload2 = _read_block_or_image(panels)
                 if kind2 != "text" or not payload2.strip():
                     print("Unchanged.")
                     continue

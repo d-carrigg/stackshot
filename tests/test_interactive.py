@@ -4,21 +4,8 @@ from pathlib import Path
 from PIL import Image
 
 from codeimg import interactive as interactive_mod
+from codeimg import io_utils
 from codeimg.cli import main
-
-
-def _set_clipboard(monkeypatch, sequence):
-    """Patch try_get_clipboard_image to return values from `sequence`,
-    one per call, then None forever."""
-    it = iter(sequence)
-
-    def _next():
-        try:
-            return next(it)
-        except StopIteration:
-            return None
-
-    monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", _next)
 
 
 def _run(monkeypatch, argv, stdin):
@@ -27,33 +14,13 @@ def _run(monkeypatch, argv, stdin):
     main()
 
 
-def test_clipboard_image_only_added_on_empty_submission(tmp_path: Path, monkeypatch, capsys):
-    """A clipboard image must NOT auto-add on startup. It's only grabbed
-    when the user explicitly submits an empty block (the paste gesture)."""
-    img = Image.new("RGB", (40, 30), (200, 100, 50))
-    monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", lambda: img.copy())
-
-    # Block 1: empty submission → triggers clipboard grab → image added.
-    # Block 2: 'code' text. Then 'd' done.
-    stdin = (
-        "\n\n"      # block 1: empty submission grabs clipboard
-        "code\n\n\n"  # block 2: text
-        "d\n"       # done
-    )
-    out = tmp_path / "x.png"
-    _run(monkeypatch, ["--out", str(out)], stdin)
-    output = capsys.readouterr().out
-    assert "[Image 1]" in output
-    assert out.exists() and out.stat().st_size > 0
-
-
 def test_no_startup_clipboard_grab(tmp_path: Path, monkeypatch, capsys):
-    """Regression: an image in the clipboard at app launch must NOT be
-    auto-inserted as the first panel. The user has to ask for it."""
+    """An image in the clipboard at app launch must not be auto-inserted
+    as a panel. Image insertion is only via an explicit paste gesture
+    (TTY-only)."""
     img = Image.new("RGB", (40, 30), (200, 100, 50))
     monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", lambda: img.copy())
 
-    # Block 1: just text, no empty submission. Image must not appear.
     stdin = (
         "print('hi')\n\n\n"
         "d\n"
@@ -65,28 +32,26 @@ def test_no_startup_clipboard_grab(tmp_path: Path, monkeypatch, capsys):
     assert out.exists() and out.stat().st_size > 0
 
 
-def test_same_clipboard_image_is_not_added_twice(tmp_path: Path, monkeypatch, capsys):
-    """If the user submits two empty blocks with the same image still in
-    clipboard, dedup prevents double-add."""
+def test_piped_stdin_does_not_grab_clipboard_on_empty_block(tmp_path: Path, monkeypatch, capsys):
+    """Non-TTY mode is text-only — even an empty block with an image on
+    the clipboard must not produce an image panel. (Regression: the
+    previous behavior treated empty submissions as paste gestures.)"""
     img = Image.new("RGB", (40, 30), (200, 100, 50))
     monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", lambda: img.copy())
 
     stdin = (
-        "\n\n"        # block 1: empty → clipboard image added
-        "a\n"         # action: add another
-        "\n\n"        # block 2: empty → clipboard checked, same image, no re-add
-        "a\n"         # action: add another
-        "code\n\n\n"  # block 3: text (so we have something to render)
-        "d\n"         # done
+        "\n\n"          # block 1 empty — must NOT grab clipboard
+        "code\n\n\n"    # block 2 text
+        "d\n"
     )
     out = tmp_path / "x.png"
     _run(monkeypatch, ["--out", str(out)], stdin)
     output = capsys.readouterr().out
-    assert output.count("[Image ") == 1, output
+    assert "[Image" not in output, output
 
 
-def test_text_only_path_unchanged_when_clipboard_empty(tmp_path: Path, monkeypatch, capsys):
-    _set_clipboard(monkeypatch, [])
+def test_text_only_path_works_with_no_clipboard(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", lambda: None)
     stdin = (
         "print('hi')\n"
         "\n"
@@ -102,7 +67,7 @@ def test_text_only_path_unchanged_when_clipboard_empty(tmp_path: Path, monkeypat
 
 def test_prompt_toolkit_session_builds():
     """Smoke-test the TTY editor's keybindings — Enter submits, Ctrl+J
-    and Alt+Enter insert a newline. Catches import / binding typos."""
+    and Alt+Enter insert a newline, BracketedPaste is intercepted."""
     from prompt_toolkit.keys import Keys
 
     session = interactive_mod._build_session()
@@ -110,3 +75,61 @@ def test_prompt_toolkit_session_builds():
     assert (Keys.Enter,) in bound or (Keys.ControlM,) in bound
     assert (Keys.ControlJ,) in bound
     assert (Keys.Escape, Keys.Enter) in bound or (Keys.Escape, Keys.ControlM) in bound
+    assert (Keys.BracketedPaste,) in bound
+
+
+def test_paste_action_returns_image_when_clipboard_has_image():
+    """When clipboard holds an image, pasting should produce an image
+    panel regardless of the pasted text."""
+    img = Image.new("RGB", (10, 10), (1, 2, 3))
+    kind, payload = interactive_mod._paste_action("some pasted text", img)
+    assert kind == "image"
+    assert payload is img
+
+
+def test_paste_action_returns_text_when_clipboard_has_no_image():
+    """No image on clipboard means a normal text paste — the pasted
+    text is forwarded to the buffer."""
+    kind, payload = interactive_mod._paste_action("print('hi')", None)
+    assert kind == "text"
+    assert payload == "print('hi')"
+
+
+def _patch_grabclipboard(monkeypatch, fn):
+    monkeypatch.setattr(io_utils.ImageGrab, "grabclipboard", staticmethod(fn))
+
+
+def test_try_get_clipboard_image_returns_image(monkeypatch):
+    """When Pillow's ImageGrab returns an Image, pass it through."""
+    img = Image.new("RGB", (5, 5), (10, 20, 30))
+    _patch_grabclipboard(monkeypatch, lambda: img)
+    assert io_utils.try_get_clipboard_image() is img
+
+
+def test_try_get_clipboard_image_returns_none_on_text(monkeypatch):
+    """When the clipboard is empty / text-only, ImageGrab returns None,
+    and so should our wrapper."""
+    _patch_grabclipboard(monkeypatch, lambda: None)
+    assert io_utils.try_get_clipboard_image() is None
+
+
+def test_try_get_clipboard_image_opens_file_list(tmp_path: Path, monkeypatch):
+    """On Windows/macOS, ImageGrab.grabclipboard() may return a list of
+    file paths instead of an Image (e.g., user copied a file in Finder).
+    Open the first one."""
+    img_path = tmp_path / "clip.png"
+    Image.new("RGB", (3, 3), (1, 2, 3)).save(img_path)
+    _patch_grabclipboard(monkeypatch, lambda: [str(img_path)])
+    got = io_utils.try_get_clipboard_image()
+    assert got is not None
+    assert got.size == (3, 3)
+
+
+def test_try_get_clipboard_image_swallows_platform_errors(monkeypatch):
+    """On Linux with no wl-paste/xclip (and on stripped-down envs),
+    ImageGrab may raise. The wrapper must degrade to None rather than
+    crash the app."""
+    def _raise():
+        raise NotImplementedError("no clipboard backend")
+    _patch_grabclipboard(monkeypatch, _raise)
+    assert io_utils.try_get_clipboard_image() is None

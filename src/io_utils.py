@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from typing import Optional, Tuple
 
-from PIL import Image, ImageSequence, UnidentifiedImageError
+from PIL import Image, ImageGrab, ImageSequence, UnidentifiedImageError
 
 from .colors import DEFAULT_BG
 from .fonts import RESAMPLE_LANCZOS
@@ -150,23 +150,21 @@ def print_progress(current: int, total: int, label: str) -> None:
 
 def try_get_clipboard_image() -> Optional[Image.Image]:
     """Best-effort fetch of an image from the system clipboard.
-    Returns None if no image is present or no clipboard tool is available."""
-    candidates = []
-    if shutil.which("wl-paste"):
-        candidates.append(["wl-paste", "--type", "image/png"])
-    if shutil.which("xclip"):
-        candidates.append(["xclip", "-selection", "clipboard", "-t", "image/png", "-o"])
-    for cmd in candidates:
+    Cross-platform via Pillow's ImageGrab — works on macOS and Windows
+    natively, on Linux via `wl-paste`/`xclip` invoked internally by
+    Pillow. Returns None if no image is on the clipboard or the
+    platform's clipboard tooling isn't available."""
+    try:
+        result = ImageGrab.grabclipboard()
+    except (NotImplementedError, OSError):
+        return None
+    if isinstance(result, Image.Image):
+        return result
+    if isinstance(result, list) and result:
         try:
-            result = subprocess.run(cmd, capture_output=True, check=True)
-        except (subprocess.SubprocessError, FileNotFoundError):
-            continue
-        if not result.stdout:
-            continue
-        try:
-            return Image.open(io.BytesIO(result.stdout))
+            return Image.open(result[0])
         except (UnidentifiedImageError, OSError):
-            continue
+            return None
     return None
 
 

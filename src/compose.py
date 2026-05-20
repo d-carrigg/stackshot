@@ -122,7 +122,7 @@ def compose_panels(
     x = margin
     for i, ((img, title, is_image), pad, pw, ph) in enumerate(zip(items, pads, panel_widths, panel_heights)):
         panel_x = x
-        panel_y = top_pad
+        panel_y = top_pad + (max_panel_h - ph) // 2
         draw_bg = not (no_inner_border and is_image)
         if draw_bg:
             draw.rounded_rectangle(
@@ -264,12 +264,12 @@ def compose_side_by_side(
         draw.text((right_title_x, margin), right_title, font=title_font, fill=TEXT)
 
     left_panel_x = margin
-    left_panel_y = top_pad
+    left_panel_y = top_pad + (max_panel_h - left_inner_h) // 2
     left_panel_w = left_img.width + left_panel_pad * 2
     left_panel_h = left_inner_h
 
     right_panel_x = margin + left_panel_w + gutter + arrow_width + gutter
-    right_panel_y = top_pad
+    right_panel_y = top_pad + (max_panel_h - right_inner_h) // 2
     right_panel_w = right_img.width + right_panel_pad * 2
     right_panel_h = right_inner_h
 

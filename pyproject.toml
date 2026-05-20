@@ -1,6 +1,6 @@
 [project]
 name = "codeimg"
-version = "0.2.1"
+version = "0.2.4"
 description = "Compose code snippets, screenshots, and images into multi-panel illustrations — for READMEs, docs, blog posts, and tutorials"
 readme = "README.md"
 license = { file = "LICENSE" }

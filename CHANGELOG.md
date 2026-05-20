@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.2.4 — 2026-05-20
+
+### Added
+- `docs/examples/record_print_loop.sh` — one-command regeneration of
+  the README's `print_loop.gif` sample via asciinema + agg.
+- `*.cast` is now gitignored; recordings are kept local and the
+  committed GIFs are the source of truth.
+
+## 0.2.3 — 2026-05-20
+
+### Fixed
+- Horizontal layouts now vertically center each panel within the row.
+  Previously panels were top-aligned, so a tall panel next to a short
+  one left the short one floating against the top while the arrow
+  pointed somewhere between them. Affects both `compose_panels` and
+  the per-frame `compose_side_by_side` used in animated output.
+- Animated code → gif output no longer speeds up the source GIF. The
+  parallel-mode duration picker used `min(left, right)`, which capped
+  slow animations at the static code panel's 100ms placeholder (a 7×
+  speedup for a 500ms-per-frame source). Now the animated panel's
+  durations drive the output when the other side is static.
+
+## 0.2.2 — 2026-05-20
+
+### Changed
+- Interactive mode reacts to terminal paste: if the clipboard holds an
+  image, the paste creates an image panel and auto-advances to the next
+  block. Pasting text stays in the editor. Replaces the previous
+  "submit an empty block to grab the clipboard image" gesture entirely
+  (TTY and non-TTY).
+- Clipboard image fetch is now cross-platform via Pillow's `ImageGrab`
+  (works on macOS, Windows, and Linux). Previous Linux-only
+  `wl-paste`/`xclip` subprocess loop is removed.
+
+### Added
+- README covers PyPI (`uv tool install codeimg`), standalone GitHub
+  Release binaries, and from-source install.
+- Auto-tag workflow: pushing to `main` with a bumped version in
+  `pyproject.toml` creates a `v<version>` tag, which triggers the
+  existing release/binary build.
+- `CLAUDE.md` documents the feature-branch → bump → PR → auto-tag flow.
+
 ## 0.2.1 — 2026-05-20
 
 ### Fixed

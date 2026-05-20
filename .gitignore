@@ -7,3 +7,4 @@ codeimg.png
 build/
 dist/
 /codeimg/
+*.cast
