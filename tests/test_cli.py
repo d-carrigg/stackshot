@@ -3,7 +3,28 @@ from pathlib import Path
 
 import pytest
 
-from codeimg.cli import main
+from codeimg.cli import _composed_duration, main
+
+
+def test_composed_duration_uses_animated_panel_when_only_one_animates():
+    """If only the right side animates, the composed-frame duration must
+    follow its timing — not the static side's placeholder. (Regression:
+    naive min() previously capped slow animations at the static panel's
+    100ms default, ~7x speedup.)"""
+    assert _composed_duration(100, 500, left_anim=False, right_anim=True) == 500
+    assert _composed_duration(500, 100, left_anim=True, right_anim=False) == 500
+
+
+def test_composed_duration_uses_min_when_both_animate():
+    """When both panels animate, the composed timing syncs to the faster
+    one so neither loops out of phase."""
+    assert _composed_duration(33, 50, left_anim=True, right_anim=True) == 33
+
+
+def test_composed_duration_static_only_falls_back_to_min():
+    """Both-static is degenerate in the animated path, but the helper
+    must not crash and should still return a sane value."""
+    assert _composed_duration(100, 100, left_anim=False, right_anim=False) == 100
 
 
 def _run_main(monkeypatch, argv, stdin=None):

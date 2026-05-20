@@ -131,6 +131,20 @@ def _save_and_maybe_clip(img: Image.Image, args) -> str:
     return out_path
 
 
+def _composed_duration(left_dur: int, right_dur: int, left_anim: bool, right_anim: bool) -> int:
+    """Pick the frame duration for one composed output frame in parallel
+    mode. When only one side animates, its duration drives the timing —
+    naively taking min() with the static side's placeholder duration
+    would cap (and so speed up) a slow animation."""
+    if left_anim and right_anim:
+        return min(left_dur, right_dur)
+    if right_anim:
+        return right_dur
+    if left_anim:
+        return left_dur
+    return min(left_dur, right_dur)
+
+
 def _has_animated_image(resolved: list[ResolvedPanel]) -> bool:
     for rp in resolved:
         if not rp.is_image or not rp.image_path:
@@ -221,7 +235,7 @@ def _run_animated_two_panel(args, resolved: list[ResolvedPanel]) -> None:
             ))
             ld = left_durs[i % len(left_durs)] if left_durs else 100
             rd = right_durs[i % len(right_durs)] if right_durs else 100
-            composed_durs.append(min(ld, rd))
+            composed_durs.append(_composed_duration(ld, rd, left_anim, right_anim))
 
     first_size = composed_frames[0].size
     normalized: list[Image.Image] = []

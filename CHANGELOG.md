@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.3 — 2026-05-20
+
+### Fixed
+- Horizontal layouts now vertically center each panel within the row.
+  Previously panels were top-aligned, so a tall panel next to a short
+  one left the short one floating against the top while the arrow
+  pointed somewhere between them. Affects both `compose_panels` and
+  the per-frame `compose_side_by_side` used in animated output.
+- Animated code → gif output no longer speeds up the source GIF. The
+  parallel-mode duration picker used `min(left, right)`, which capped
+  slow animations at the static code panel's 100ms placeholder (a 7×
+  speedup for a 500ms-per-frame source). Now the animated panel's
+  durations drive the output when the other side is static.
+
 ## 0.2.2 — 2026-05-20
 
 ### Changed
