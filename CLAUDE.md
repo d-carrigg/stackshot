@@ -1,0 +1,62 @@
+# codeimg
+
+Multi-panel image composer for code/screenshots/images. CLI is `codeimg`.
+Package code lives in `src/` (imported as `codeimg`), tests in `tests/`,
+built and managed with `uv`.
+
+## Release flow
+
+All changes ship through feature branches. Never commit directly to `main`.
+
+1. **Branch.** Cut a feature branch from `main`:
+   `git checkout -b <topic>` (e.g. `fix-arrow-aa`, `add-vertical-layout`).
+2. **Code + test.** Make the change. Add/update tests under `tests/`. Run
+   `uv run pytest` locally.
+3. **Bump the version** in `pyproject.toml` (`[project].version`) as part
+   of the same PR. Use semver:
+   - patch (`0.2.1 → 0.2.2`) for bug fixes,
+   - minor (`0.2.x → 0.3.0`) for new features,
+   - major (`0.x.y → 1.0.0`) for breaking changes.
+   Every PR that ships user-visible change must bump the version. If
+   there's no user-visible change (pure refactor, CI tweak, docs), no bump.
+4. **Update `CHANGELOG.md`** with a new section for the bumped version
+   (Fixed / Changed / Added). Follow the existing format.
+5. **Open a PR to `main`.** CI (`test.yml`) runs pytest on 3.10 and 3.13.
+6. **Merge.** On push to `main`, `auto-tag.yml` reads the version from
+   `pyproject.toml` and pushes a `v<version>` tag if it doesn't exist.
+   The tag push triggers `release.yml`, which builds standalone binaries
+   for Linux/macOS/Windows and attaches them to the GitHub Release.
+
+If you forget to bump the version, `auto-tag.yml` is a no-op (tag already
+exists). Bump and merge again to ship.
+
+## Workflows
+
+- `.github/workflows/test.yml` — pytest on push/PR.
+- `.github/workflows/auto-tag.yml` — pushes `v<version>` tag on merge to main.
+- `.github/workflows/release.yml` — on `v*` tag, builds binaries
+  (PyPI publish is gated; see comment in the file).
+
+## Local commands
+
+- `uv sync --group dev` — install deps including pytest.
+- `uv run pytest` — full test suite (must stay fast and real; no subprocess
+  shelling, no mocks of the package under test).
+- `uv run codeimg <panels>` — run the CLI from the working tree.
+- `uv build` — build sdist + wheel into `dist/`.
+
+## Project layout
+
+- `src/` — package source, imported as `codeimg` (see `[tool.setuptools]`
+  in `pyproject.toml` mapping `codeimg` → `src`).
+- `tests/` — pytest tests. Call entry points in-process; don't shell out.
+- `docs/` — sample images / README assets.
+- `CHANGELOG.md` — keep in lockstep with version bumps.
+
+## Conventions
+
+- Python ≥ 3.10. Use `tomllib` (stdlib) for TOML, no `toml`/`tomli` deps.
+- Don't add inline-shell verification (`printf | … && sleep && ls`). Write
+  a pytest test instead.
+- Keep tests fast and real — exercise the actual contracts, not helpers,
+  and don't spawn subprocesses for what can be called in-process.
