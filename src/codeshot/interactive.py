@@ -1,3 +1,7 @@
+import hashlib
+import io
+import select
+import sys
 import tempfile
 from typing import Optional
 
@@ -16,70 +20,116 @@ from .io_utils import (
 from .markdown import Panel, parse_markdown
 
 
-def read_block_input() -> Optional[str]:
-    """Read multi-line input. Ends on two consecutive blank lines or Ctrl+D.
-    Returns None if the user types ':cancel'."""
+CLIPBOARD_POLL_SECONDS = 0.25
+
+
+def _clipboard_image_snapshot() -> Optional[tuple[str, Image.Image]]:
+    img = try_get_clipboard_image()
+    if img is None:
+        return None
+    buf = io.BytesIO()
+    img.convert("RGBA").save(buf, format="PNG")
+    return hashlib.sha1(buf.getvalue()).hexdigest(), img
+
+
+def _stdin_ready(timeout: float) -> bool:
+    """True if sys.stdin has a line waiting. Falls back to True when stdin
+    doesn't support select (e.g. StringIO in tests)."""
+    try:
+        ready, _, _ = select.select([sys.stdin], [], [], timeout)
+        return bool(ready)
+    except (OSError, ValueError, io.UnsupportedOperation):
+        return True
+
+
+def _save_clipboard_image_as_panel(img: Image.Image, panels: list[Panel]) -> None:
+    tmp = tempfile.NamedTemporaryFile(prefix="codeshot-clip-", suffix=".png", delete=False)
+    img.convert("RGBA").save(tmp.name, format="PNG")
+    panels.append(Panel(code="", is_image=True, image_path=tmp.name))
+
+
+def _read_block_or_image(
+    panels: list[Panel], last_image_hash: Optional[str]
+) -> tuple[str, str, Optional[str]]:
+    """Block input loop with concurrent clipboard polling.
+
+    Returns (kind, payload, new_last_hash):
+      kind="text":   payload is the typed text (no panel added here)
+      kind="image":  a new clipboard image was added to `panels`; payload is image path
+      kind="cancel": user typed :cancel
+    """
     lines: list[str] = []
     blank_run = 0
+
     while True:
-        try:
-            line = input()
-        except EOFError:
-            print()
-            break
-        if line.strip() == ":cancel":
-            return None
-        if line == "":
-            blank_run += 1
-            if blank_run >= 2:
+        # Only poll the clipboard while no text has been typed yet — once the
+        # user starts typing this is a text block, not an image paste.
+        if not lines:
+            snap = _clipboard_image_snapshot()
+            if snap is not None:
+                h, img = snap
+                if h != last_image_hash:
+                    _save_clipboard_image_as_panel(img, panels)
+                    print(f"[Image {len(panels)}]")
+                    return "image", panels[-1].image_path or "", h
+
+        if _stdin_ready(CLIPBOARD_POLL_SECONDS):
+            line = sys.stdin.readline()
+            if not line:  # EOF / Ctrl+D
                 break
-            lines.append(line)
-        else:
-            blank_run = 0
-            lines.append(line)
+            line = line.rstrip("\n")
+            if line.strip() == ":cancel":
+                return "cancel", "", last_image_hash
+            if line == "":
+                blank_run += 1
+                if blank_run >= 2:
+                    break
+                lines.append(line)
+            else:
+                blank_run = 0
+                lines.append(line)
+        # else: timeout — loop to re-poll clipboard
+
     while lines and lines[-1] == "":
         lines.pop()
-    return "\n".join(lines)
+    return "text", "\n".join(lines), last_image_hash
 
 
 def _panel_summary(panels: list[Panel]) -> None:
     for idx, p in enumerate(panels):
+        if p.is_image:
+            print(f"  [{idx}] (image)")
+            continue
         t = p.title or "(no title)"
         lang = p.lang or "auto"
         ln = len(p.code.splitlines()) or 1
         print(f"  [{idx}] {t}  ({lang}, {ln} line{'s' if ln != 1 else ''})")
 
 
-def _add_clipboard_image_panel(panels: list[Panel]) -> bool:
-    """Attempt to add an image from the clipboard as a new panel.
-    Returns True on success, False if no image is on the clipboard."""
-    img = try_get_clipboard_image()
-    if img is None:
-        return False
-    tmp = tempfile.NamedTemporaryFile(prefix="codeshot-clip-", suffix=".png", delete=False)
-    img.convert("RGBA").save(tmp.name, format="PNG")
-    panels.append(Panel(code="", is_image=True, image_path=tmp.name))
-    print(f"[Image {len(panels)}] added from clipboard.")
-    return True
-
-
 def interactive_compose(args) -> None:
     print("Codeshot interactive mode")
-    print("Paste code or markdown. Use ```lang fences to set syntax; the line above a fence becomes its title.")
-    print("End each block with two blank lines (or Ctrl+D). Type 'i' at the action prompt to paste a clipboard image.")
+    print("Paste code or markdown — ```lang fences set syntax, the line above is the title.")
+    print("End a text block with two blank lines (or Ctrl+D).")
+    print("Paste an image into your clipboard and it's added automatically as the next panel.")
     print("Type :cancel on its own line to abort.\n")
 
     panels: list[Panel] = []
+    last_image_hash: Optional[str] = None
     action = ""
+
     while True:
         label = f"Block {len(panels) + 1}" if not panels else f"Add block {len(panels) + 1} (Enter empty to finish)"
         print(f"--- {label} ---")
-        text = read_block_input()
-        if text is None:
+        kind, payload, last_image_hash = _read_block_or_image(panels, last_image_hash)
+
+        if kind == "cancel":
             print("Cancelled.")
             return
-        if text.strip():
-            parsed = parse_markdown(text)
+        if kind == "image":
+            continue  # auto-advance, no action menu
+        # kind == "text"
+        if payload.strip():
+            parsed = parse_markdown(payload)
             if parsed:
                 panels.extend(parsed)
                 print(f"\nAdded {len(parsed)} panel(s):")
@@ -89,16 +139,10 @@ def interactive_compose(args) -> None:
             return
 
         while True:
-            action = input("\n[a]dd / [i]mage / [d]one / [e]dit N / [r]emove N / [q]uit: ").strip().lower()
+            action = input("\n[a]dd / [d]one / [e]dit N / [r]emove N / [q]uit: ").strip().lower()
             if action in ("", "a", "add"):
                 print()
                 break
-            if action in ("i", "image", "img"):
-                if _add_clipboard_image_panel(panels):
-                    print()
-                    break  # auto-advance to next block input
-                print("Clipboard has no image. Copy an image and try again.")
-                continue
             if action in ("d", "done"):
                 break
             if action in ("q", "quit", "cancel"):
@@ -123,11 +167,11 @@ def interactive_compose(args) -> None:
                         return
                     continue
                 print(f"Re-enter content for panel [{idx}] (two blank lines to finish):")
-                new_text = read_block_input()
-                if not new_text or not new_text.strip():
+                kind2, payload2, last_image_hash = _read_block_or_image(panels, last_image_hash)
+                if kind2 != "text" or not payload2.strip():
                     print("Unchanged.")
                     continue
-                new_parsed = parse_markdown(new_text)
+                new_parsed = parse_markdown(payload2)
                 if not new_parsed:
                     print("Unchanged.")
                     continue

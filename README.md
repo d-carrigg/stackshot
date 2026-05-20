@@ -21,37 +21,24 @@ uv run codeshot --help
 
 ### Interactive (recommended)
 
-Run `codeshot` with no arguments. Paste code or markdown, end each block
-with two blank lines (or Ctrl+D), then pick an action.
+Run `codeshot` with no arguments. Paste code/markdown to fill a block,
+end with two blank lines (or Ctrl+D). Copy an image into the clipboard
+and codeshot picks it up automatically — no command, no action key.
 
 ```text
 $ codeshot --out out.png
-Codeshot interactive mode
-Paste code or markdown. Use ```lang fences to set syntax; the line above
-a fence becomes its title. End each block with two blank lines (or Ctrl+D).
-Type 'i' at the action prompt to paste a clipboard image.
-
 --- Block 1 ---
-Request
-```pwsh
-Get-Process | Select-Object -First 3
+[Image 1]                     # ← clipboard image, auto-advanced
+--- Block 2 ---
+// some code
+\n
+\n
+[a]dd / [d]one / [e]dit N / [r]emove N / [q]uit: a
 ```
 
-
-[a]dd / [i]mage / [d]one / [e]dit N / [r]emove N / [q]uit: a
-
---- Add block 2 ---
-Response
-```
-Handles  NPM(K)  PM(K) ...
-```
-
-
-[a]dd / [i]mage / [d]one / [e]dit N / [r]emove N / [q]uit: d
-```
-
-Type `i` at the action prompt to add the current clipboard image as the
-next panel (uses `wl-paste` or `xclip`).
+Clipboard images are fetched via `wl-paste` or `xclip`; whatever's on
+the clipboard at the start of a block prompt becomes the next panel.
+The same image is only added once — copy a new image to add another.
 
 ### Markdown syntax
 

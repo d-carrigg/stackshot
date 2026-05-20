@@ -7,49 +7,75 @@ from codeshot import interactive as interactive_mod
 from codeshot.cli import main
 
 
-def _fake_args_for(tmp_path: Path):
-    class A:
-        out = str(tmp_path / "out.png")
-        max_left_width = 1200
-        max_panel_height = 900
-        webp_quality = 90
-        webp_method = 4
-        no_border = False
-    return A()
+def _set_clipboard(monkeypatch, sequence):
+    """Patch try_get_clipboard_image to return values from `sequence`,
+    one per call, then None forever."""
+    it = iter(sequence)
+
+    def _next():
+        try:
+            return next(it)
+        except StopIteration:
+            return None
+
+    monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", _next)
 
 
-def test_image_action_pulls_clipboard_image(tmp_path: Path, monkeypatch):
-    """Typing 'i' at the action prompt grabs the clipboard image, adds it
-    as a panel with is_image=True, and continues to the next block."""
-    fake_img = Image.new("RGB", (40, 30), (200, 100, 50))
-    monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", lambda: fake_img)
+def _run(monkeypatch, argv, stdin):
+    monkeypatch.setattr("sys.argv", ["codeshot", *argv])
+    monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
+    main()
+
+
+def test_clipboard_image_is_auto_added_and_advances(tmp_path: Path, monkeypatch, capsys):
+    """An image in the clipboard at block-prompt time is added as a panel,
+    '[Image 1]' is printed, and no action menu is shown for that block."""
+    img = Image.new("RGB", (40, 30), (200, 100, 50))
+    _set_clipboard(monkeypatch, [img])
 
     stdin = (
-        "first block of code\n"
+        "code line\n"  # block 2: text
         "\n"
-        "\n"          # end first block
-        "i\n"         # paste image
-        "\n"          # empty next block -> nothing added; finish
+        "\n"
+        "d\n"  # done
+    )
+    out = tmp_path / "x.png"
+    _run(monkeypatch, ["--out", str(out)], stdin)
+    output = capsys.readouterr().out
+    assert "[Image 1]" in output
+    assert out.exists() and out.stat().st_size > 0
+
+
+def test_same_clipboard_image_is_not_added_twice(tmp_path: Path, monkeypatch, capsys):
+    """If the clipboard still holds the same image on the next block, it
+    must not auto-add again — the user wanted one image, not many."""
+    img = Image.new("RGB", (40, 30), (200, 100, 50))
+    # Returns the same image on every call
+    monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", lambda: img.copy())
+
+    stdin = (
+        "a\n"      # block 2: action menu wants 'add' after the second block
+        "code\n"   # block 2 content
+        "\n"
+        "\n"
+        "d\n"      # done
+    )
+    out = tmp_path / "x.png"
+    _run(monkeypatch, ["--out", str(out)], stdin)
+    output = capsys.readouterr().out
+    assert output.count("[Image ") == 1, output
+
+
+def test_text_only_path_unchanged_when_clipboard_empty(tmp_path: Path, monkeypatch, capsys):
+    _set_clipboard(monkeypatch, [])
+    stdin = (
+        "print('hi')\n"
+        "\n"
         "\n"
         "d\n"
     )
-    monkeypatch.setattr("sys.argv", ["codeshot", "--out", str(tmp_path / "x.png")])
-    monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
-    main()
-    assert (tmp_path / "x.png").exists()
-
-
-def test_image_action_with_empty_clipboard_keeps_prompting(monkeypatch, capsys, tmp_path: Path):
-    monkeypatch.setattr(interactive_mod, "try_get_clipboard_image", lambda: None)
-    stdin = (
-        "code line\n"
-        "\n"
-        "\n"
-        "i\n"   # no image -> message + reprompt
-        "d\n"   # then done
-    )
-    monkeypatch.setattr("sys.argv", ["codeshot", "--out", str(tmp_path / "x.png")])
-    monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
-    main()
-    out = capsys.readouterr().out
-    assert "Clipboard has no image" in out
+    out = tmp_path / "x.png"
+    _run(monkeypatch, ["--out", str(out)], stdin)
+    output = capsys.readouterr().out
+    assert "[Image" not in output
+    assert out.exists() and out.stat().st_size > 0
