@@ -9,7 +9,12 @@ export const loadImage = (src: string): Promise<HTMLImageElement> => {
   const p = new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = (e) => reject(e);
+    img.onerror = (e) => {
+      // Evict so a re-render after the user fixes the panel doesn't get
+      // stuck on the cached rejection forever.
+      cache.delete(src);
+      reject(e);
+    };
     img.src = src;
   });
   cache.set(src, p);

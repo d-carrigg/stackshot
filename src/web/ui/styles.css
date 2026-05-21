@@ -406,3 +406,24 @@ html, body {
   z-index: 2000;
   pointer-events: none;
 }
+
+/* Narrow viewports — stack the settings rail below the editor and hide
+   the tagline. The cards already horizontal-scroll. Not pretty on
+   phones but it doesn't break. */
+@media (max-width: 720px) {
+  #app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 48px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "topbar"
+      "center"
+      "right";
+  }
+  .topbar .subtitle { display: none; }
+  .right {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 50vh;
+  }
+  .panel-card { min-width: 280px; }
+}
