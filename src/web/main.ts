@@ -2,8 +2,8 @@ import "./ui/styles.css";
 
 import { Store, defaultComposition, makeCodePanel } from "./state";
 import { mountCompositionView } from "./ui/CompositionView";
-import { mountSettingsPanel } from "./ui/SettingsPanel";
 import { mountTopbar } from "./ui/Topbar";
+import { mountStatusBar } from "./ui/StatusBar";
 import { mountPreviewModal } from "./ui/PreviewModal";
 import { fileToImagePanel, debounce } from "./ui/util";
 import { load as loadPersisted, save as savePersisted } from "./persist";
@@ -12,18 +12,18 @@ const root = document.querySelector<HTMLDivElement>("#app")!;
 root.innerHTML = `
   <div id="topbar"></div>
   <main class="center" id="composition"></main>
-  <aside class="right" id="settings"></aside>
+  <footer id="statusbar"></footer>
 `;
 
 const initial = (await loadPersisted()) ?? defaultComposition();
 const store = new Store(initial);
 
-mountTopbar(document.getElementById("topbar")!, store);
 const preview = mountPreviewModal(store);
-mountCompositionView(document.getElementById("composition")!, store, {
+mountTopbar(document.getElementById("topbar")!, store, {
   onPreview: () => preview.open(),
 });
-mountSettingsPanel(document.getElementById("settings")!, store);
+mountCompositionView(document.getElementById("composition")!, store);
+mountStatusBar(document.getElementById("statusbar")!, store);
 
 // Auto-save to localStorage, debounced.
 const debouncedSave = debounce(() => savePersisted(store.get()), 300);

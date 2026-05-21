@@ -59,11 +59,12 @@ html, body {
 #app {
   height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  grid-template-rows: 48px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 56px minmax(0, 1fr) 32px;
   grid-template-areas:
-    "topbar topbar"
-    "center right";
+    "topbar"
+    "center"
+    "statusbar";
 }
 
 #topbar { grid-area: topbar; min-width: 0; }
@@ -78,14 +79,19 @@ html, body {
   font-weight: 600;
   letter-spacing: 0.02em;
 }
-.topbar .brand { color: var(--accent); }
+.topbar .brand { color: var(--accent); font-size: 16px; }
 .topbar .spacer { flex: 1; }
-.topbar a { color: var(--muted); text-decoration: none; font-weight: 500; font-size: 13px; }
-.topbar a:hover { color: var(--text); }
+.topbar-sep {
+  display: inline-block;
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  flex-shrink: 0;
+}
 
-.topbar-layout { font-size: 14px; }
+.topbar-layout { font-size: 14px; display: inline-flex; gap: 0; border-radius: var(--radius); overflow: hidden; }
 .topbar-layout button {
-  background: var(--surface);
+  background: transparent;
   color: var(--muted);
   border: none;
   padding: 6px 10px;
@@ -95,33 +101,340 @@ html, body {
   align-items: center;
   justify-content: center;
   line-height: 1;
+  font-size: 16px;
 }
 .topbar-layout button:hover { color: var(--text); background: var(--surface-2); }
 .topbar-layout button.active { background: var(--surface-2); color: var(--accent); }
 
-.topbar-link {
+/* Topbar theme pills — reuse `.theme-pill` styles defined below but
+   scope sizing to the topbar so they sit comfortably at row height. */
+.topbar-themes {
+  position: relative;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.topbar-themes .theme-pill { width: 22px; height: 22px; border-width: 2px; }
+.topbar-themes .theme-pill::after { left: 3px; right: 3px; height: 1.5px; }
+.topbar-themes .theme-pill-custom { font-size: 14px; }
+
+/* Flat pill groups (scale, format) — share styles. Tab-style underline
+   on the active pill. */
+.topbar-scale,
+.topbar-format {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.topbar-pill {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.topbar-pill:hover { color: var(--text); }
+.topbar-pill.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.topbar-scale-input {
+  width: 56px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  margin-left: 4px;
+}
+.topbar-scale-input:focus { outline: none; border-color: var(--accent); }
+
+/* Custom-color popover anchored under the theme strip. */
+.topbar-color-pop[hidden],
+.topbar-more-menu[hidden],
+.topbar-scale-input[hidden] { display: none; }
+.topbar-color-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  z-index: 50;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.topbar-color-pop label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.topbar-color-pop input[type="color"] {
+  width: 28px; height: 22px; padding: 0;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: transparent; cursor: pointer;
+}
+
+/* Icon-only action buttons (Preview, Copy, Download). Square, 32px,
+   browser-native tooltip via the title attribute. Download gets an
+   accent fill to keep its primary-action weight without a text label. */
+.topbar-icon-btn {
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease, filter 0.12s ease, transform 0.06s ease;
+}
+.topbar-icon-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.topbar-icon-btn[hidden] { display: none; }
+.topbar-icon-btn .ico { display: inline-flex; line-height: 1; }
+.topbar-icon-btn-primary {
+  background: var(--accent);
+  color: #0c0c12;
+  border-color: var(--accent);
+}
+.topbar-icon-btn-primary:hover {
+  background: var(--accent);
+  color: #0c0c12;
+  border-color: var(--accent);
+  filter: brightness(1.08);
+}
+.topbar-icon-btn-primary:active { transform: scale(0.96); }
+
+/* Overflow ⋯ menu. */
+.topbar-more { position: relative; }
+.topbar-more-btn {
   width: 32px;
   height: 32px;
+  background: transparent;
+  color: var(--muted);
+  border: none;
   border-radius: var(--radius);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  font-family: inherit;
+}
+.topbar-more-btn:hover { background: var(--surface-2); color: var(--text); }
+.topbar-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.topbar-more-menu button,
+.topbar-more-menu a,
+.topbar-more-menu label.topbar-more-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.topbar-more-menu button:hover,
+.topbar-more-menu a:hover,
+.topbar-more-menu label.topbar-more-toggle:hover { background: var(--surface-2); }
+.topbar-more-toggle { user-select: none; }
+.topbar-more-toggle input { margin: 0; }
+.topbar-more-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+.topbar-more-gh { display: inline-flex; font-size: 14px; }
+
+/* Slot wrappers — transparent containers in the topbar that hold each
+   group. display: contents lets them disappear from layout, so the
+   inner group inherits the topbar's flex behaviour directly. */
+.topbar-slot { display: contents; }
+
+/* Overflow sections inside the ⋯ menu. Hidden by default; @media
+   rules below show them as their corresponding topbar slot is hidden. */
+.menu-overflow { display: none; }
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.menu-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.menu-layout {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  width: max-content;
+}
+.menu-layout button {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 18px;
 }
-.topbar-link:hover { background: var(--surface-2); }
-
-.center, .right { overflow: hidden; min-height: 0; min-width: 0; }
-.right {
-  grid-area: right;
-  border-left: 1px solid var(--border);
-  background: var(--surface);
-  overflow-y: auto;
-  padding: 16px;
+.menu-layout button:hover { color: var(--text); background: var(--surface-2); }
+.menu-layout button.active { background: var(--surface-2); color: var(--accent); }
+.menu-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
+.menu-themes-custom {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  flex-basis: 100%;
+}
+.menu-themes-custom label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.menu-themes-custom input[type="color"] {
+  width: 28px; height: 22px; padding: 0;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: transparent; cursor: pointer;
+}
+.menu-scale,
+.menu-format {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.menu-scale .topbar-pill,
+.menu-format .topbar-pill {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.menu-scale .topbar-scale-input {
+  width: 64px;
+  margin-left: 6px;
+}
+/* Separator above the always-on items (inner border, reset, github).
+   Hidden by default; shows only when at least one overflow section
+   above it is visible. */
+.menu-always-sep { display: none; }
+.topbar-more-menu:has(.menu-overflow[data-overflow]:not(:empty):not([data-hidden-by-mq])) .menu-always-sep {
+  display: block;
+}
+/* :has() with media-query state isn't straightforward, so just always
+   show the divider when any menu-overflow is rendered (the rules below
+   make sure it's only rendered when a breakpoint folds something in). */
+.menu-overflow:not(:empty) ~ .menu-always-sep { display: block; }
+
+/* Responsive fold-into-⋯ breakpoints. Each breakpoint hides one
+   topbar slot and reveals its overflow counterpart in the menu.
+   Icon-only Preview/Copy/Download stay in the topbar at every width. */
+@media (max-width: 880px) {
+  .topbar-slot[data-slot="format"] { display: none; }
+  .topbar-sep[data-sep-after="scale"] { display: none; }
+  .menu-overflow[data-overflow="format"] { display: block; }
+}
+@media (max-width: 740px) {
+  .topbar-slot[data-slot="scale"] { display: none; }
+  .topbar-sep[data-sep-after="themes"] { display: none; }
+  .menu-overflow[data-overflow="scale"] { display: block; }
+}
+@media (max-width: 600px) {
+  .topbar-slot[data-slot="themes"] { display: none; }
+  .topbar-sep[data-sep-after="layout"] { display: none; }
+  .menu-overflow[data-overflow="themes"] { display: block; }
+}
+@media (max-width: 460px) {
+  .topbar-slot[data-slot="layout"] { display: none; }
+  .menu-overflow[data-overflow="layout"] { display: block; }
+}
+
+.center { overflow: hidden; min-height: 0; min-width: 0; }
 .center {
   grid-area: center;
   background: var(--bg);
   overflow: hidden;
+}
+
+/* Status footer ----------------------------------------------------- */
+#statusbar { grid-area: statusbar; min-width: 0; }
+.status {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  gap: 12px;
+}
+.status .spacer { flex: 1; }
+.status-keys kbd {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--text);
+  margin: 0 2px;
 }
 
 /* Composition stage --------------------------------------------------- */
@@ -401,95 +714,27 @@ html, body {
   border-color: var(--accent);
   background: rgba(137, 180, 250, 0.06);
 }
-/* Preview button reads as a primary action — solid border, accent
-   colour, sits inline with the +code/+image affordances. */
-.composition-add-row button.composition-preview {
-  border-style: solid;
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(137, 180, 250, 0.08);
+/* Clear-all button sits inline with the +code/+image affordances but
+   styled as a danger action — dashed-to-solid on hover, danger colour. */
+.composition-add-row button.composition-clear {
   margin-left: 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-.composition-add-row button.composition-preview:hover {
-  background: var(--accent);
-  color: #1e1e2e;
+.composition-add-row button.composition-clear:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: rgba(243, 139, 168, 0.06);
 }
-.composition-add-row button.composition-preview .ico {
+.composition-add-row button.composition-clear .ico {
   display: inline-flex;
   font-size: 16px;
-}
-
-/* Right-rail settings ------------------------------------------------- */
-.section-header {
-  padding: 0 0 12px 0;
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  font-weight: 700;
-}
-.section-subhead {
-  margin: 4px 0 8px 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  font-weight: 600;
-}
-.setting { margin-bottom: 14px; }
-.setting > label {
-  display: block;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-.setting .seg {
-  display: flex;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.setting .seg button {
-  flex: 1;
-  background: var(--surface);
-  color: var(--muted);
-  border: none;
-  padding: 8px 10px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 13px;
-}
-.setting .seg button.active { background: var(--surface-2); color: var(--text); }
-.setting input[type="range"] { width: 100%; }
-.setting input[type="color"] {
-  width: 38px; height: 28px; padding: 0;
-  border: 1px solid var(--border); border-radius: 6px;
-  background: transparent; cursor: pointer;
-}
-.setting .row { display: flex; align-items: center; gap: 8px; }
-.setting .row .val { color: var(--muted); font-size: 12px; min-width: 32px; text-align: right; }
-.setting .toggle {
-  display: flex; align-items: center; gap: 8px;
-  cursor: pointer; user-select: none;
 }
 
 /* Theme presets — color-swatch buttons in a row. Each pill shows the
    background colour as the fill and a thin stripe in the arrow colour
    so users can read both at a glance. */
-.theme-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .theme-pill {
   position: relative;
   width: 32px;
@@ -550,75 +795,6 @@ html, body {
   justify-content: center;
 }
 .theme-pill-custom::after { display: none; }
-
-.actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
-.actions-row { display: flex; gap: 8px; }
-.actions-row button { flex: 1; }
-
-/* Flat tab-style format selector: tab labels with a bottom underline
-   on the active one. No filled chips. */
-.format-pills {
-  display: flex;
-  gap: 0;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.format-pills .format-pill {
-  flex: 1;
-  background: transparent;
-  color: var(--muted);
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 8px 4px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  margin-bottom: -1px;
-  transition: color 0.12s ease, border-color 0.12s ease;
-}
-.format-pills .format-pill:hover { color: var(--text); }
-.format-pills .format-pill.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
-
-/* Flat action buttons: text + icon, no fills. */
-.actions button {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
-}
-.actions button:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.actions button[data-export] {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.actions button[data-export]:hover {
-  background: var(--accent);
-  color: #1e1e2e;
-}
-.actions button .ico {
-  display: inline-flex;
-  font-size: 16px;
-  line-height: 1;
-}
 
 /* Toast and overlays ------------------------------------------------- */
 .toast {
@@ -684,6 +860,7 @@ html, body {
   border-radius: 6px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
 }
+.preview-modal-img[hidden] { display: none; }
 .preview-modal-loading {
   color: var(--muted);
   font-size: 13px;
@@ -744,23 +921,13 @@ html, body {
   pointer-events: none;
 }
 
-/* Narrow viewports — stack the settings rail below the editor and hide
-   the tagline. The cards already horizontal-scroll. Not pretty on
-   phones but it doesn't break. */
-@media (max-width: 720px) {
-  #app {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 48px minmax(0, 1fr) auto;
-    grid-template-areas:
-      "topbar"
-      "center"
-      "right";
-  }
-  .topbar .subtitle { display: none; }
-  .right {
-    border-left: none;
-    border-top: 1px solid var(--border);
-    max-height: 50vh;
-  }
-  .panel-card { min-width: 280px; }
+/* Narrow viewports — at mobile widths, allow the topbar to wrap onto
+   two rows as a fallback in case the brand + Download + ⋯ trio still
+   doesn't fit (e.g. very long brand or system font). Status meta hides
+   so the keyboard-shortcut hints stay visible. */
+@media (max-width: 480px) {
+  .topbar { flex-wrap: wrap; padding: 6px 12px; gap: 8px; }
+  #app { grid-template-rows: auto minmax(0, 1fr) 32px; }
+  .status-meta { display: none; }
+  .panel-card { min-width: 240px; }
 }
