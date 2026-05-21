@@ -39,7 +39,7 @@ export type Composition = {
   layout: Layout;
   bgColor: string;     // hex
   arrowColor: string;  // hex
-  scale: number;       // 1.0 - 3.0
+  scale: number;       // 1.0 - 8.0 (presets: low=3, med=4, high=5)
   innerBorder: boolean; // when false → image panels get rounded corners, no inner panel bg
   gridRows: number;    // only used when layout === "grid"
   gridCols: number;    // only used when layout === "grid"
@@ -79,7 +79,7 @@ export const emptyComposition = (): Composition => ({
   layout: "vertical",
   bgColor: DEFAULT_BG_HEX,
   arrowColor: ARROW_HEX,
-  scale: 2.0,
+  scale: 4.0,
   innerBorder: true,
   gridRows: 2,
   gridCols: 2,
@@ -106,7 +106,7 @@ export const defaultComposition = (): Composition => {
     layout: "vertical",
     bgColor: DEFAULT_BG_HEX,
     arrowColor: ARROW_HEX,
-    scale: 2.0,
+    scale: 4.0,
     innerBorder: true,
     gridRows: 2,
     gridCols: 2,

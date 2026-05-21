@@ -26,9 +26,9 @@ export type TopbarOptions = {
 
 type ScalePreset = "low" | "med" | "high" | "custom";
 const SCALE_VALUES: Record<Exclude<ScalePreset, "custom">, number> = {
-  low: 1.0,
-  med: 2.0,
-  high: 3.0,
+  low: 3.0,
+  med: 4.0,
+  high: 5.0,
 };
 const resolveScalePreset = (scale: number): ScalePreset => {
   for (const k of ["low", "med", "high"] as const) {
@@ -153,7 +153,7 @@ const buildScaleGroup = (store: Store, variant: Variant): HTMLElement => {
     <button type="button" class="topbar-pill" data-scale-val="med">med</button>
     <button type="button" class="topbar-pill" data-scale-val="high">high</button>
     <button type="button" class="topbar-pill" data-scale-val="custom" data-scale-custom>custom</button>
-    <input type="number" class="topbar-scale-input" min="0.5" max="6" step="0.1" data-scale-input hidden />
+    <input type="number" class="topbar-scale-input" min="1" max="8" step="0.5" data-scale-input hidden />
   `;
   const pills = wrap.querySelectorAll<HTMLButtonElement>("[data-scale-val]");
   const customPill = wrap.querySelector<HTMLButtonElement>("[data-scale-custom]")!;
