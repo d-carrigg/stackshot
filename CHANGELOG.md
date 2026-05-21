@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.5.0 — 2026-05-20
+
+### Added
+- Web: **Grid layout**. Third layout option alongside Horizontal and
+  Vertical, with snap-to-grid rows × cols (configurable 1–4 each).
+  Drag a panel onto another to swap cells. New `gridRows` / `gridCols`
+  on `Composition` and optional `gridRow` / `gridCol` per panel.
+- Web: **Animated GIF / WEBP input → animated WEBP output**. Drop a
+  GIF or animated WEBP and the panel plays in the exported image. The
+  Export button switches to "Export WEBP" automatically. Uses the
+  browser's native `ImageDecoder` for frame extraction and a pure-JS
+  WEBP muxer that wraps per-frame `canvas.toBlob("image/webp")` output
+  — no WASM dependency added.
+- Web: **Preview modal**. Topbar button opens a native `<dialog>` with
+  the exact image that would be exported, plus inline Download / Copy
+  actions.
+- Web: **PWA**. Installable via `vite-plugin-pwa`; ships a service
+  worker that precaches the build (and the Shiki language chunks) for
+  offline use. New manifest at `public/manifest.webmanifest` and PNG
+  icons in `public/icons/` (regeneratable via `scripts/make-icons.mjs`).
+- Web: **IndexedDB image store**. Image blobs persist to IndexedDB
+  (`codeimg/images`) so animated assets no longer blow past the 5MB
+  localStorage quota. Composition shape stays in compressed
+  localStorage with `blobId` refs. One-time v1 → v2 migration runs on
+  first load.
+- Web: **Lucide-style icon set** at `src/web/ui/icons.ts`. Replaces
+  unicode `‹ › ×` placeholders and feeds the new topbar / preview
+  buttons. No external dep.
+
+### Changed
+- Web: **Default layout is now Vertical** (new compositions only;
+  existing persisted compositions keep their layout).
+- Web: **Layout selector moved to the topbar** as a segmented control
+  (Vertical / Horizontal / Grid). Right-rail "Composition" section
+  now only carries scale, colours, image options, and (when grid is
+  active) rows/cols sliders.
+- Web: Inner-panel-border toggle nested under an **"Image options"**
+  subhead, since it only affects image panels.
+- Web: Persistence schema bumped to `codeimg.composition.v2`. v1
+  payloads migrate transparently and are removed.
+
+## 0.4.3 — 2026-05-20
+
+### Fixed
+- Web: language `<select>` no longer triggers password-manager /
+  browser autofill. Adds `autocomplete="off"` plus
+  `data-1p-ignore` / `data-lpignore` / `data-form-type="other"`
+  hints, and a unique `name` so 1Password and similar stop matching
+  it as a country/language field.
+- Web: dragging files or text over a code editor no longer shows the
+  textarea's native drop-caret indicator and can no longer replace
+  the editor contents. The global drop handler still catches the
+  file and adds a new panel.
+
+### Changed
+- Web: in horizontal layout, the "+ code" / "+ image" buttons now sit
+  in a row beneath the panels instead of stacked to the right, so the
+  panel row reads as a single composition. Buttons restyled as
+  dashed-outline affordances ("+ code", "+ image") to match the
+  empty/placeholder visual language.
+
 ## 0.4.2 — 2026-05-20
 
 ### Added

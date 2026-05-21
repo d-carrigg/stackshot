@@ -66,10 +66,11 @@ html, body {
     "center right";
 }
 
+#topbar { grid-area: topbar; min-width: 0; }
 .topbar {
-  grid-area: topbar;
   display: flex;
   align-items: center;
+  height: 100%;
   padding: 0 16px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -81,6 +82,33 @@ html, body {
 .topbar .spacer { flex: 1; }
 .topbar a { color: var(--muted); text-decoration: none; font-weight: 500; font-size: 13px; }
 .topbar a:hover { color: var(--text); }
+
+.topbar-layout { font-size: 14px; }
+.topbar-layout button {
+  background: var(--surface);
+  color: var(--muted);
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.topbar-layout button:hover { color: var(--text); background: var(--surface-2); }
+.topbar-layout button.active { background: var(--surface-2); color: var(--accent); }
+
+.topbar-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  font-size: 18px;
+}
+.topbar-link:hover { background: var(--surface-2); }
 
 .center, .right { overflow: hidden; min-height: 0; min-width: 0; }
 .right {
@@ -111,19 +139,72 @@ html, body {
   padding: 32px;
   background: var(--bg);
   display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 .composition[data-layout="horizontal"] {
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
+  align-items: flex-start;
   width: max-content;
 }
 .composition[data-layout="vertical"] {
-  flex-direction: column;
   align-items: stretch;
   max-width: 920px;
   margin: 0 auto;
+}
+
+.composition-panels {
+  display: flex;
+  gap: 16px;
+}
+.composition[data-layout="horizontal"] .composition-panels {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.composition[data-layout="vertical"] .composition-panels {
+  flex-direction: column;
+  align-items: stretch;
+}
+.composition[data-layout="grid"] .composition-panels {
+  display: grid;
+  gap: 16px;
+  align-items: stretch;
+}
+.composition[data-layout="grid"] .panel-card {
+  min-width: 0;
+  cursor: grab;
+}
+.composition[data-layout="grid"] .panel-card.dragging { opacity: 0.5; }
+.composition[data-layout="grid"] .panel-card.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--panel-radius);
+}
+
+/* Sequential (horizontal / vertical) drag-to-reorder: drop indicator is
+   a thin accent bar on the side the dragged card will land. */
+.composition[data-layout="horizontal"] .panel-card.dragging,
+.composition[data-layout="vertical"] .panel-card.dragging { opacity: 0.5; }
+.panel-card.drop-before::before,
+.panel-card.drop-after::after {
+  content: "";
+  position: absolute;
+  background: var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 5;
+}
+.composition[data-layout="vertical"] .panel-card.drop-before::before {
+  left: 0; right: 0; top: -8px; height: 3px;
+}
+.composition[data-layout="vertical"] .panel-card.drop-after::after {
+  left: 0; right: 0; bottom: -8px; height: 3px;
+}
+.composition[data-layout="horizontal"] .panel-card.drop-before::before {
+  top: 0; bottom: 0; left: -8px; width: 3px;
+}
+.composition[data-layout="horizontal"] .panel-card.drop-after::after {
+  top: 0; bottom: 0; right: -8px; width: 3px;
 }
 
 .composition-empty {
@@ -171,13 +252,26 @@ html, body {
   align-items: center;
 }
 .panel-card-lang {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
   border-radius: 6px;
   padding: 3px 6px;
   font-family: inherit;
   font-size: 12px;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.panel-card-lang:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.panel-card-lang:focus {
+  outline: none;
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
 }
 .icon-btn {
   background: transparent;
@@ -187,13 +281,18 @@ html, body {
   width: 28px;
   height: 28px;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
   padding: 0;
   font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border); }
 .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+.icon-btn.panel-card-grip { cursor: grab; }
+.panel-card.dragging .icon-btn.panel-card-grip { cursor: grabbing; }
 
 .panel-card-body {
   display: flex;
@@ -272,33 +371,55 @@ html, body {
 /* Add panel row ------------------------------------------------------- */
 .composition-add-row {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: 12px;
+  align-items: stretch;
   flex-shrink: 0;
+  flex-direction: row;
 }
 .composition[data-layout="horizontal"] .composition-add-row {
-  flex-direction: column;
-  margin-left: 16px;
+  justify-content: flex-start;
 }
 .composition[data-layout="vertical"] .composition-add-row {
-  margin-top: 8px;
   justify-content: center;
 }
 .composition-add-row button {
-  background: var(--surface-2);
+  background: transparent;
   color: var(--muted);
-  border: 1px dashed var(--border);
+  border: 2px dashed var(--border);
   border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 14px 28px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   white-space: nowrap;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
 }
 .composition-add-row button:hover {
-  color: var(--text);
+  color: var(--accent);
   border-color: var(--accent);
+  background: rgba(137, 180, 250, 0.06);
+}
+/* Preview button reads as a primary action — solid border, accent
+   colour, sits inline with the +code/+image affordances. */
+.composition-add-row button.composition-preview {
   border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(137, 180, 250, 0.08);
+  margin-left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.composition-add-row button.composition-preview:hover {
+  background: var(--accent);
+  color: #1e1e2e;
+}
+.composition-add-row button.composition-preview .ico {
+  display: inline-flex;
+  font-size: 16px;
 }
 
 /* Right-rail settings ------------------------------------------------- */
@@ -309,6 +430,16 @@ html, body {
   letter-spacing: 0.08em;
   color: var(--muted);
   font-weight: 700;
+}
+.section-subhead {
+  margin: 4px 0 8px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
 }
 .setting { margin-bottom: 14px; }
 .setting > label {
@@ -351,26 +482,143 @@ html, body {
   cursor: pointer; user-select: none;
 }
 
-.actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
-.actions-row { display: flex; gap: 8px; }
-.actions-row button { flex: 1; }
-.actions button {
-  background: var(--accent);
-  color: #1e1e2e;
-  border: none;
-  border-radius: var(--radius);
-  padding: 12px;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
+/* Theme presets — color-swatch buttons in a row. Each pill shows the
+   background colour as the fill and a thin stripe in the arrow colour
+   so users can read both at a glance. */
+.theme-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.actions button.secondary {
+.theme-pill {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--swatch-bg, #1e1e2e);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.12s ease, transform 0.08s ease;
+}
+.theme-pill::before {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 1;
 }
-.actions button:hover { filter: brightness(1.1); }
+.theme-pill:hover::before { opacity: 1; }
+.theme-pill::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--swatch-arrow, #fff);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.theme-pill:hover { border-color: var(--muted); }
+.theme-pill.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.25);
+}
+.theme-pill:active { transform: scale(0.94); }
+.theme-pill-custom {
+  background: linear-gradient(135deg, #f38ba8 0%, #fab387 33%, #a6e3a1 66%, #89b4fa 100%);
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-pill-custom::after { display: none; }
+
+.actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
+.actions-row { display: flex; gap: 8px; }
+.actions-row button { flex: 1; }
+
+/* Flat tab-style format selector: tab labels with a bottom underline
+   on the active one. No filled chips. */
+.format-pills {
+  display: flex;
+  gap: 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.format-pills .format-pill {
+  flex: 1;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: -1px;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.format-pills .format-pill:hover { color: var(--text); }
+.format-pills .format-pill.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Flat action buttons: text + icon, no fills. */
+.actions button {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.actions button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.actions button[data-export] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.actions button[data-export]:hover {
+  background: var(--accent);
+  color: #1e1e2e;
+}
+.actions button .ico {
+  display: inline-flex;
+  font-size: 16px;
+  line-height: 1;
+}
 
 /* Toast and overlays ------------------------------------------------- */
 .toast {
@@ -391,6 +639,95 @@ html, body {
   pointer-events: none;
 }
 .toast.show { opacity: 1; }
+
+/* Minimal preview dialog: the image is the dialog. Three icon-only
+   overlay buttons sit on the image's corners. No chrome, no padding. */
+.preview-modal {
+  background: transparent;
+  color: var(--text);
+  border: none;
+  padding: 0;
+  /* Anchor at viewport center, then offset by half the dialog's own
+     intrinsic size. Native <dialog>'s default centering breaks down
+     when the dialog has transparent chrome and a shrink-to-fit child;
+     this transform-based approach is robust to either. */
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: max-content;
+  height: max-content;
+  max-width: 92vw;
+  max-height: 92vh;
+  box-shadow: none;
+  overflow: visible;
+}
+.preview-modal::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(3px);
+}
+.preview-modal-figure {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 92vw;
+  max-height: 92vh;
+  line-height: 0;
+}
+.preview-modal-img {
+  display: block;
+  max-width: 92vw;
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+.preview-modal-loading {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 80px 120px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.preview-modal-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 0;
+  /* mix-blend-mode: difference inverts whatever's underneath. A pure-white
+     icon over a light image renders dark; over a dark image, light. Means
+     the three controls stay readable on ANY composition. */
+  mix-blend-mode: difference;
+}
+.preview-modal-overlay {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  font-family: inherit;
+  transition: opacity 0.12s ease, transform 0.08s ease;
+  opacity: 0.85;
+}
+.preview-modal-overlay:hover { opacity: 1; }
+.preview-modal-overlay:active { transform: scale(0.94); }
+.preview-modal-loading {
+  color: var(--muted);
+  font-size: 13px;
+}
 
 .global-drop-overlay {
   position: fixed;

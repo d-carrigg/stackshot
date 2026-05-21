@@ -3,25 +3,26 @@ import "./ui/styles.css";
 import { Store, defaultComposition, makeCodePanel } from "./state";
 import { mountCompositionView } from "./ui/CompositionView";
 import { mountSettingsPanel } from "./ui/SettingsPanel";
+import { mountTopbar } from "./ui/Topbar";
+import { mountPreviewModal } from "./ui/PreviewModal";
 import { fileToImagePanel, debounce } from "./ui/util";
 import { load as loadPersisted, save as savePersisted } from "./persist";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
 root.innerHTML = `
-  <header class="topbar">
-    <span class="brand">codeimg</span>
-    <span class="subtitle" style="color: var(--muted); font-weight: 500;">quickly create code screenshots, data never leaves your browser</span>
-    <span class="spacer"></span>
-    <a href="https://github.com/d-carrigg/codeimg" target="_blank" rel="noreferrer">GitHub</a>
-  </header>
+  <div id="topbar"></div>
   <main class="center" id="composition"></main>
   <aside class="right" id="settings"></aside>
 `;
 
-const initial = loadPersisted() ?? defaultComposition();
+const initial = (await loadPersisted()) ?? defaultComposition();
 const store = new Store(initial);
 
-mountCompositionView(document.getElementById("composition")!, store);
+mountTopbar(document.getElementById("topbar")!, store);
+const preview = mountPreviewModal(store);
+mountCompositionView(document.getElementById("composition")!, store, {
+  onPreview: () => preview.open(),
+});
 mountSettingsPanel(document.getElementById("settings")!, store);
 
 // Auto-save to localStorage, debounced.

@@ -1,5 +1,7 @@
 import type { ImagePanel } from "../state";
 import { makeImagePanel } from "../state";
+import { nextBlobId, putBlob, resolveBlobUrl } from "../storage/blobStore";
+import { probeAnimation } from "../render/motion";
 
 export const fileToDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -11,15 +13,25 @@ export const fileToDataUrl = (file: File): Promise<string> =>
 
 export const fileToImagePanel = async (file: File): Promise<ImagePanel | null> => {
   if (!file.type.startsWith("image/")) return null;
-  const src = await fileToDataUrl(file);
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+  const blobId = nextBlobId();
+  await putBlob(blobId, file);
+  const src = (await resolveBlobUrl(blobId)) ?? "";
+  const dims = await loadDimensions(src);
+  const animated = await probeAnimation(file).catch(() => false);
+  return makeImagePanel(src, dims.w, dims.h, undefined, {
+    blobId,
+    mime: file.type,
+    animated,
+  });
+};
+
+const loadDimensions = (src: string): Promise<{ w: number; h: number }> =>
+  new Promise((resolve, reject) => {
     const i = new Image();
-    i.onload = () => resolve(i);
+    i.onload = () => resolve({ w: i.naturalWidth, h: i.naturalHeight });
     i.onerror = reject;
     i.src = src;
   });
-  return makeImagePanel(src, img.naturalWidth, img.naturalHeight);
-};
 
 export const debounce = <T extends unknown[]>(
   fn: (...args: T) => void,

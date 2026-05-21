@@ -5,7 +5,7 @@
 // We re-tokenize on input (debounced to next animation frame) and keep
 // scroll positions in sync.
 import { tokenize } from "../render/highlight";
-import { PANEL_BG_HEX } from "../render/colors";
+import type { Theme } from "../themes";
 
 const FONT = '14px "DejaVu Sans Mono", "SFMono-Regular", Menlo, Consolas, monospace';
 const LINE_HEIGHT = "1.5";
@@ -18,6 +18,7 @@ export type CodeEditorHandle = {
   root: HTMLElement;
   setCode: (code: string) => void;
   setLanguage: (lang: string) => void;
+  setTheme: (t: Theme) => void;
   focus: () => void;
   destroy: () => void;
 };
@@ -25,6 +26,7 @@ export type CodeEditorHandle = {
 export const createCodeEditor = (opts: {
   initialCode: string;
   initialLanguage: string;
+  theme: Theme;
   onChange: (code: string) => void;
 }): CodeEditorHandle => {
   const root = document.createElement("div");
@@ -40,8 +42,12 @@ export const createCodeEditor = (opts: {
 
   // Identical font metrics on both layers.
   const shared = `font: ${FONT}; line-height: ${LINE_HEIGHT}; padding: ${PADDING}; tab-size: 4; white-space: pre; word-wrap: normal;`;
-  pre.style.cssText = `${shared} margin: 0; color: #cdd6f4; background: ${PANEL_BG_HEX}; border-radius: 12px; overflow: auto; pointer-events: none;`;
-  ta.style.cssText = `${shared} position: absolute; inset: 0; margin: 0; background: transparent; color: transparent; caret-color: #cdd6f4; border: 0; outline: none; resize: none; overflow: auto; white-space: pre; -webkit-text-fill-color: transparent;`;
+  let theme = opts.theme;
+  const applyThemeStyles = () => {
+    pre.style.cssText = `${shared} margin: 0; color: ${theme.title}; background: ${theme.panelBg}; border-radius: 12px; overflow: auto; pointer-events: none;`;
+    ta.style.cssText = `${shared} position: absolute; inset: 0; margin: 0; background: transparent; color: transparent; caret-color: ${theme.title}; border: 0; outline: none; resize: none; overflow: auto; white-space: pre; -webkit-text-fill-color: transparent;`;
+  };
+  applyThemeStyles();
 
   root.style.cssText = "position: relative; min-width: 280px; min-height: 80px;";
 
@@ -52,7 +58,7 @@ export const createCodeEditor = (opts: {
     scheduled = false;
     const text = ta.value;
     try {
-      const lines = await tokenize(text, language);
+      const lines = await tokenize(text, language, theme.syntax);
       const html = lines
         .map((line) => {
           if (line.length === 0) return "<span></span>";
@@ -102,6 +108,20 @@ export const createCodeEditor = (opts: {
     pre.scrollTop = ta.scrollTop;
     pre.scrollLeft = ta.scrollLeft;
   });
+  // Block the browser's native "drop text/file into textarea" behaviour
+  // so dragging a file over a code panel doesn't show a caret-insert
+  // indicator and doesn't replace the editor's contents on drop. The
+  // global drop handler still picks the file up.
+  const blockDrop = (e: DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
+  };
+  ta.addEventListener("dragenter", blockDrop);
+  ta.addEventListener("dragover", blockDrop);
+  ta.addEventListener("drop", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
 
   ta.value = opts.initialCode;
   schedule();
@@ -121,6 +141,12 @@ export const createCodeEditor = (opts: {
         language = l;
         schedule();
       }
+    },
+    setTheme(t) {
+      if (theme.id === t.id && theme.syntax === t.syntax && theme.panelBg === t.panelBg) return;
+      theme = t;
+      applyThemeStyles();
+      schedule();
     },
     focus() {
       ta.focus();

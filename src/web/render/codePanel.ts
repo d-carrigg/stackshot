@@ -1,8 +1,8 @@
 // Rasterize tokenized code into a Canvas. Mirrors the dimensions of
 // Pygments' ImageFormatter so panel sizes line up with the CLI: 18px base
 // font, 12px image_pad, both scaled by `scale`.
-import { PANEL_BG_HEX } from "./colors";
 import { tokenize, type TokenLine } from "./highlight";
+import type { Theme } from "../themes";
 
 const FONT_FAMILY = '"DejaVu Sans Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace';
 
@@ -38,8 +38,9 @@ export const renderCodePanelImage = async (
   code: string,
   language: string,
   scale: number,
+  theme: Theme,
 ): Promise<CodePanelImage> => {
-  const tokens = await tokenize(code, language);
+  const tokens = await tokenize(code, language, theme.syntax);
   const fontSize = baseFontSize(scale);
   const pad = basePad(scale);
 
@@ -61,7 +62,7 @@ export const renderCodePanelImage = async (
   const ctx = canvas.getContext("2d")!;
 
   // Fill with panel background so subpixel-AA glyph edges blend cleanly.
-  ctx.fillStyle = PANEL_BG_HEX;
+  ctx.fillStyle = theme.panelBg;
   ctx.fillRect(0, 0, width, height);
 
   ctx.font = `${fontSize}px ${FONT_FAMILY}`;

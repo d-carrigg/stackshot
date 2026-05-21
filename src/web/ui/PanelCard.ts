@@ -1,13 +1,16 @@
 import type { Store, Panel } from "../state";
 import { createCodeEditor, type CodeEditorHandle } from "./CodeEditor";
 import { fileToImagePanel, languageOptions } from "./util";
+import { gripVertical, trash } from "./icons";
+import type { Theme } from "../themes";
 
 export type PanelCardHandle = {
   root: HTMLElement;
   update: (p: Panel) => void;
+  setTheme: (t: Theme) => void;
 };
 
-export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => {
+export const createPanelCard = (store: Store, panel: Panel, theme: Theme): PanelCardHandle => {
   const root = document.createElement("div");
   root.className = `panel-card panel-card-${panel.kind}`;
 
@@ -29,6 +32,14 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
   if (panel.kind === "code") {
     const langSelect = document.createElement("select");
     langSelect.className = "panel-card-lang";
+    // Suppress password managers / browser autofill — they latch onto
+    // <select> with values like "python" / "english" and try to fill it
+    // as a country or language field.
+    langSelect.setAttribute("autocomplete", "off");
+    langSelect.setAttribute("name", "panel-syntax-" + panel.id);
+    langSelect.setAttribute("data-1p-ignore", "true");
+    langSelect.setAttribute("data-lpignore", "true");
+    langSelect.setAttribute("data-form-type", "other");
     for (const lang of languageOptions()) {
       const opt = document.createElement("option");
       opt.value = lang;
@@ -43,20 +54,10 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
     controls.appendChild(langSelect);
   }
 
-  const moveLeft = mkIconButton("‹", "Move earlier");
-  const moveRight = mkIconButton("›", "Move later");
-  const del = mkIconButton("×", "Remove panel", "danger");
-  moveLeft.addEventListener("click", () => {
-    const idx = store.get().panels.findIndex((p) => p.id === panel.id);
-    if (idx > 0) store.movePanel(panel.id, idx - 1);
-  });
-  moveRight.addEventListener("click", () => {
-    const c = store.get();
-    const idx = c.panels.findIndex((p) => p.id === panel.id);
-    if (idx >= 0 && idx < c.panels.length - 1) store.movePanel(panel.id, idx + 1);
-  });
+  const grip = mkIconButton(gripVertical(), "Drag to reorder", "grip");
+  const del = mkIconButton(trash(), "Remove panel", "danger");
   del.addEventListener("click", () => store.removePanel(panel.id));
-  controls.append(moveLeft, moveRight, del);
+  controls.append(grip, del);
 
   header.appendChild(controls);
   root.appendChild(header);
@@ -70,6 +71,7 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
     editor = createCodeEditor({
       initialCode: panel.code,
       initialLanguage: panel.language,
+      theme,
       onChange: (code) => store.patchPanel(panel.id, { code }),
     });
     body.appendChild(editor.root);
@@ -87,16 +89,24 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
         editor.setLanguage(p.language);
       }
     },
+    setTheme(t) {
+      editor?.setTheme(t);
+    },
   };
 };
 
-const mkIconButton = (label: string, title: string, variant?: string): HTMLButtonElement => {
+const mkIconButton = (
+  icon: SVGSVGElement,
+  title: string,
+  variant?: string,
+): HTMLButtonElement => {
   const b = document.createElement("button");
   b.type = "button";
-  b.textContent = label;
+  b.appendChild(icon);
   b.title = title;
   b.setAttribute("aria-label", title);
   b.className = "icon-btn" + (variant ? " " + variant : "");
+  if (variant === "grip") b.classList.add("panel-card-grip");
   return b;
 };
 
@@ -107,8 +117,8 @@ const buildImageEditor = (store: Store, panel: Panel & { kind: "image" }): HTMLE
     <img alt="panel image" />
     <div class="image-card-overlay">
       <button type="button" class="icon-btn">Replace</button>
-      <input type="file" accept="image/*" hidden />
-      <div class="hint">drag & drop, paste, or click Replace</div>
+      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/*" hidden />
+      <div class="hint">drag & drop, paste, or click Replace<br/>png · jpeg · gif · webp · avif</div>
     </div>
   `;
   const img = wrap.querySelector<HTMLImageElement>("img")!;
@@ -121,6 +131,9 @@ const buildImageEditor = (store: Store, panel: Panel & { kind: "image" }): HTMLE
     if (next) {
       store.patchPanel(panel.id, {
         src: next.src,
+        blobId: next.blobId,
+        mime: next.mime,
+        animated: next.animated,
         naturalW: next.naturalW,
         naturalH: next.naturalH,
       });
