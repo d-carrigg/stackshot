@@ -32,6 +32,7 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
   controls.className = "panel-card-controls";
 
   let lang: ReturnType<typeof createCombobox> | null = null;
+  let borderToggle: HTMLInputElement | null = null;
   if (panel.kind === "code") {
     lang = createCombobox({
       value: panel.language,
@@ -44,6 +45,23 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
       },
     });
     controls.appendChild(lang.root);
+  } else {
+    // Per-image "inner border" toggle. Off by default so a freshly added
+    // image sits flush in the layout without an unrequested panel frame.
+    const label = document.createElement("label");
+    label.className = "panel-card-toggle";
+    label.title = "Wrap the image in a panel background";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!panel.innerBorder;
+    cb.addEventListener("change", () => {
+      store.patchPanel(panel.id, { innerBorder: cb.checked });
+    });
+    const txt = document.createElement("span");
+    txt.textContent = "border";
+    label.append(cb, txt);
+    controls.appendChild(label);
+    borderToggle = cb;
   }
 
   const grip = mkIconButton(gripVertical(), "Drag to reorder", "grip");
@@ -59,6 +77,7 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
   body.className = "panel-card-body";
   root.appendChild(body);
 
+  let imageBody: HTMLElement | null = null;
   if (panel.kind === "code") {
     editor = createCodeEditor({
       initialCode: panel.code,
@@ -68,7 +87,9 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
     });
     body.appendChild(editor.root);
   } else {
-    body.appendChild(buildImageEditor(store, panel));
+    imageBody = buildImageEditor(store, panel);
+    imageBody.classList.toggle("bordered", !!panel.innerBorder);
+    body.appendChild(imageBody);
   }
 
   return {
@@ -80,6 +101,12 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
         editor.setCode(p.code);
         editor.setLanguage(p.language);
         if (lang && lang.getValue() !== p.language) lang.setValue(p.language);
+      }
+      if (p.kind === "image" && imageBody) {
+        imageBody.classList.toggle("bordered", !!p.innerBorder);
+        if (borderToggle && borderToggle.checked !== !!p.innerBorder) {
+          borderToggle.checked = !!p.innerBorder;
+        }
       }
     },
     setTheme(t) {

@@ -13,6 +13,8 @@
   that would result in no movement (e.g. dropping a panel on the
   half right next to its current slot). Cleared stale indicator
   classes that could linger if a drag ended outside any target.
+- Web: **Image panels are now centered horizontally** in vertical
+  layout instead of pinning to the left edge of the wider column.
 
 ### Added
 - Web: **Language picker is now a typed-filter combobox.** The flat
@@ -21,6 +23,12 @@
   using the browser's default `<select>` chrome.
 
 ### Changed
+- Web: **Inner panel border is now per-image, default off.** Removed
+  the composition-wide "Inner panel border" toggle from the overflow
+  menu; each image panel now carries its own `innerBorder` flag with
+  a small `border` checkbox in the panel header controls. The UI
+  card mirror reflects the toggle live (padded frame when on, just
+  the image with rounded corners when off).
 - Web: **Grid mode caps at 6 panels.** Grid dimensions auto-fit the
   panel count (1×1 → 1×2 → 1×3 → 2×2 → 2×3) so every added panel
   shows up in the export instead of silently falling off-grid. Add

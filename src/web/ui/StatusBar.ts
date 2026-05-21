@@ -28,7 +28,6 @@ export const mountStatusBar = (root: HTMLElement, store: Store): void => {
       `${c.panels.length} panel${c.panels.length === 1 ? "" : "s"}`,
       `${layoutLabel[c.layout] ?? c.layout} layout`,
       `${c.scale.toFixed(1)}× scale`,
-      `inner border ${c.innerBorder ? "on" : "off"}`,
     ];
     meta.textContent = parts.join("  ·  ");
   };

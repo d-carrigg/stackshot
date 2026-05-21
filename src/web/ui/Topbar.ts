@@ -269,11 +269,6 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
           <div class="menu-overflow" data-overflow="scale"></div>
           <div class="menu-overflow" data-overflow="format"></div>
           <div class="topbar-more-sep menu-always-sep"></div>
-          <label class="topbar-more-toggle" role="menuitemcheckbox">
-            <input type="checkbox" data-border />
-            <span>Inner panel border</span>
-          </label>
-          <div class="topbar-more-sep"></div>
           <button type="button" role="menuitem" data-default>Reset to default</button>
           <div class="topbar-more-sep"></div>
           <a href="https://github.com/d-carrigg/codeimg" target="_blank" rel="noreferrer" role="menuitem">
@@ -359,9 +354,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
   });
 
   const defaultBtn = moreMenu.querySelector<HTMLButtonElement>("[data-default]")!;
-  const border = moreMenu.querySelector<HTMLInputElement>("[data-border]")!;
 
-  border.addEventListener("change", () => store.patch({ innerBorder: border.checked }));
   defaultBtn.addEventListener("click", () => {
     closeMenu();
     if (store.get().panels.length > 0 && !confirm("Replace the current composition with the default?")) return;
@@ -394,9 +387,4 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     }
   });
 
-  // Inner border checkbox needs to follow store updates so the menu
-  // mirror is always correct when reopened.
-  const renderBorder = () => { border.checked = store.get().innerBorder; };
-  renderBorder();
-  store.subscribe(renderBorder);
 };

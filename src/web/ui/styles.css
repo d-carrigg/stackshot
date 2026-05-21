@@ -261,8 +261,7 @@ html, body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .topbar-more-menu button,
-.topbar-more-menu a,
-.topbar-more-menu label.topbar-more-toggle {
+.topbar-more-menu a {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -278,10 +277,7 @@ html, body {
   text-decoration: none;
 }
 .topbar-more-menu button:hover,
-.topbar-more-menu a:hover,
-.topbar-more-menu label.topbar-more-toggle:hover { background: var(--surface-2); }
-.topbar-more-toggle { user-select: none; }
-.topbar-more-toggle input { margin: 0; }
+.topbar-more-menu a:hover { background: var(--surface-2); }
 .topbar-more-sep { height: 1px; background: var(--border); margin: 4px 2px; }
 .topbar-more-gh { display: inline-flex; font-size: 14px; }
 
@@ -643,6 +639,34 @@ html, body {
   color: var(--muted);
   font-style: italic;
 }
+
+/* Per-image "border" toggle in the panel header controls. */
+.panel-card-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.panel-card-toggle:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.panel-card-toggle input {
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.panel-card-toggle:has(input:checked) {
+  color: var(--text);
+}
 .icon-btn {
   background: transparent;
   border: 1px solid transparent;
@@ -679,9 +703,11 @@ html, body {
 }
 
 /* Image cards --------------------------------------------------------- */
+/* Default: just the image with rounded corners — no panel frame. The
+   `bordered` modifier opts in to a padded panel-bg around the image,
+   matching the per-panel innerBorder flag in compose.ts. */
 .image-card-body {
   position: relative;
-  background: var(--panel-bg);
   border-radius: var(--panel-radius);
   min-height: 120px;
   display: flex;
@@ -691,11 +717,18 @@ html, body {
   cursor: pointer;
   width: 100%;
 }
+.image-card-body.bordered {
+  background: var(--panel-bg);
+  padding: 24px;
+}
 .image-card-body img {
   max-width: 100%;
   max-height: 480px;
   display: block;
   border-radius: var(--panel-radius);
+}
+.image-card-body.bordered img {
+  border-radius: 0;
 }
 .image-card-body.drag-over { outline: 2px dashed var(--accent); outline-offset: -8px; }
 .image-card-overlay {

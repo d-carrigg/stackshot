@@ -60,6 +60,10 @@ export type ImagePanel = {
   animated?: boolean;  // true if the source has more than one frame
   naturalW: number;
   naturalH: number;
+  // true → image sits inside a padded panel bg (matching code panels);
+  // false (default) → just the image with rounded corners. Used to be a
+  // composition-wide toggle; per-image since 0.7.
+  innerBorder?: boolean;
   gridRow?: number;
   gridCol?: number;
 };
@@ -72,7 +76,6 @@ export type Composition = {
   bgColor: string;     // hex
   arrowColor: string;  // hex
   scale: number;       // 1.0 - 8.0 (presets: low=3, med=4, high=5)
-  innerBorder: boolean; // when false → image panels get rounded corners, no inner panel bg
   gridRows: number;    // only used when layout === "grid"
   gridCols: number;    // only used when layout === "grid"
   exportFormat: ExportFormat; // "auto" → webp
@@ -112,7 +115,6 @@ export const emptyComposition = (): Composition => ({
   bgColor: DEFAULT_BG_HEX,
   arrowColor: ARROW_HEX,
   scale: DEFAULT_SCALE,
-  innerBorder: true,
   gridRows: 2,
   gridCols: 2,
   exportFormat: "auto",
@@ -139,7 +141,6 @@ export const defaultComposition = (): Composition => {
     bgColor: DEFAULT_BG_HEX,
     arrowColor: ARROW_HEX,
     scale: DEFAULT_SCALE,
-    innerBorder: true,
     gridRows: 2,
     gridCols: 2,
     exportFormat: "auto",

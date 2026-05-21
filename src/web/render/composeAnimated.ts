@@ -67,12 +67,11 @@ export const composeAnimatedFrames = async (
   comp: Composition,
 ): Promise<AnimatedWebpFrame[]> => {
   const scale = comp.scale;
-  const noInnerBorder = !comp.innerBorder;
   const radius = _s(PANEL_RADIUS, scale);
   const theme = resolveTheme(comp.bgColor, comp.arrowColor);
 
   const items: PanelImage[] = await Promise.all(
-    comp.panels.map((p) => renderPanel(p, scale, noInnerBorder, theme)),
+    comp.panels.map((p) => renderPanel(p, scale, theme)),
   );
 
   const slots: AnimSlot[] = [];
@@ -84,12 +83,13 @@ export const composeAnimatedFrames = async (
     const frames = await decodeFrames(blob);
     if (frames.length < 2) continue;
     const totalMs = frames.reduce((a, f) => a + Math.max(20, f.durationMs), 0);
-    slots.push({ panelIndex: i, frames, totalMs, rounded: noInnerBorder, radius });
+    // rounded → image is drawn without panel bg (the inner border)
+    slots.push({ panelIndex: i, frames, totalMs, rounded: !p.innerBorder, radius });
   }
 
   if (slots.length === 0) {
     // No motion — return a single frame.
-    const canvas = composeFromItems(items, comp, scale, noInnerBorder);
+    const canvas = composeFromItems(items, comp, scale);
     return [{ canvas, durationMs: 1000 }];
   }
 
@@ -110,7 +110,7 @@ export const composeAnimatedFrames = async (
         height: swapped.height,
       };
     }
-    const canvas = composeFromItems(items, comp, scale, noInnerBorder);
+    const canvas = composeFromItems(items, comp, scale);
     output.push({ canvas, durationMs: FRAME_MS });
   }
   return output;

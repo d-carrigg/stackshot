@@ -12,6 +12,7 @@ export type PanelImage = {
   height: number;
   title?: string;
   isImage: boolean;
+  innerBorder: boolean; // only meaningful for image panels
 };
 
 const TITLE_FONT_FAMILY = '"Inter", "Helvetica Neue", Arial, sans-serif';
@@ -21,17 +22,17 @@ const titleFontPx = (scale: number) => Math.max(1, Math.round(24 * scale));
 export const renderPanel = async (
   p: Panel,
   scale: number,
-  noInnerBorder: boolean,
   theme: Theme,
 ): Promise<PanelImage> => {
   if (p.kind === "code") {
     const img = await renderCodePanelImage(p.code, p.language, scale, theme);
-    return { canvas: img.canvas, width: img.width, height: img.height, title: p.title, isImage: false };
+    return { canvas: img.canvas, width: img.width, height: img.height, title: p.title, isImage: false, innerBorder: true };
   }
-  const rounded = noInnerBorder;
+  const innerBorder = !!p.innerBorder;
+  const rounded = !innerBorder;
   const radius = _s(PANEL_RADIUS, scale);
   const img = await renderImagePanel(p.src, rounded, radius);
-  return { canvas: img.canvas, width: img.width, height: img.height, title: p.title, isImage: true };
+  return { canvas: img.canvas, width: img.width, height: img.height, title: p.title, isImage: true, innerBorder };
 };
 
 const measureTitleHeight = (ctx: CanvasRenderingContext2D, text: string, fontPx: number): number => {
@@ -63,32 +64,33 @@ export const composeCanvas = async (comp: Composition): Promise<HTMLCanvasElemen
   }
 
   const scale = comp.scale;
-  const noInnerBorder = !comp.innerBorder;
   const theme = resolveTheme(comp.bgColor, comp.arrowColor);
 
   const items = await Promise.all(
-    comp.panels.map((p) => renderPanel(p, scale, noInnerBorder, theme)),
+    comp.panels.map((p) => renderPanel(p, scale, theme)),
   );
 
-  return composeFromItems(items, comp, scale, noInnerBorder);
+  return composeFromItems(items, comp, scale);
 };
+
+// True if this panel should get the padded inner-bg box. Code panels
+// always do; image panels follow their per-panel `innerBorder` flag.
+const hasInnerBg = (it: PanelImage): boolean => !it.isImage || it.innerBorder;
 
 export const composeFromItems = (
   items: PanelImage[],
   comp: Composition,
   scale: number,
-  noInnerBorder: boolean,
 ): HTMLCanvasElement => {
-  if (comp.layout === "vertical") return composeVertical(items, comp, scale, noInnerBorder);
-  if (comp.layout === "grid") return composeGrid(items, comp, scale, noInnerBorder);
-  return composeHorizontal(items, comp, scale, noInnerBorder);
+  if (comp.layout === "vertical") return composeVertical(items, comp, scale);
+  if (comp.layout === "grid") return composeGrid(items, comp, scale);
+  return composeHorizontal(items, comp, scale);
 };
 
 const composeGrid = (
   items: PanelImage[],
   comp: Composition,
   scale: number,
-  noInnerBorder: boolean,
 ): HTMLCanvasElement => {
   const margin = _s(40, scale);
   const gutter = _s(24, scale);
@@ -102,7 +104,7 @@ const composeGrid = (
   const titleColor = theme.title;
 
   const probe = document.createElement("canvas").getContext("2d")!;
-  const pads = items.map((it) => (noInnerBorder && it.isImage ? 0 : basePanelPad));
+  const pads = items.map((it) => (hasInnerBg(it) ? basePanelPad : 0));
   const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
   const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
   const titleHeights = items.map((it) =>
@@ -166,8 +168,7 @@ const composeGrid = (
       ctx.textAlign = "left";
       ctx.fillText(it.title, px + pad, titleY);
     }
-    const drawBg = !(noInnerBorder && it.isImage);
-    if (drawBg) {
+    if (hasInnerBg(it)) {
       ctx.fillStyle = theme.panelBg;
       roundedRectPath(ctx, px, py, pw, ph, panelRadius);
       ctx.fill();
@@ -182,7 +183,6 @@ const composeHorizontal = (
   items: PanelImage[],
   comp: Composition,
   scale: number,
-  noInnerBorder: boolean,
 ): HTMLCanvasElement => {
   const gutter = _s(32, scale);
   const margin = _s(40, scale);
@@ -203,7 +203,7 @@ const composeHorizontal = (
     ...items.map((it) => (it.title ? measureTitleHeight(probe, it.title, titleFont) : 0)),
   );
 
-  const pads = items.map((it) => (noInnerBorder && it.isImage ? 0 : basePanelPad));
+  const pads = items.map((it) => (hasInnerBg(it) ? basePanelPad : 0));
   const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
   const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
   const maxPanelH = Math.max(...panelH);
@@ -231,8 +231,7 @@ const composeHorizontal = (
     const ph = panelH[i]!;
     const px = x;
     const py = topPad + Math.floor((maxPanelH - ph) / 2);
-    const drawBg = !(noInnerBorder && it.isImage);
-    if (drawBg) {
+    if (hasInnerBg(it)) {
       ctx.fillStyle = theme.panelBg;
       roundedRectPath(ctx, px, py, pw, ph, panelRadius);
       ctx.fill();
@@ -266,7 +265,6 @@ const composeVertical = (
   items: PanelImage[],
   comp: Composition,
   scale: number,
-  noInnerBorder: boolean,
 ): HTMLCanvasElement => {
   const margin = _s(40, scale);
   const gutter = _s(16, scale);
@@ -282,7 +280,7 @@ const composeVertical = (
   const titleColor = theme.title;
 
   const probe = document.createElement("canvas").getContext("2d")!;
-  const pads = items.map((it) => (noInnerBorder && it.isImage ? 0 : basePanelPad));
+  const pads = items.map((it) => (hasInnerBg(it) ? basePanelPad : 0));
   const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
   const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
   const maxPanelW = Math.max(...panelW);
@@ -311,23 +309,30 @@ const composeVertical = (
   for (let i = 0; i < n; i++) {
     const it = items[i]!;
     const pad = pads[i]!;
+    const pw = panelW[i]!;
     const ph = panelH[i]!;
     const th = titleHeights[i]!;
+    // Code panels stay left-aligned (left-to-right reading); images are
+    // centered horizontally within the column so a narrow screenshot
+    // doesn't sit awkwardly against the left edge.
+    const offsetX = it.isImage ? Math.floor((maxPanelW - pw) / 2) : 0;
+    const px = margin + offsetX;
     if (it.title) {
       ctx.fillStyle = titleColor;
       ctx.font = `600 ${titleFont}px ${TITLE_FONT_FAMILY}`;
       ctx.textBaseline = "top";
       ctx.textAlign = "left";
-      ctx.fillText(it.title, margin, y);
+      ctx.fillText(it.title, px, y);
       y += th;
     }
-    const drawBg = !(noInnerBorder && it.isImage);
-    if (drawBg) {
+    if (hasInnerBg(it)) {
       ctx.fillStyle = theme.panelBg;
-      roundedRectPath(ctx, margin, y, maxPanelW, ph, panelRadius);
+      const bgW = it.isImage ? pw : maxPanelW;
+      const bgX = it.isImage ? px : margin;
+      roundedRectPath(ctx, bgX, y, bgW, ph, panelRadius);
       ctx.fill();
     }
-    ctx.drawImage(it.canvas, margin + pad, y + pad);
+    ctx.drawImage(it.canvas, px + pad, y + pad);
     y += ph;
     if (i < n - 1) {
       y += gutter;
