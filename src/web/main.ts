@@ -1,10 +1,8 @@
 import "./ui/styles.css";
 
 import { Store, defaultComposition, makeCodePanel } from "./state";
-import { mountPanelList } from "./ui/PanelList";
-import { mountPanelEditor } from "./ui/PanelEditor";
+import { mountCompositionView } from "./ui/CompositionView";
 import { mountSettingsPanel } from "./ui/SettingsPanel";
-import { mountPreview } from "./ui/Preview";
 import { fileToImagePanel, debounce } from "./ui/util";
 import { decodeFromHash, writeHash } from "./share";
 
@@ -16,31 +14,25 @@ root.innerHTML = `
     <span class="spacer"></span>
     <a href="https://github.com/d-carrigg/codeimg" target="_blank" rel="noreferrer">GitHub</a>
   </header>
-  <aside class="left" id="panel-list"></aside>
-  <main class="center">
-    <section id="editor"></section>
-    <section class="preview-pane" id="preview"></section>
-  </main>
+  <main class="center" id="composition"></main>
   <aside class="right" id="settings"></aside>
 `;
 
 const initial = decodeFromHash(location.hash) ?? defaultComposition();
 const store = new Store(initial);
 
-mountPanelList(document.getElementById("panel-list")!, store);
-mountPanelEditor(document.getElementById("editor")!, store);
+mountCompositionView(document.getElementById("composition")!, store);
 mountSettingsPanel(document.getElementById("settings")!, store);
-mountPreview(document.getElementById("preview")!, store);
 
 // Persist to URL hash, debounced.
 const debouncedHash = debounce(() => writeHash(store.get()), 250);
 store.subscribe(debouncedHash);
 
-// Global file-drop overlay → adds images as new panels.
+// Global file-drop overlay → adds images / code as new panels.
 let dragDepth = 0;
 const dropOverlay = document.createElement("div");
 dropOverlay.className = "global-drop-overlay";
-dropOverlay.textContent = "Drop image to add panel";
+dropOverlay.textContent = "Drop to add panel";
 dropOverlay.style.display = "none";
 document.body.appendChild(dropOverlay);
 
@@ -64,6 +56,9 @@ window.addEventListener("dragleave", (e) => {
 });
 window.addEventListener("drop", async (e) => {
   if (!hasFiles(e)) return;
+  // Don't intercept drops onto editable image cards — they have their own handler.
+  const target = e.target as HTMLElement | null;
+  if (target?.closest(".image-card-body")) return;
   e.preventDefault();
   dragDepth = 0;
   dropOverlay.style.display = "none";
@@ -91,7 +86,8 @@ window.addEventListener("drop", async (e) => {
   }
 });
 
-// Paste handler — image from clipboard adds an image panel.
+// Paste handler — image from clipboard adds an image panel. Skip when
+// pasting into an input/textarea so normal text paste works.
 window.addEventListener("paste", async (e) => {
   const target = e.target as HTMLElement | null;
   if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT")) return;
