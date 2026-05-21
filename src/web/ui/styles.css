@@ -860,6 +860,7 @@ html, body {
   border-radius: 6px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
 }
+.preview-modal-img[hidden] { display: none; }
 .preview-modal-loading {
   color: var(--muted);
   font-size: 13px;
