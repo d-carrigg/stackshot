@@ -489,10 +489,17 @@ html, body {
   color: var(--text);
   border: none;
   padding: 0;
+  /* Anchor at viewport center, then offset by half the dialog's own
+     intrinsic size. Native <dialog>'s default centering breaks down
+     when the dialog has transparent chrome and a shrink-to-fit child;
+     this transform-based approach is robust to either. */
+  position: fixed;
+  inset: 0;
   margin: auto;
+  width: max-content;
+  height: max-content;
   max-width: 92vw;
   max-height: 92vh;
-  width: auto;
   box-shadow: none;
   overflow: visible;
 }
