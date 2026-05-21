@@ -6,6 +6,23 @@ const ARROW_HEX = DARK_THEME.arrow;
 export type Layout = "horizontal" | "vertical" | "grid";
 export type ExportFormat = "auto" | "png" | "webp" | "gif";
 
+// Scale presets — the topbar exposes these as low/med/high pills with a
+// "custom" escape hatch (numeric input). Centralised here so the default
+// composition stays in sync with the preset map.
+export type ScalePreset = "low" | "med" | "high" | "custom";
+export const SCALE_VALUES: Record<Exclude<ScalePreset, "custom">, number> = {
+  low: 3.0,
+  med: 4.0,
+  high: 5.0,
+};
+export const DEFAULT_SCALE = SCALE_VALUES.med;
+export const resolveScalePreset = (scale: number): ScalePreset => {
+  for (const k of ["low", "med", "high"] as const) {
+    if (Math.abs(SCALE_VALUES[k] - scale) < 0.01) return k;
+  }
+  return "custom";
+};
+
 export type CodePanel = {
   id: string;
   kind: "code";
@@ -79,7 +96,7 @@ export const emptyComposition = (): Composition => ({
   layout: "vertical",
   bgColor: DEFAULT_BG_HEX,
   arrowColor: ARROW_HEX,
-  scale: 4.0,
+  scale: DEFAULT_SCALE,
   innerBorder: true,
   gridRows: 2,
   gridCols: 2,
@@ -106,7 +123,7 @@ export const defaultComposition = (): Composition => {
     layout: "vertical",
     bgColor: DEFAULT_BG_HEX,
     arrowColor: ARROW_HEX,
-    scale: 4.0,
+    scale: DEFAULT_SCALE,
     innerBorder: true,
     gridRows: 2,
     gridCols: 2,

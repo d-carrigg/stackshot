@@ -4,11 +4,11 @@
 // the store; the topbar mounts one instance and the menu mounts a
 // second compact instance. CSS @media rules hide one or the other at
 // each breakpoint, so the controls stay reachable at every width.
-import type { Store, Layout, ExportFormat } from "../state";
+import type { Store, Layout, ExportFormat, ScalePreset } from "../state";
+import { SCALE_VALUES, resolveScalePreset, defaultComposition } from "../state";
 import { exportImage, copyImageToClipboard, resolveExportFormat } from "../export";
 import { showToast } from "./util";
 import { clearPersisted } from "../persist";
-import { defaultComposition } from "../state";
 import {
   rows as rowsIcon,
   columns as colsIcon,
@@ -22,19 +22,6 @@ import { THEMES, resolveTheme } from "../themes";
 
 export type TopbarOptions = {
   onPreview?: () => void;
-};
-
-type ScalePreset = "low" | "med" | "high" | "custom";
-const SCALE_VALUES: Record<Exclude<ScalePreset, "custom">, number> = {
-  low: 3.0,
-  med: 4.0,
-  high: 5.0,
-};
-const resolveScalePreset = (scale: number): ScalePreset => {
-  for (const k of ["low", "med", "high"] as const) {
-    if (Math.abs(SCALE_VALUES[k] - scale) < 0.01) return k;
-  }
-  return "custom";
 };
 
 type Variant = "topbar" | "menu";
@@ -252,14 +239,17 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
 
       <span class="spacer"></span>
 
-      <button type="button" class="topbar-secondary" data-preview-top hidden>
-        <span class="ico" data-preview-top-ico></span><span>Preview</span>
+      <button type="button" class="topbar-icon-btn" data-preview-top
+              title="Preview" aria-label="Preview" hidden>
+        <span class="ico" data-preview-top-ico></span>
       </button>
-      <button type="button" class="topbar-secondary" data-copy-top>
-        <span class="ico" data-copy-top-ico></span><span>Copy</span>
+      <button type="button" class="topbar-icon-btn" data-copy-top
+              title="Copy to clipboard" aria-label="Copy to clipboard">
+        <span class="ico" data-copy-top-ico></span>
       </button>
-      <button type="button" class="topbar-export" data-export>
-        <span class="ico" data-dl-ico></span><span>Download</span>
+      <button type="button" class="topbar-icon-btn topbar-icon-btn-primary"
+              data-export title="Download" aria-label="Download">
+        <span class="ico" data-dl-ico></span>
       </button>
 
       <div class="topbar-more">
@@ -271,16 +261,6 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
           <div class="menu-overflow" data-overflow="themes"></div>
           <div class="menu-overflow" data-overflow="scale"></div>
           <div class="menu-overflow" data-overflow="format"></div>
-          <div class="menu-overflow" data-overflow="preview">
-            <button type="button" class="menu-action" data-preview-menu role="menuitem" hidden>
-              <span class="ico" data-preview-menu-ico></span><span>Preview</span>
-            </button>
-          </div>
-          <div class="menu-overflow" data-overflow="copy">
-            <button type="button" class="menu-action" data-copy-menu role="menuitem">
-              <span class="ico" data-copy-menu-ico></span><span>Copy to clipboard</span>
-            </button>
-          </div>
           <div class="topbar-more-sep menu-always-sep"></div>
           <label class="topbar-more-toggle" role="menuitemcheckbox">
             <input type="checkbox" data-border />
@@ -316,35 +296,24 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
   slot("format").appendChild(buildFormatGroup(store, "topbar"));
   over("format").appendChild(wrapMenuSection("Format", buildFormatGroup(store, "menu")));
 
-  // Preview / Copy / Download -----------------------------------------
+  // Preview / Copy / Download — icon-only with tooltips ---------------
   const previewTop = root.querySelector<HTMLButtonElement>("[data-preview-top]")!;
   root.querySelector<HTMLSpanElement>("[data-preview-top-ico]")!.appendChild(eyeIcon());
-  const previewMenu = root.querySelector<HTMLButtonElement>("[data-preview-menu]")!;
-  root.querySelector<HTMLSpanElement>("[data-preview-menu-ico]")!.appendChild(eyeIcon());
   if (opts.onPreview) {
     previewTop.hidden = false;
-    previewMenu.hidden = false;
     previewTop.addEventListener("click", () => opts.onPreview?.());
-    previewMenu.addEventListener("click", () => {
-      closeMenu();
-      opts.onPreview?.();
-    });
   }
 
   const copyTop = root.querySelector<HTMLButtonElement>("[data-copy-top]")!;
   root.querySelector<HTMLSpanElement>("[data-copy-top-ico]")!.appendChild(clipIcon());
-  const copyMenu = root.querySelector<HTMLButtonElement>("[data-copy-menu]")!;
-  root.querySelector<HTMLSpanElement>("[data-copy-menu-ico]")!.appendChild(clipIcon());
-  const doCopy = async () => {
+  copyTop.addEventListener("click", async () => {
     try {
       await copyImageToClipboard(store.get());
       showToast("Copied to clipboard");
     } catch (e) {
       showToast(`Copy failed: ${(e as Error).message}`);
     }
-  };
-  copyTop.addEventListener("click", doCopy);
-  copyMenu.addEventListener("click", () => { closeMenu(); doCopy(); });
+  });
 
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
   root.querySelector<HTMLSpanElement>("[data-dl-ico]")!.appendChild(dlIcon());

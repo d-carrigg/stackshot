@@ -191,49 +191,44 @@ html, body {
   background: transparent; cursor: pointer;
 }
 
-/* Secondary topbar action buttons (Preview, Copy). Outlined, sit
-   immediately left of the primary Download. */
-.topbar-secondary {
+/* Icon-only action buttons (Preview, Copy, Download). Square, 32px,
+   browser-native tooltip via the title attribute. Download gets an
+   accent fill to keep its primary-action weight without a text label. */
+.topbar-icon-btn {
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 6px 12px;
+  padding: 0;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
-  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease, filter 0.12s ease, transform 0.06s ease;
 }
-.topbar-secondary:hover {
+.topbar-icon-btn:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
-.topbar-secondary[hidden] { display: none; }
-.topbar-secondary .ico { display: inline-flex; font-size: 14px; line-height: 1; }
-
-/* Primary export button — solid accent, sits beside the more menu. */
-.topbar-export {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.topbar-icon-btn[hidden] { display: none; }
+.topbar-icon-btn .ico { display: inline-flex; line-height: 1; }
+.topbar-icon-btn-primary {
   background: var(--accent);
   color: #0c0c12;
-  border: none;
-  border-radius: var(--radius);
-  padding: 7px 14px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: filter 0.12s ease, transform 0.06s ease;
+  border-color: var(--accent);
 }
-.topbar-export:hover { filter: brightness(1.08); }
-.topbar-export:active { transform: scale(0.98); }
-.topbar-export .ico { display: inline-flex; font-size: 16px; line-height: 1; }
+.topbar-icon-btn-primary:hover {
+  background: var(--accent);
+  color: #0c0c12;
+  border-color: var(--accent);
+  filter: brightness(1.08);
+}
+.topbar-icon-btn-primary:active { transform: scale(0.96); }
 
 /* Overflow ⋯ menu. */
 .topbar-more { position: relative; }
@@ -374,52 +369,37 @@ html, body {
   width: 64px;
   margin-left: 6px;
 }
-/* The Copy/Preview rows inside the menu — same look as the other menu
-   buttons, with the icon left-aligned. */
-.menu-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.menu-action[hidden] { display: none; }
-.menu-action .ico { display: inline-flex; font-size: 14px; line-height: 1; }
-/* Hide the always-on separator when no overflow items are visible, so
-   we don't end up with two dividers stacked. The first divider only
-   matters when at least one item above it is showing. */
+/* Separator above the always-on items (inner border, reset, github).
+   Hidden by default; shows only when at least one overflow section
+   above it is visible. */
 .menu-always-sep { display: none; }
-
-/* Show separator when any overflow item above it is visible. */
-.topbar-more-menu:has(.menu-overflow:not([style*="display: none"])) .menu-always-sep,
-.topbar-more-menu:has([data-preview-menu]:not([hidden])) .menu-always-sep,
-.topbar-more-menu:has([data-copy-menu]:not([hidden])) .menu-always-sep { display: block; }
+.topbar-more-menu:has(.menu-overflow[data-overflow]:not(:empty):not([data-hidden-by-mq])) .menu-always-sep {
+  display: block;
+}
+/* :has() with media-query state isn't straightforward, so just always
+   show the divider when any menu-overflow is rendered (the rules below
+   make sure it's only rendered when a breakpoint folds something in). */
+.menu-overflow:not(:empty) ~ .menu-always-sep { display: block; }
 
 /* Responsive fold-into-⋯ breakpoints. Each breakpoint hides one
-   topbar slot (or button) and reveals its overflow counterpart in
-   the menu. Order = priority: lower-priority items hide first. */
-@media (max-width: 1200px) {
-  .topbar-secondary[data-copy-top] { display: none; }
-  .menu-overflow[data-overflow="copy"] { display: block; }
-}
-@media (max-width: 1050px) {
-  .topbar-secondary[data-preview-top] { display: none; }
-  .menu-overflow[data-overflow="preview"] { display: block; }
-}
-@media (max-width: 920px) {
+   topbar slot and reveals its overflow counterpart in the menu.
+   Icon-only Preview/Copy/Download stay in the topbar at every width. */
+@media (max-width: 880px) {
   .topbar-slot[data-slot="format"] { display: none; }
   .topbar-sep[data-sep-after="scale"] { display: none; }
   .menu-overflow[data-overflow="format"] { display: block; }
 }
-@media (max-width: 780px) {
+@media (max-width: 740px) {
   .topbar-slot[data-slot="scale"] { display: none; }
   .topbar-sep[data-sep-after="themes"] { display: none; }
   .menu-overflow[data-overflow="scale"] { display: block; }
 }
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .topbar-slot[data-slot="themes"] { display: none; }
   .topbar-sep[data-sep-after="layout"] { display: none; }
   .menu-overflow[data-overflow="themes"] { display: block; }
 }
-@media (max-width: 520px) {
+@media (max-width: 460px) {
   .topbar-slot[data-slot="layout"] { display: none; }
   .menu-overflow[data-overflow="layout"] { display: block; }
 }
