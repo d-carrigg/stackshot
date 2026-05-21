@@ -1,6 +1,5 @@
-import type { Store } from "../state";
-import { exportImage, copyImageToClipboard } from "../export";
-import { hasAnimatedPanel } from "../render/composeAnimated";
+import type { ExportFormat, Store } from "../state";
+import { exportImage, copyImageToClipboard, resolveExportFormat } from "../export";
 import { showToast } from "./util";
 import { clearPersisted } from "../persist";
 import { defaultComposition, emptyComposition } from "../state";
@@ -42,6 +41,15 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
     </div>
 
     <div class="actions">
+      <div class="setting" style="margin-bottom: 8px">
+        <label>Format</label>
+        <select data-format class="panel-card-lang" style="width: 100%">
+          <option value="auto">Auto (PNG / animated WEBP)</option>
+          <option value="png">PNG (static)</option>
+          <option value="webp">WEBP (animated if input is)</option>
+          <option value="gif">GIF (animated if input is)</option>
+        </select>
+      </div>
       <button data-export>Export</button>
       <button class="secondary" data-copy>Copy to clipboard</button>
       <div class="actions-row">
@@ -61,6 +69,9 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   const bg = root.querySelector<HTMLInputElement>("[data-bg]")!;
   const arrow = root.querySelector<HTMLInputElement>("[data-arrow]")!;
   const border = root.querySelector<HTMLInputElement>("[data-border]")!;
+  const formatSelect = root.querySelector<HTMLSelectElement>("[data-format]")!;
+  formatSelect.setAttribute("autocomplete", "off");
+  formatSelect.setAttribute("data-1p-ignore", "true");
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
   const copyBtn = root.querySelector<HTMLButtonElement>("[data-copy]")!;
   const clearBtn = root.querySelector<HTMLButtonElement>("[data-clear]")!;
@@ -72,6 +83,9 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   bg.addEventListener("input", () => store.patch({ bgColor: bg.value }));
   arrow.addEventListener("input", () => store.patch({ arrowColor: arrow.value }));
   border.addEventListener("change", () => store.patch({ innerBorder: border.checked }));
+  formatSelect.addEventListener("change", () =>
+    store.patch({ exportFormat: formatSelect.value as ExportFormat }),
+  );
 
   exportBtn.addEventListener("click", async () => {
     try {
@@ -112,9 +126,11 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
     bg.value = c.bgColor;
     arrow.value = c.arrowColor;
     border.checked = c.innerBorder;
-    // Surface format that Export will produce so users see what they'll get.
-    const animated = hasAnimatedPanel(c);
-    exportBtn.textContent = animated ? "Export WEBP" : "Export PNG";
+    formatSelect.value = c.exportFormat;
+    // Surface what Export will actually produce ("Auto" resolves to
+    // PNG or WEBP based on whether motion content is present).
+    const resolved = resolveExportFormat(c).toUpperCase();
+    exportBtn.textContent = `Export ${resolved}`;
   };
   render();
   store.subscribe(render);

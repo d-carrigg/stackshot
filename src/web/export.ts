@@ -1,29 +1,61 @@
-import type { Composition } from "./state";
+import type { Composition, ExportFormat } from "./state";
 import { composeCanvas } from "./render/compose";
-import { composeAnimatedBlob, hasAnimatedPanel } from "./render/composeAnimated";
+import { composeAnimatedBlob, composeAnimatedFrames, hasAnimatedPanel } from "./render/composeAnimated";
 
 export type RenderedImage = {
   blob: Blob;
   mime: string;
-  ext: "png" | "webp";
+  ext: "png" | "webp" | "gif";
 };
 
-const canvasToBlob = (canvas: HTMLCanvasElement, type = "image/png"): Promise<Blob> =>
+const canvasToBlob = (canvas: HTMLCanvasElement, type = "image/png", quality?: number): Promise<Blob> =>
   new Promise((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))), type);
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))), type, quality);
   });
 
-// Render a composition for export/preview. Routes to the animated WEBP
-// pipeline if any panel carries motion content; otherwise produces a
-// flat PNG via the existing canvas pipeline.
+// "auto" picks the most faithful single-blob format for the content:
+// motion → animated WEBP, static → PNG.
+export const resolveExportFormat = (comp: Composition): Exclude<ExportFormat, "auto"> => {
+  if (comp.exportFormat === "auto") {
+    return hasAnimatedPanel(comp) ? "webp" : "png";
+  }
+  return comp.exportFormat;
+};
+
 export const renderForExport = async (comp: Composition): Promise<RenderedImage> => {
-  if (hasAnimatedPanel(comp)) {
-    const blob = await composeAnimatedBlob(comp);
-    return { blob, mime: "image/webp", ext: "webp" };
+  const format = resolveExportFormat(comp);
+  const animated = hasAnimatedPanel(comp);
+
+  if (format === "png") {
+    // First-frame PNG. Animated input loses its motion; that's the
+    // honest behaviour for a single-frame format.
+    const canvas = await composeCanvas(comp);
+    return { blob: await canvasToBlob(canvas, "image/png"), mime: "image/png", ext: "png" };
+  }
+  if (format === "webp") {
+    if (animated) {
+      const blob = await composeAnimatedBlob(comp);
+      return { blob, mime: "image/webp", ext: "webp" };
+    }
+    const canvas = await composeCanvas(comp);
+    return {
+      blob: await canvasToBlob(canvas, "image/webp", 0.92),
+      mime: "image/webp",
+      ext: "webp",
+    };
+  }
+  // gif
+  const { encodeGif } = await import("./render/gifEncoder");
+  if (animated) {
+    const frames = await composeAnimatedFrames(comp);
+    const blob = await encodeGif(
+      frames.map((f) => ({ canvas: f.canvas, delayMs: f.durationMs })),
+    );
+    return { blob, mime: "image/gif", ext: "gif" };
   }
   const canvas = await composeCanvas(comp);
-  const blob = await canvasToBlob(canvas, "image/png");
-  return { blob, mime: "image/png", ext: "png" };
+  const blob = await encodeGif([{ canvas, delayMs: 1000 }]);
+  return { blob, mime: "image/gif", ext: "gif" };
 };
 
 const triggerDownload = (blob: Blob, filename: string): void => {

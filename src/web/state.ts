@@ -1,6 +1,7 @@
 import { ARROW_HEX, DEFAULT_BG_HEX } from "./render/colors";
 
 export type Layout = "horizontal" | "vertical" | "grid";
+export type ExportFormat = "auto" | "png" | "webp" | "gif";
 
 export type CodePanel = {
   id: string;
@@ -39,6 +40,7 @@ export type Composition = {
   innerBorder: boolean; // when false → image panels get rounded corners, no inner panel bg
   gridRows: number;    // only used when layout === "grid"
   gridCols: number;    // only used when layout === "grid"
+  exportFormat: ExportFormat; // "auto" → png unless motion content present, then webp
   selectedId: string | null;
 };
 
@@ -78,6 +80,7 @@ export const emptyComposition = (): Composition => ({
   innerBorder: true,
   gridRows: 2,
   gridCols: 2,
+  exportFormat: "auto",
   selectedId: null,
 });
 
@@ -101,6 +104,7 @@ export const defaultComposition = (): Composition => {
     innerBorder: true,
     gridRows: 2,
     gridCols: 2,
+    exportFormat: "auto",
     selectedId: first.id,
   };
 };

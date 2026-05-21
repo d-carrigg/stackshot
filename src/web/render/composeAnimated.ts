@@ -59,18 +59,20 @@ const frameAtTime = (slot: AnimSlot, t: number): Frame => {
 export const hasAnimatedPanel = (comp: Composition): boolean =>
   comp.panels.some((p) => p.kind === "image" && p.animated === true);
 
-export const composeAnimatedBlob = async (comp: Composition): Promise<Blob> => {
+// Build the per-output-frame canvases for an animated composition.
+// Returns one canvas per frame plus the frame's display duration in ms.
+// Reuses static panel renderings, only swaps the animated images.
+export const composeAnimatedFrames = async (
+  comp: Composition,
+): Promise<AnimatedWebpFrame[]> => {
   const scale = comp.scale;
   const noInnerBorder = !comp.innerBorder;
   const radius = _s(PANEL_RADIUS, scale);
 
-  // Render every panel once. Animated image panels start on frame 0;
-  // we'll swap their canvas per output frame below.
   const items: PanelImage[] = await Promise.all(
     comp.panels.map((p) => renderPanel(p, scale, noInnerBorder)),
   );
 
-  // Decode frames for every animated image panel.
   const slots: AnimSlot[] = [];
   for (let i = 0; i < comp.panels.length; i++) {
     const p = comp.panels[i] as Panel;
@@ -84,16 +86,9 @@ export const composeAnimatedBlob = async (comp: Composition): Promise<Blob> => {
   }
 
   if (slots.length === 0) {
-    // Caller should have checked hasAnimatedPanel; bail out with a
-    // first-frame render rather than throwing.
+    // No motion — return a single frame.
     const canvas = composeFromItems(items, comp, scale, noInnerBorder);
-    return new Promise((resolve, reject) =>
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("toBlob webp null"))),
-        "image/webp",
-        0.92,
-      ),
-    );
+    return [{ canvas, durationMs: 1000 }];
   }
 
   const maxLen = slots.reduce((a, s) => Math.max(a, s.totalMs), 0);
@@ -102,9 +97,6 @@ export const composeAnimatedBlob = async (comp: Composition): Promise<Blob> => {
   const output: AnimatedWebpFrame[] = [];
   for (let i = 0; i < totalFrames; i++) {
     const t = i * FRAME_MS;
-    // Mutate `items` in-place: swap each animated panel's canvas for
-    // the active frame at time t. Restoring at the end isn't needed —
-    // we throw items away after encoding.
     for (const slot of slots) {
       const f = frameAtTime(slot, t);
       const swapped = renderFrameToCanvas(f, slot.rounded, slot.radius);
@@ -119,6 +111,20 @@ export const composeAnimatedBlob = async (comp: Composition): Promise<Blob> => {
     const canvas = composeFromItems(items, comp, scale, noInnerBorder);
     output.push({ canvas, durationMs: FRAME_MS });
   }
+  return output;
+};
 
-  return encodeAnimatedWebp(output, { quality: 0.9, loop: 0 });
+export const composeAnimatedBlob = async (comp: Composition): Promise<Blob> => {
+  const frames = await composeAnimatedFrames(comp);
+  if (frames.length === 1) {
+    // Single-frame fallback when no panel was animated.
+    return new Promise((resolve, reject) =>
+      (frames[0]!.canvas as HTMLCanvasElement).toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("toBlob webp null"))),
+        "image/webp",
+        0.92,
+      ),
+    );
+  }
+  return encodeAnimatedWebp(frames, { quality: 0.9, loop: 0 });
 };
