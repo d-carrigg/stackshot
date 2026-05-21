@@ -2,6 +2,7 @@ import type { Store } from "../state";
 import { exportPng, copyPngToClipboard } from "../export";
 import { showToast } from "./util";
 import { clearPersisted } from "../persist";
+import { defaultComposition, emptyComposition } from "../state";
 
 export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   root.innerHTML = `
@@ -40,7 +41,10 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
     <div class="actions">
       <button data-export>Export PNG</button>
       <button class="secondary" data-copy>Copy to clipboard</button>
-      <button class="secondary" data-reset>Start over</button>
+      <div class="actions-row">
+        <button class="secondary" data-clear>Clear</button>
+        <button class="secondary" data-default>Default</button>
+      </div>
     </div>
   `;
 
@@ -52,7 +56,8 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   const border = root.querySelector<HTMLInputElement>("[data-border]")!;
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
   const copyBtn = root.querySelector<HTMLButtonElement>("[data-copy]")!;
-  const resetBtn = root.querySelector<HTMLButtonElement>("[data-reset]")!;
+  const clearBtn = root.querySelector<HTMLButtonElement>("[data-clear]")!;
+  const defaultBtn = root.querySelector<HTMLButtonElement>("[data-default]")!;
 
   for (const btn of layoutSeg.querySelectorAll<HTMLButtonElement>("button")) {
     btn.addEventListener("click", () => {
@@ -80,10 +85,15 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
       showToast(`Copy failed: ${(e as Error).message}`);
     }
   });
-  resetBtn.addEventListener("click", () => {
-    if (!confirm("Discard the current composition and start over?")) return;
+  clearBtn.addEventListener("click", () => {
+    if (store.get().panels.length > 0 && !confirm("Remove all panels?")) return;
     clearPersisted();
-    location.reload();
+    store.set(() => emptyComposition());
+  });
+  defaultBtn.addEventListener("click", () => {
+    if (store.get().panels.length > 0 && !confirm("Replace the current composition with the default?")) return;
+    clearPersisted();
+    store.set(() => defaultComposition());
   });
 
   const render = () => {

@@ -51,6 +51,16 @@ export const makeImagePanel = (src: string, w: number, h: number, title?: string
   title,
 });
 
+export const emptyComposition = (): Composition => ({
+  panels: [],
+  layout: "horizontal",
+  bgColor: DEFAULT_BG_HEX,
+  arrowColor: ARROW_HEX,
+  scale: 2.0,
+  innerBorder: true,
+  selectedId: null,
+});
+
 export const defaultComposition = (): Composition => {
   const first = makeCodePanel({
     code: "def hello(name):\n    return f\"hello, {name}\"\n\nprint(hello(\"world\"))\n",

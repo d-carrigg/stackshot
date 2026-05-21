@@ -10,7 +10,7 @@ const root = document.querySelector<HTMLDivElement>("#app")!;
 root.innerHTML = `
   <header class="topbar">
     <span class="brand">codeimg</span>
-    <span style="color: var(--muted); font-weight: 500;">create images from code and gifs</span>
+    <span style="color: var(--muted); font-weight: 500;">quickly create code screenshots, data never leaves your browser</span>
     <span class="spacer"></span>
     <a href="https://github.com/d-carrigg/codeimg" target="_blank" rel="noreferrer">GitHub</a>
   </header>
