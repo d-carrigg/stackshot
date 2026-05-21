@@ -9,8 +9,8 @@ import LZString from "lz-string";
 import type { Composition, ImagePanel, Panel } from "./state";
 import { putBlob, resolveBlobUrl, nextBlobId, gcUnused } from "./storage/blobStore";
 
-const KEY_V2 = "codeimg.composition.v2";
-const KEY_V1 = "codeimg.composition.v1";
+const KEY_V2 = "stackshot.composition.v2";
+const KEY_V1 = "stackshot.composition.v1";
 
 // What actually lands in localStorage: composition minus selectedId,
 // and image panels minus `src` (which is an in-memory object URL and

@@ -232,7 +232,7 @@ const wrapMenuSection = (label: string, el: HTMLElement): HTMLElement => {
 export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions = {}): void => {
   root.innerHTML = `
     <header class="topbar">
-      <span class="brand">codeimg</span>
+      <span class="brand">stackshot</span>
 
       <div class="topbar-slot" data-slot="layout"></div>
       <span class="topbar-sep" data-sep-after="layout" aria-hidden="true"></span>
@@ -273,7 +273,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
           <button type="button" role="menuitem" data-templates>Browse templates…</button>
           <button type="button" role="menuitem" data-licenses>Open-source licenses</button>
           <div class="topbar-more-sep"></div>
-          <a href="https://github.com/d-carrigg/codeimg" target="_blank" rel="noreferrer" role="menuitem">
+          <a href="https://github.com/d-carrigg/stackshot" target="_blank" rel="noreferrer" role="menuitem">
             <span class="topbar-more-gh"></span><span>View on GitHub</span>
           </a>
         </div>

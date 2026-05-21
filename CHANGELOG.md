@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.8.0 — 2026-05-21
+
+### Changed
+- **Project renamed from `codeimg` to `stackshot`.** Breaking on
+  every public surface: PyPI package name, CLI command, Python
+  import (`from stackshot import …`), default output filename
+  (`stackshot.png`), GitHub repo URL, standalone binary asset
+  names (`stackshot-linux-x86_64`, …). The web app changes its
+  brand, page title, PWA manifest, IndexedDB name, localStorage
+  keys, and download filename prefix to match — existing browser
+  state under the old `codeimg.*` keys is silently abandoned (no
+  migration). PNG export metadata `app` field also moves from
+  `"codeshot"` to `"stackshot"`. The original name collided with
+  existing products at `codeimg.io` / `codeimg.dev`; renaming now
+  while the package is still unpublished and the repo is private
+  is the cheapest moment to do it.
+
 ## 0.7.1 — 2026-05-21
 
 ### Fixed

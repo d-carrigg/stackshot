@@ -3,13 +3,13 @@ from pathlib import Path
 
 from PIL import Image
 
-from codeimg import interactive as interactive_mod
-from codeimg import io_utils
-from codeimg.cli import main
+from stackshot import interactive as interactive_mod
+from stackshot import io_utils
+from stackshot.cli import main
 
 
 def _run(monkeypatch, argv, stdin):
-    monkeypatch.setattr("sys.argv", ["codeimg", *argv])
+    monkeypatch.setattr("sys.argv", ["stackshot", *argv])
     monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
     main()
 

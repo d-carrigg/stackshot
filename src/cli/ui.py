@@ -1,4 +1,4 @@
-"""Desktop UI for codeimg.
+"""Desktop UI for stackshot.
 
 Layout: a row of panel editor cards above a large live preview, with a
 toolbar that controls layout/colors/scale/output. Each panel card has a
@@ -274,7 +274,7 @@ class ColorSwatch:
 class App:
     def __init__(self, root: "tk.Misc") -> None:
         self.root = root
-        root.title("codeimg")
+        root.title("stackshot")
         root.configure(bg=UI_BG)
         root.geometry("1280x880")
         root.minsize(900, 640)
@@ -287,7 +287,7 @@ class App:
         self.bg_rgb: tuple[int, int, int] = DEFAULT_BG
         self.arrow_rgb: tuple[int, int, int] = ARROW
         self.scale_var = tk.StringVar(value="2.0")
-        self.out_path = "codeimg.png"
+        self.out_path = "stackshot.png"
         self._preview_ref = None
         self._preview_after = None
         self._panels_container: Optional[ttk.Frame] = None
@@ -406,7 +406,7 @@ class App:
         toolbar = ttk.Frame(outer, style="Toolbar.TFrame")
         toolbar.pack(fill="x", pady=(0, 12))
 
-        ttk.Label(toolbar, text="codeimg", font=("TkDefaultFont", 16, "bold")).pack(side="left")
+        ttk.Label(toolbar, text="stackshot", font=("TkDefaultFont", 16, "bold")).pack(side="left")
         ttk.Label(toolbar, text=("drag-and-drop" if _DND_OK else "tkinterdnd2 not installed"),
                   style="Section.TLabel").pack(side="left", padx=(10, 0))
 

@@ -5,7 +5,7 @@
 //
 // Single database, single object store with `id` as the keyPath.
 
-const DB_NAME = "codeimg";
+const DB_NAME = "stackshot";
 const DB_VERSION = 1;
 const STORE = "images";
 

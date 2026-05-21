@@ -32,7 +32,7 @@ DEFAULT_SCALE = 2.0
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="codeimg",
+        prog="stackshot",
         description="Compose code snippets, screenshots, and images into multi-panel illustrations.",
     )
     parser.add_argument(
@@ -55,7 +55,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-border", action="store_true", help="Remove inner card borders when a panel is an image.")
     parser.add_argument("--vertical", action="store_true", help="Stack panels top-to-bottom with downward arrows.")
     parser.add_argument("--arrow-color", help="Arrow color: hex (#fff, #aabbcc) or named (e.g. white, cyan). Default white.")
-    parser.add_argument("--out", default="codeimg.png", help="Output image path (.png, .webp, or .gif).")
+    parser.add_argument("--out", default="stackshot.png", help="Output image path (.png, .webp, or .gif).")
     parser.add_argument("--no-clip", action="store_true", help="Skip copying the output to the clipboard.")
     parser.add_argument(
         "--sequential", action="store_true",

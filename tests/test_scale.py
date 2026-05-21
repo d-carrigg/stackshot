@@ -4,8 +4,8 @@ proportional. Renders are done in-process via the public flow."""
 import pytest
 from PIL import Image
 
-from codeimg import compose_panels, compose_side_by_side, render_code_image
-from codeimg.cli import main
+from stackshot import compose_panels, compose_side_by_side, render_code_image
+from stackshot.cli import main
 
 
 CODE = "def hello():\n    print('world')\n"
@@ -72,7 +72,7 @@ def test_cli_rejects_nonpositive_scale(bad, monkeypatch, tmp_path):
     `x <= 0` would let it through."""
     monkeypatch.setattr(
         "sys.argv",
-        ["codeimg", "x = 1", "--scale", bad, "--out", str(tmp_path / "o.png"), "--no-clip"],
+        ["stackshot", "x = 1", "--scale", bad, "--out", str(tmp_path / "o.png"), "--no-clip"],
     )
     with pytest.raises(SystemExit):
         main()

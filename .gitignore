@@ -2,11 +2,11 @@ __pycache__/
 *.pyc
 .venv/
 .idea/awsToolkit.xml
-codeimg.png
+stackshot.png
 *.egg-info/
 build/
 dist/
-/codeimg/
+/stackshot/
 *.cast
 
 # web app

@@ -8,8 +8,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"],
       manifest: {
-        name: "codeimg",
-        short_name: "codeimg",
+        name: "stackshot",
+        short_name: "stackshot",
         description: "Quickly create multi-panel code screenshots in your browser.",
         theme_color: "#16161e",
         background_color: "#16161e",

@@ -1,4 +1,4 @@
-from codeimg.markdown import Panel, parse_markdown
+from stackshot.markdown import Panel, parse_markdown
 
 
 def test_plain_text_becomes_single_panel():

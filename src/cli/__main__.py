@@ -1,3 +1,3 @@
-from codeimg.cli import main
+from stackshot.cli import main
 
 main()
