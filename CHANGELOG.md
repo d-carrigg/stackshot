@@ -22,6 +22,11 @@
   add/reset/clear row now sits centered under the whole composition
   rather than bunched under the first card.
 
+### Fixed
+- **Mobile add-button layout** (web). On narrow viewports the
+  add/reset/clear buttons now wrap and flex to share the screen width
+  (two per row) instead of overflowing off-screen.
+
 ## 0.8.0 — 2026-05-21
 
 ### Changed

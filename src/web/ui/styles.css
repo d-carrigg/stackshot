@@ -1290,3 +1290,13 @@ html, body {
   .status-meta { display: none; }
   .panel-card { min-width: 240px; }
 }
+
+/* Narrow viewports — the add/reset/clear buttons can't fit on one row,
+   so let them wrap and flex to share the width (two per row) instead of
+   overflowing or being clipped. */
+@media (max-width: 600px) {
+  .composition-add-row { flex-wrap: wrap; gap: 8px; }
+  .composition-add-row button { flex: 1 1 40%; padding: 12px 8px; }
+  .composition-add-row button.composition-reset,
+  .composition-add-row button.composition-clear { margin-left: 0; }
+}

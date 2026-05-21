@@ -29,6 +29,7 @@ Numbers in parens map back to the original list.
 - [x] Image drag-to-replace — drop an image on an image or code panel to replace it in place (37)
 - [x] Center the add/action buttons in horizontal mode (18)
 - [x] Download-the-CLI link — "Get the CLI" → GitHub Releases, in the ⋯ menu (34)
+- [x] Mobile: add/reset/clear buttons wrap and flex to fit the screen width (39)
 
 ## In progress
 - [~] Panel controls as an in-block overlay — lang indicator, remove, drag handle top-right of each panel (11)
@@ -53,9 +54,9 @@ Numbers in parens map back to the original list.
 ### Editing & UX
 - [ ] Undo / redo (32)
 - [ ] Dialog icons — drop backgrounds, move to the right, polish (13)
-- [ ] On mobile, button actions (add code, image, reset, etc) don't flex to fit the width of the screen (39)
 - [ ] Integrate title into the panel (currently it's a separate text element above the panel) (40)
-- [ ] Grid mode card numbering (41)
+- [ ] Grid mode card numbering option (41)
+- [ ] Save/load compositions (42)
 
 ## Dropped
 - ~~Move preview button into the right pane (23)~~ — the right rail was removed; preview now lives in the top bar.
