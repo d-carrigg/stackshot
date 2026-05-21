@@ -15,6 +15,12 @@
   classes that could linger if a drag ended outside any target.
 - Web: **Image panels are now centered horizontally** in vertical
   layout instead of pinning to the left edge of the wider column.
+- Web: **Sunset theme chrome no longer clashes.** Themes now carry
+  their own `accent` (and `accentText`) so the brand text, active
+  pill underline, and download button adapt instead of staying
+  catppuccin blue on the peach bg. Sunset uses dark navy as its
+  accent for a monochromatic warm-on-cool look; muted text and
+  borders were retuned to warm tones too.
 
 ### Added
 - Web: **Language picker is now a typed-filter combobox.** The flat

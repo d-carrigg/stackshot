@@ -17,8 +17,18 @@ export type Theme = {
   border: string;
   surface: string;     // chrome surface (lang select bg, hover bg base)
   surface2: string;    // chrome surface accent (hover, active)
+  // Live-editor accent — brand text, active pill underline, primary
+  // download button. Defaults to a light blue (catppuccin sapphire);
+  // warm themes override to something that doesn't clash with their bg.
+  accent: string;
+  // Foreground colour on top of the accent fill (e.g. the icon inside
+  // the primary download button).
+  accentText: string;
   syntax: SyntaxThemeId;
 };
+
+const ACCENT_BLUE = "#89b4fa";
+const ACCENT_BLUE_FG = "#0c0c12";
 
 export const DARK_THEME: Theme = {
   id: "dark", label: "Dark",
@@ -26,6 +36,7 @@ export const DARK_THEME: Theme = {
   arrow: "#ffffff", title: "#cdd6f4",
   chromeText: "#cdd6f4", chromeMuted: "#7f849c",
   border: "#313244", surface: "#1e1e2e", surface2: "#292a37",
+  accent: ACCENT_BLUE, accentText: ACCENT_BLUE_FG,
   syntax: "one-dark-pro",
 };
 
@@ -37,17 +48,22 @@ export const LIGHT_THEME: Theme = {
   border: "rgba(0,0,0,0.18)",
   surface: "rgba(255,255,255,0.6)",
   surface2: "rgba(0,0,0,0.06)",
+  accent: ACCENT_BLUE, accentText: ACCENT_BLUE_FG,
   syntax: "github-light",
 };
 
+// Warm peach bg — the default blue accent fights it. Use the same dark
+// navy as the title for a monochromatic feel; primary button reads as
+// an inverted pill (dark fill, peach icon).
 export const SUNSET_THEME: Theme = {
   id: "sunset", label: "Sunset",
   bg: "#fab387", panelBg: "#1e1e2e",
   arrow: "#1e1e2e", title: "#1e1e2e",
-  chromeText: "#1e1e2e", chromeMuted: "#5b617a",
-  border: "rgba(0,0,0,0.22)",
-  surface: "rgba(255,255,255,0.25)",
-  surface2: "rgba(0,0,0,0.08)",
+  chromeText: "#1e1e2e", chromeMuted: "#5b3a2a",
+  border: "rgba(30,30,46,0.28)",
+  surface: "rgba(255,255,255,0.28)",
+  surface2: "rgba(30,30,46,0.10)",
+  accent: "#1e1e2e", accentText: "#fab387",
   syntax: "one-dark-pro",
 };
 
@@ -59,6 +75,7 @@ export const OCEAN_THEME: Theme = {
   border: "rgba(255,255,255,0.16)",
   surface: "rgba(255,255,255,0.06)",
   surface2: "rgba(255,255,255,0.1)",
+  accent: ACCENT_BLUE, accentText: "#0d2748",
   syntax: "one-dark-pro",
 };
 
@@ -98,4 +115,6 @@ export const applyThemeVars = (el: HTMLElement, t: Theme): void => {
   el.style.setProperty("--border", t.border);
   el.style.setProperty("--surface", t.surface);
   el.style.setProperty("--surface-2", t.surface2);
+  el.style.setProperty("--accent", t.accent);
+  el.style.setProperty("--accent-text", t.accentText);
 };
