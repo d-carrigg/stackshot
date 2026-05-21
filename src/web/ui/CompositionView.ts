@@ -25,7 +25,11 @@ export const mountCompositionView = (root: HTMLElement, store: Store): void => {
     // textarea inside CodeEditor is recreated, so focus is lost on every
     // store change — to avoid that, skip rebuilds when only ids/order
     // changed and the panel set is identical.
-    const desired = c.panels.map((p) => p.id).join("|");
+    //
+    // Layout is baked into the signature so toggling horizontal/vertical
+    // forces the arrow SVGs (which differ per orientation) to be
+    // recreated.
+    const desired = c.layout + ":" + c.panels.map((p) => p.id).join("|");
     if (stage.dataset.signature === desired) {
       // In-place update each card.
       const cards = stage.querySelectorAll<HTMLElement>(".panel-card");
