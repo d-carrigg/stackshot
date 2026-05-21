@@ -3,6 +3,7 @@ import { exportImage, copyImageToClipboard, resolveExportFormat } from "../expor
 import { showToast } from "./util";
 import { clearPersisted } from "../persist";
 import { defaultComposition, emptyComposition } from "../state";
+import { download as dlIcon, clipboard as clipIcon } from "./icons";
 
 export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   root.innerHTML = `
@@ -47,8 +48,8 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
         <button type="button" class="format-pill" data-format-val="png">png</button>
         <button type="button" class="format-pill" data-format-val="gif">gif</button>
       </div>
-      <button data-export>Download</button>
-      <button class="secondary" data-copy>Copy to clipboard</button>
+      <button data-export><span class="ico" data-dl-ico></span><span>Download</span></button>
+      <button class="secondary" data-copy><span class="ico" data-copy-ico></span><span>Copy to clipboard</span></button>
       <div class="actions-row">
         <button class="secondary" data-clear>Clear</button>
         <button class="secondary" data-default>Default</button>
@@ -68,6 +69,8 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   const border = root.querySelector<HTMLInputElement>("[data-border]")!;
   const formatPills = root.querySelectorAll<HTMLButtonElement>(".format-pill");
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
+  root.querySelector<HTMLSpanElement>("[data-dl-ico]")!.appendChild(dlIcon());
+  root.querySelector<HTMLSpanElement>("[data-copy-ico]")!.appendChild(clipIcon());
   const copyBtn = root.querySelector<HTMLButtonElement>("[data-copy]")!;
   const clearBtn = root.querySelector<HTMLButtonElement>("[data-clear]")!;
   const defaultBtn = root.querySelector<HTMLButtonElement>("[data-default]")!;

@@ -441,53 +441,74 @@ html, body {
   cursor: pointer; user-select: none;
 }
 
+.actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
+.actions-row { display: flex; gap: 8px; }
+.actions-row button { flex: 1; }
+
+/* Flat tab-style format selector: tab labels with a bottom underline
+   on the active one. No filled chips. */
 .format-pills {
   display: flex;
-  gap: 6px;
-  margin-bottom: 4px;
+  gap: 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
-.format-pill {
+.format-pills .format-pill {
   flex: 1;
-  background: var(--surface-2);
+  background: transparent;
   color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 6px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 4px;
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  margin-bottom: -1px;
+  transition: color 0.12s ease, border-color 0.12s ease;
 }
-.format-pill:hover { color: var(--text); border-color: var(--muted); }
-.format-pill.active {
-  background: var(--accent);
-  color: #1e1e2e;
-  border-color: var(--accent);
+.format-pills .format-pill:hover { color: var(--text); }
+.format-pills .format-pill.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
-.actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
-.actions-row { display: flex; gap: 8px; }
-.actions-row button { flex: 1; }
+/* Flat action buttons: text + icon, no fills. */
 .actions button {
-  background: var(--accent);
-  color: #1e1e2e;
-  border: none;
-  border-radius: var(--radius);
-  padding: 12px;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.actions button.secondary {
-  background: var(--surface-2);
+  background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
 }
-.actions button:hover { filter: brightness(1.1); }
+.actions button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.actions button[data-export] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.actions button[data-export]:hover {
+  background: var(--accent);
+  color: #1e1e2e;
+}
+.actions button .ico {
+  display: inline-flex;
+  font-size: 16px;
+  line-height: 1;
+}
 
 /* Toast and overlays ------------------------------------------------- */
 .toast {
