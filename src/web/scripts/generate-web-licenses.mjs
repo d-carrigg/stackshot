@@ -154,7 +154,7 @@ const main = () => {
   lines.push("# Third-party licenses (web)");
   lines.push("");
   lines.push(
-    "codeimg is distributed under the MIT License (see `LICENSE`). The web app served from `dist/` bundles the following third-party npm packages (production dependencies, transitive). Their copyright notices and license texts are reproduced below to satisfy each license's attribution requirements.",
+    "stackshot is distributed under the MIT License (see `LICENSE`). The web app served from `dist/` bundles the following third-party npm packages (production dependencies, transitive). Their copyright notices and license texts are reproduced below to satisfy each license's attribution requirements.",
   );
   lines.push("");
   lines.push(

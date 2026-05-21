@@ -1,7 +1,7 @@
 import pytest
 from PIL import Image
 
-from codeimg.compose import compose_panels, compose_side_by_side
+from stackshot.compose import compose_panels, compose_side_by_side
 
 
 def _solid(w, h, color=(50, 60, 70, 255)):
@@ -53,7 +53,7 @@ def test_compose_panels_centers_unequal_heights(monkeypatch):
     """Horizontal layout: when panels differ in height, each panel's
     card must be vertically centered within the row, not top-aligned.
     The shorter panel should sit roughly mid-row."""
-    from codeimg.colors import DEFAULT_BG
+    from stackshot.colors import DEFAULT_BG
 
     short = Image.new("RGBA", (100, 40), (10, 200, 10, 255))
     tall = Image.new("RGBA", (100, 200), (200, 10, 10, 255))
@@ -83,7 +83,7 @@ def test_compose_panels_centers_unequal_heights(monkeypatch):
 def test_compose_side_by_side_centers_unequal_heights():
     """Same centering invariant for the per-frame side-by-side compose
     used in the animated code path."""
-    from codeimg.colors import DEFAULT_BG
+    from stackshot.colors import DEFAULT_BG
 
     short = Image.new("RGBA", (100, 40), (10, 200, 10, 255))
     tall = Image.new("RGBA", (100, 200), (200, 10, 10, 255))

@@ -31,7 +31,7 @@ export const renderForExport = async (comp: Composition): Promise<RenderedImage>
     // composition as an iTXt chunk so the image round-trips.
     const canvas = await composeCanvas(comp);
     const raw = await canvasToBlob(canvas, "image/png");
-    const blob = await injectPngText(raw, "codeshot", composeMetadata(comp));
+    const blob = await injectPngText(raw, "stackshot", composeMetadata(comp));
     return { blob, mime: "image/png", ext: "png" };
   }
   if (format === "webp") {
@@ -73,7 +73,7 @@ const triggerDownload = (blob: Blob, filename: string): void => {
 
 export const exportImage = async (comp: Composition): Promise<void> => {
   const img = await renderForExport(comp);
-  triggerDownload(img.blob, `codeimg-${Date.now()}.${img.ext}`);
+  triggerDownload(img.blob, `stackshot-${Date.now()}.${img.ext}`);
 };
 
 export const copyImageToClipboard = async (comp: Composition): Promise<void> => {

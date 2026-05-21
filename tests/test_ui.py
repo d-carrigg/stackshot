@@ -13,7 +13,7 @@ import pytest
 from PIL import Image
 
 # Import the module; if tkinter itself isn't available, skip the file.
-ui = pytest.importorskip("codeimg.ui")
+ui = pytest.importorskip("stackshot.ui")
 tk = ui.tk
 if tk is None:
     pytest.skip("tkinter not available", allow_module_level=True)

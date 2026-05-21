@@ -2,7 +2,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from codeimg.panel_input import resolve_panel
+from stackshot.panel_input import resolve_panel
 
 
 def test_literal_code_when_no_file_match():

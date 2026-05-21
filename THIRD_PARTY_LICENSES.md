@@ -1,6 +1,6 @@
 # Third-party licenses
 
-codeimg is distributed under the MIT License (see `LICENSE`). The standalone binaries published on GitHub Releases bundle the following third-party Python packages and their native dependencies. Their copyright notices and license texts are reproduced below to satisfy the attribution requirements of each license. Installing codeimg from source or via PyPI pulls these packages separately from their respective projects; this file is provided as a single, convenient attribution bundle.
+stackshot is distributed under the MIT License (see `LICENSE`). The standalone binaries published on GitHub Releases bundle the following third-party Python packages and their native dependencies. Their copyright notices and license texts are reproduced below to satisfy the attribution requirements of each license. Installing stackshot from source or via PyPI pulls these packages separately from their respective projects; this file is provided as a single, convenient attribution bundle.
 
 ## Summary
 
@@ -16,7 +16,7 @@ codeimg is distributed under the MIT License (see `LICENSE`). The standalone bin
 
 - License: MIT-CMU (HPND-style)
 - Project: https://github.com/python-pillow/Pillow
-- Use in codeimg: Imaging library used for rendering and image I/O. The license text below also includes notices for native libraries (libjpeg, libpng, libtiff, libwebp, FreeType, etc.) that Pillow bundles and that ship inside our standalone binaries.
+- Use in stackshot: Imaging library used for rendering and image I/O. The license text below also includes notices for native libraries (libjpeg, libpng, libtiff, libwebp, FreeType, etc.) that Pillow bundles and that ship inside our standalone binaries.
 
 ```
 The Python Imaging Library (PIL) is
@@ -1548,7 +1548,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 - License: BSD-3-Clause
 - Project: https://github.com/prompt-toolkit/python-prompt-toolkit
-- Use in codeimg: Interactive prompt library used by the CLI.
+- Use in stackshot: Interactive prompt library used by the CLI.
 
 ```
 Copyright (c) 2014, Jonathan Slenders
@@ -1584,7 +1584,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 - License: BSD-2-Clause
 - Project: https://pygments.org/
-- Use in codeimg: Syntax highlighter used to tokenize code panels.
+- Use in stackshot: Syntax highlighter used to tokenize code panels.
 
 ```
 Copyright (c) 2006-2022 by the respective authors (see AUTHORS file).
@@ -1618,7 +1618,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 - License: MIT
 - Project: https://github.com/jquast/wcwidth
-- Use in codeimg: Transitive dependency of prompt_toolkit; measures terminal character widths.
+- Use in stackshot: Transitive dependency of prompt_toolkit; measures terminal character widths.
 
 ```
 The MIT License (MIT)
@@ -1654,7 +1654,7 @@ disclaims all warranties with regard to this software.
 
 - License: MIT
 - Project: https://github.com/Eliav2/tkinterdnd2
-- Use in codeimg: Optional dependency (installed only with `codeimg[ui]`) providing drag-and-drop on the desktop UI.
+- Use in stackshot: Optional dependency (installed only with `stackshot[ui]`) providing drag-and-drop on the desktop UI.
 
 ```
 MIT License

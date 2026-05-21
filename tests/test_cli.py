@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from codeimg.cli import _composed_duration, main
+from stackshot.cli import _composed_duration, main
 
 
 def test_composed_duration_uses_animated_panel_when_only_one_animates():
@@ -28,7 +28,7 @@ def test_composed_duration_static_only_falls_back_to_min():
 
 
 def _run_main(monkeypatch, argv, stdin=None):
-    monkeypatch.setattr("sys.argv", ["codeimg", *argv])
+    monkeypatch.setattr("sys.argv", ["stackshot", *argv])
     if stdin is not None:
         monkeypatch.setattr("sys.stdin", io.StringIO(stdin))
     main()
@@ -105,7 +105,7 @@ def test_cli_image_path_panel(tmp_path: Path, monkeypatch):
 def test_cli_no_clip_suppresses_clipboard(tmp_path: Path, monkeypatch, capsys):
     out = tmp_path / "x.png"
     called = []
-    monkeypatch.setattr("codeimg.cli.copy_to_clipboard", lambda img: called.append(img))
+    monkeypatch.setattr("stackshot.cli.copy_to_clipboard", lambda img: called.append(img))
     _run_main(monkeypatch, ["x = 1", "--out", str(out), "--no-clip"])
     assert called == []
     assert "clipboard" not in capsys.readouterr().out.lower()
@@ -114,7 +114,7 @@ def test_cli_no_clip_suppresses_clipboard(tmp_path: Path, monkeypatch, capsys):
 def test_cli_default_copies_to_clipboard(tmp_path: Path, monkeypatch):
     out = tmp_path / "x.png"
     called = []
-    monkeypatch.setattr("codeimg.cli.copy_to_clipboard", lambda img: called.append(img))
+    monkeypatch.setattr("stackshot.cli.copy_to_clipboard", lambda img: called.append(img))
     _run_main(monkeypatch, ["x = 1", "--out", str(out)])
     assert len(called) == 1
 
@@ -131,6 +131,6 @@ def test_cli_interactive_markdown_via_stdin(tmp_path: Path, monkeypatch):
         "\n"  # two blank lines end the block
         "d\n"  # done at the action prompt
     )
-    monkeypatch.setattr("codeimg.interactive.copy_to_clipboard", lambda img: None)
+    monkeypatch.setattr("stackshot.interactive.copy_to_clipboard", lambda img: None)
     _run_main(monkeypatch, ["--out", str(out)], stdin=stdin)
     assert out.exists() and out.stat().st_size > 0

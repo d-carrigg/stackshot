@@ -59,7 +59,7 @@ export const composeMetadata = (comp: Composition): string => {
     .filter((p): p is CodePanel => p.kind === "code")
     .map((p) => ({ title: p.title ?? "", language: p.language, code: p.code }));
   return JSON.stringify({
-    app: "codeshot",
+    app: "stackshot",
     schema: 1,
     layout: comp.layout,
     bgColor: comp.bgColor,

@@ -1,4 +1,4 @@
-# codeimg
+# stackshot
 
 Compose code snippets, screenshots, and images into multi-panel
 illustrations. Pass panels as positional args (code, file paths, or
@@ -17,15 +17,15 @@ Static Web Apps free tier).
 From PyPI (Python ≥ 3.10):
 
 ```bash
-uv tool install codeimg     # or: pipx install codeimg
+uv tool install stackshot     # or: pipx install stackshot
 ```
 
 Standalone binary (no Python required) — download the asset for your
-platform from the [latest release](https://github.com/d-carrigg/codeimg/releases/latest):
+platform from the [latest release](https://github.com/d-carrigg/stackshot/releases/latest):
 
-- `codeimg-linux-x86_64`
-- `codeimg-macos-arm64`
-- `codeimg-windows-x86_64.exe`
+- `stackshot-linux-x86_64`
+- `stackshot-macos-arm64`
+- `stackshot-windows-x86_64.exe`
 
 `chmod +x` and put it on your PATH (Linux/macOS).
 
@@ -33,14 +33,14 @@ From a checkout of this repo:
 
 ```bash
 uv tool install .       # install globally from source
-uv run codeimg --help   # or run without installing
+uv run stackshot --help   # or run without installing
 ```
 
 ## Use
 
 ### Interactive
 
-Run `codeimg` with no arguments. Each block opens a multi-line editor:
+Run `stackshot` with no arguments. Each block opens a multi-line editor:
 
 - Arrow keys move the cursor (including across lines)
 - **Enter** submits the block
@@ -56,7 +56,7 @@ uses Pillow's `ImageGrab`; on Linux it shells out to `wl-paste` or
 `xclip` — install one if image paste returns nothing.)
 
 ```text
-$ codeimg --out out.png
+$ stackshot --out out.png
 --- Block 1 ---
 def hi():
     print("hello")            ← Alt+Enter for newline, Enter to submit
@@ -92,7 +92,7 @@ top-to-bottom with a downward arrow between them.
 
 ### Animated output (code → gif)
 
-If one of the panels is an animated GIF or WebP, codeimg produces an
+If one of the panels is an animated GIF or WebP, stackshot produces an
 animated output frame-by-frame.
 
 ![code to gif](docs/img/code-to-gif.gif)
@@ -113,11 +113,11 @@ Pass one or more positional panel inputs. Each one is auto-detected:
 - anything else → literal code string
 
 ```bash
-codeimg 'print("hi")' 'hi' --out out.png
-codeimg input.png output.png --no-border --out diff.png
-codeimg src/cli.py:1-30 --out top.png
-codeimg before.py after.py --title Before After --out diff.png
-codeimg 'def add(a, b): return a + b' --out single.png    # one arg => single panel
+stackshot 'print("hi")' 'hi' --out out.png
+stackshot input.png output.png --no-border --out diff.png
+stackshot src/cli.py:1-30 --out top.png
+stackshot before.py after.py --title Before After --out diff.png
+stackshot 'def add(a, b): return a + b' --out single.png    # one arg => single panel
 ```
 
 Per-panel metadata uses parallel lists:
@@ -135,7 +135,7 @@ around images), `--arrow-color` (hex like `#aabbcc` or named like `white`),
 ## As a library
 
 ```python
-from codeimg import Panel, compose_panels, parse_markdown, render_code_image
+from stackshot import Panel, compose_panels, parse_markdown, render_code_image
 
 panels = parse_markdown(open("README.md").read())
 items = [(render_code_image(p.code, p.lang, None), p.title, False) for p in panels]

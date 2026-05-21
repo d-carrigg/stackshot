@@ -1,5 +1,5 @@
-from codeimg.colors import PANEL_BG
-from codeimg.highlight import render_code_image
+from stackshot.colors import PANEL_BG
+from stackshot.highlight import render_code_image
 
 
 def test_render_code_image_uses_panel_bg_so_no_fringe():

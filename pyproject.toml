@@ -1,6 +1,6 @@
 [project]
-name = "codeimg"
-version = "0.7.1"
+name = "stackshot"
+version = "0.8.0"
 description = "Compose code snippets, screenshots, and images into multi-panel illustrations — for READMEs, docs, blog posts, and tutorials"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -31,21 +31,21 @@ dependencies = [
 ui = ["tkinterdnd2>=0.4.3"]
 
 [project.urls]
-Homepage = "https://github.com/d-carrigg/codeimg"
-Repository = "https://github.com/d-carrigg/codeimg"
-Issues = "https://github.com/d-carrigg/codeimg/issues"
-Changelog = "https://github.com/d-carrigg/codeimg/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/d-carrigg/stackshot"
+Repository = "https://github.com/d-carrigg/stackshot"
+Issues = "https://github.com/d-carrigg/stackshot/issues"
+Changelog = "https://github.com/d-carrigg/stackshot/blob/main/CHANGELOG.md"
 
 [project.scripts]
-codeimg = "codeimg.cli:main"
+stackshot = "stackshot.cli:main"
 
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["codeimg"]
-package-dir = { "codeimg" = "src/cli" }
+packages = ["stackshot"]
+package-dir = { "stackshot" = "src/cli" }
 
 [dependency-groups]
 dev = ["pytest>=8.0"]

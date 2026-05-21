@@ -1,6 +1,6 @@
-# codeimg-web
+# stackshot-web
 
-Browser-based composer that mirrors the `codeimg` CLI. Vanilla TypeScript + Vite + Shiki + Canvas. No backend.
+Browser-based composer that mirrors the `stackshot` CLI. Vanilla TypeScript + Vite + Shiki + Canvas. No backend.
 
 ## Dev
 
@@ -16,7 +16,7 @@ npm run build   # → dist/
 This is a **one-time manual setup** that the Azure portal does for you:
 
 1. Azure portal → **Create a resource** → **Static Web App** → **Free** plan.
-2. Source: **GitHub**, repo: `d-carrigg/codeimg`, branch: `main`.
+2. Source: **GitHub**, repo: `d-carrigg/stackshot`, branch: `main`.
 3. Build preset: **Custom**. Set:
    - **App location:** `src/web`
    - **Output location:** `dist`

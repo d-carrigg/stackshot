@@ -80,7 +80,7 @@ def _read_text_block_tty():
 
 
 def _save_clipboard_image_as_panel(img: Image.Image, panels: list[Panel]) -> None:
-    tmp = tempfile.NamedTemporaryFile(prefix="codeimg-clip-", suffix=".png", delete=False)
+    tmp = tempfile.NamedTemporaryFile(prefix="stackshot-clip-", suffix=".png", delete=False)
     img.convert("RGBA").save(tmp.name, format="PNG")
     panels.append(Panel(code="", is_image=True, image_path=tmp.name))
 

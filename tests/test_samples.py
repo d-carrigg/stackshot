@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from codeimg import compose_panels, parse_markdown, render_code_image
-from codeimg.cli import DEFAULT_SCALE, main
-from codeimg.io_utils import fit_image, open_image, save_image
+from stackshot import compose_panels, parse_markdown, render_code_image
+from stackshot.cli import DEFAULT_SCALE, main
+from stackshot.io_utils import fit_image, open_image, save_image
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +93,7 @@ def test_sample_vertical(docs_img):
 
 
 def test_sample_markdown_to_rendered(docs_img):
-    """Markdown input on top, what codeimg rendered from it below. The
+    """Markdown input on top, what stackshot rendered from it below. The
     inner Output panel stays horizontal (it's the original Request →
     Response demo). The inner render also goes through the public flow
     so a regression in parse_markdown or compose_panels shows up in
@@ -153,7 +153,7 @@ def test_sample_code_to_gif(docs_img, monkeypatch):
 
     out_path = docs_img / "code-to-gif.gif"
     argv = [
-        "codeimg",
+        "stackshot",
         str(code_src),
         str(recording),
         "--title", "Code", "Output",
