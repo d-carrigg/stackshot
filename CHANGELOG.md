@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 — 2026-05-21
+
+### Fixed
+- Web: theme-pill tooltips now anchor **below** the swatch instead
+  of above, so they're no longer clipped by the top of the viewport
+  when the theme strip sits in the topbar.
+
 ## 0.6.0 — 2026-05-21
 
 ### Changed

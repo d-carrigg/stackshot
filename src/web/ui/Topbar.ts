@@ -62,7 +62,8 @@ const buildThemeGroup = (store: Store, variant: Variant): HTMLElement => {
     btn.type = "button";
     btn.className = "theme-pill";
     btn.dataset.theme = t.id;
-    btn.title = t.label;
+    // No `title` — the CSS ::before pseudo handles the hover label,
+    // and a native browser tooltip on top would duplicate it.
     btn.setAttribute("aria-label", t.label);
     btn.style.setProperty("--swatch-bg", t.bg);
     btn.style.setProperty("--swatch-arrow", t.arrow);
@@ -74,7 +75,6 @@ const buildThemeGroup = (store: Store, variant: Variant): HTMLElement => {
   customBtn.type = "button";
   customBtn.className = "theme-pill theme-pill-custom";
   customBtn.dataset.theme = "custom";
-  customBtn.title = "Custom colors";
   customBtn.setAttribute("aria-label", "Custom colors");
   customBtn.textContent = "+";
   wrap.appendChild(customBtn);
