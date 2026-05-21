@@ -51,9 +51,11 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
-          # We already built locally; tell the Oryx build to skip its own.
-          app_location: "src/web"
-          output_location: "dist"
+          # We built locally with `npm run build`. Point app_location
+          # straight at the built output so Azure uploads dist/, not
+          # the TypeScript source. staticwebapp.config.json lives in
+          # src/web/public so Vite copies it into dist/ at build time.
+          app_location: "src/web/dist"
           skip_app_build: true
           skip_api_build: true
 
