@@ -116,7 +116,7 @@ html, body {
 .composition[data-layout="horizontal"] {
   flex-direction: row;
   flex-wrap: nowrap;
-  align-items: flex-start;
+  align-items: center;
   width: max-content;
 }
 .composition[data-layout="vertical"] {
@@ -255,9 +255,6 @@ html, body {
 .composition[data-layout="horizontal"] .composition-arrow {
   width: 90px;
   min-width: 90px;
-  /* Stretch to the row's cross-axis height so the SVG centers vertically
-     against the tallest card instead of sitting at the title row. */
-  align-self: stretch;
 }
 .composition[data-layout="horizontal"] .composition-arrow svg {
   width: 90px;
