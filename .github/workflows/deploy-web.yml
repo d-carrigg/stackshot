@@ -3,11 +3,11 @@ name: deploy-web
 # Deploy the static web app to Azure Static Web Apps.
 #
 # Production deploys ship on every push to main. We deliberately don't
-# chain off the v* tags that auto-tag.yml creates, because GitHub's
+# chain off the v* tags that release.yml creates, because GitHub's
 # workflow recursion guard means a tag pushed using GITHUB_TOKEN does
-# NOT trigger other workflows — so the tag chain has been silently
-# broken since auto-tag took over. Triggering on push to main is the
-# simplest fix and matches the user-stated goal of "deploy on merge".
+# NOT trigger other workflows — the tag chain silently never fires.
+# Triggering on push to main is the simplest fix and matches the
+# user-stated goal of "deploy on merge".
 #
 # workflow_dispatch is exposed so a redeploy can be kicked off from
 # the Actions tab without a code change.

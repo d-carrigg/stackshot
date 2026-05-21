@@ -22,20 +22,24 @@ All changes ship through feature branches. Never commit directly to `main`.
 4. **Update `CHANGELOG.md`** with a new section for the bumped version
    (Fixed / Changed / Added). Follow the existing format.
 5. **Open a PR to `main`.** CI (`test.yml`) runs pytest on 3.10 and 3.13.
-6. **Merge.** On push to `main`, `auto-tag.yml` reads the version from
-   `pyproject.toml` and pushes a `v<version>` tag if it doesn't exist.
-   The tag push triggers `release.yml`, which builds standalone binaries
-   for Linux/macOS/Windows and attaches them to the GitHub Release.
+6. **Merge.** On push to `main`, `release.yml` reads the version from
+   `pyproject.toml`, pushes a `v<version>` tag if it doesn't exist, and
+   then builds standalone binaries for Linux/macOS/Windows + attaches
+   them (with the license bundles) to the GitHub Release.
 
-If you forget to bump the version, `auto-tag.yml` is a no-op (tag already
-exists). Bump and merge again to ship.
+If you forget to bump the version, the tag-version job is a no-op (tag
+already exists) and binaries aren't rebuilt. Bump and merge again to ship.
 
 ## Workflows
 
 - `.github/workflows/test.yml` — pytest on push/PR.
-- `.github/workflows/auto-tag.yml` — pushes `v<version>` tag on merge to main.
-- `.github/workflows/release.yml` — on `v*` tag, builds binaries
-  (PyPI publish is gated; see comment in the file).
+- `.github/workflows/release.yml` — on push to `main`: tags
+  `v<version>` if new, then builds + uploads binaries. Single workflow
+  because GitHub Actions suppresses workflow triggers from
+  `GITHUB_TOKEN`-pushed tags; chaining via a separate "on tag push"
+  workflow silently never ran (PyPI publish is gated; see comment in the file).
+- `.github/workflows/deploy-web.yml` — deploys the web app to SWA on
+  push to main.
 
 ## Local commands
 
