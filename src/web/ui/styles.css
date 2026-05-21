@@ -564,27 +564,84 @@ html, body {
   gap: 4px;
   align-items: center;
 }
-.panel-card-lang {
+/* Language picker: themed combobox. The wrapper hosts the input,
+   a chevron toggle, and an absolutely-positioned dropdown list. */
+.combobox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.combobox-input {
   background: transparent;
   color: var(--muted);
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 3px 6px;
+  padding: 3px 22px 3px 6px;
   font-family: inherit;
   font-size: 12px;
-  cursor: pointer;
+  width: 110px;
+  min-width: 0;
+  outline: none;
   transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
-.panel-card-lang:hover {
+.combobox-input:hover {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border);
 }
-.panel-card-lang:focus {
-  outline: none;
+.combobox-input:focus {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border);
+}
+.combobox-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  padding: 2px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: none;
+}
+.combobox-input:hover + .combobox-toggle,
+.combobox-input:focus + .combobox-toggle { color: var(--text); }
+.combobox-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  min-width: 140px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  font-size: 12px;
+}
+.combobox-option {
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.combobox-option.active { background: var(--surface-2); }
+.combobox-option.selected { color: var(--accent); }
+.combobox-option.selected.active { background: var(--surface-2); }
+.combobox-empty {
+  padding: 4px 8px;
+  color: var(--muted);
+  font-style: italic;
 }
 .icon-btn {
   background: transparent;

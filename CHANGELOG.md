@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.7.0 — 2026-05-21
+
+### Fixed
+- Web: **Panel reorder drops now register reliably.** The code-editor
+  textarea was calling `stopPropagation()` on every drop, including
+  panel-reorder drags — so the drop indicator showed but the actual
+  move never reached the card's drop handler when the cursor landed
+  over the editor body. The textarea now only blocks file/text drops
+  and lets `text/x-panel-id` bubble.
+- Web: Drop indicators no longer flash on adjacent same-side drops
+  that would result in no movement (e.g. dropping a panel on the
+  half right next to its current slot). Cleared stale indicator
+  classes that could linger if a drag ended outside any target.
+
+### Added
+- Web: **Language picker is now a typed-filter combobox.** The flat
+  text input narrows the dropdown as you type and the dropdown
+  itself is themed (surface / border / accent tokens) instead of
+  using the browser's default `<select>` chrome.
+
+### Changed
+- Web: **Grid mode caps at 6 panels.** Grid dimensions auto-fit the
+  panel count (1×1 → 1×2 → 1×3 → 2×2 → 2×3) so every added panel
+  shows up in the export instead of silently falling off-grid. Add
+  buttons disable at the cap; switching to grid with more than six
+  panels is refused with a toast.
+- Web: **Form/textarea inputs use `data-form-type="other"`** instead
+  of `autocomplete="off"`, which password managers were ignoring on
+  some form-shaped widgets. Title input, code textarea, and the new
+  language combobox all carry the hint.
+
 ## 0.6.1 — 2026-05-21
 
 ### Fixed

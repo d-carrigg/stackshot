@@ -5,7 +5,7 @@
 // second compact instance. CSS @media rules hide one or the other at
 // each breakpoint, so the controls stay reachable at every width.
 import type { Store, Layout, ExportFormat, ScalePreset } from "../state";
-import { SCALE_VALUES, resolveScalePreset, defaultComposition } from "../state";
+import { SCALE_VALUES, resolveScalePreset, defaultComposition, GRID_MAX_PANELS } from "../state";
 import { exportImage, copyImageToClipboard, resolveExportFormat } from "../export";
 import { showToast } from "./util";
 import { clearPersisted } from "../persist";
@@ -41,7 +41,14 @@ const buildLayoutGroup = (store: Store, variant: Variant): HTMLElement => {
   btns[1]?.appendChild(colsIcon());
   btns[2]?.appendChild(gridIcon());
   for (const b of btns) {
-    b.addEventListener("click", () => store.patch({ layout: b.dataset.layoutVal as Layout }));
+    b.addEventListener("click", () => {
+      const layout = b.dataset.layoutVal as Layout;
+      if (layout === "grid" && store.get().panels.length > GRID_MAX_PANELS) {
+        showToast(`Grid mode supports up to ${GRID_MAX_PANELS} panels — remove some first`);
+        return;
+      }
+      store.patch({ layout });
+    });
   }
   const render = () => {
     const c = store.get();

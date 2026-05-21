@@ -1,5 +1,6 @@
 import type { Store, Panel } from "../state";
 import { createCodeEditor, type CodeEditorHandle } from "./CodeEditor";
+import { createCombobox } from "./Combobox";
 import { fileToImagePanel, languageOptions } from "./util";
 import { gripVertical, trash } from "./icons";
 import type { Theme } from "../themes";
@@ -21,6 +22,7 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
   titleInput.placeholder = "Title (optional)";
   titleInput.value = panel.title ?? "";
   titleInput.className = "panel-card-title";
+  titleInput.setAttribute("data-form-type", "other");
   titleInput.addEventListener("input", () => {
     store.patchPanel(panel.id, { title: titleInput.value || undefined });
   });
@@ -29,29 +31,19 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
   const controls = document.createElement("div");
   controls.className = "panel-card-controls";
 
+  let lang: ReturnType<typeof createCombobox> | null = null;
   if (panel.kind === "code") {
-    const langSelect = document.createElement("select");
-    langSelect.className = "panel-card-lang";
-    // Suppress password managers / browser autofill — they latch onto
-    // <select> with values like "python" / "english" and try to fill it
-    // as a country or language field.
-    langSelect.setAttribute("autocomplete", "off");
-    langSelect.setAttribute("name", "panel-syntax-" + panel.id);
-    langSelect.setAttribute("data-1p-ignore", "true");
-    langSelect.setAttribute("data-lpignore", "true");
-    langSelect.setAttribute("data-form-type", "other");
-    for (const lang of languageOptions()) {
-      const opt = document.createElement("option");
-      opt.value = lang;
-      opt.textContent = lang;
-      langSelect.appendChild(opt);
-    }
-    langSelect.value = panel.language;
-    langSelect.addEventListener("change", () => {
-      store.patchPanel(panel.id, { language: langSelect.value });
-      editor?.setLanguage(langSelect.value);
+    lang = createCombobox({
+      value: panel.language,
+      options: languageOptions(),
+      placeholder: "Language",
+      ariaLabel: "Syntax language",
+      onChange: (value) => {
+        store.patchPanel(panel.id, { language: value });
+        editor?.setLanguage(value);
+      },
     });
-    controls.appendChild(langSelect);
+    controls.appendChild(lang.root);
   }
 
   const grip = mkIconButton(gripVertical(), "Drag to reorder", "grip");
@@ -87,6 +79,7 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
       if (p.kind === "code" && editor) {
         editor.setCode(p.code);
         editor.setLanguage(p.language);
+        if (lang && lang.getValue() !== p.language) lang.setValue(p.language);
       }
     },
     setTheme(t) {
