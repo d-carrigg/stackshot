@@ -441,6 +441,33 @@ html, body {
   cursor: pointer; user-select: none;
 }
 
+.format-pills {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.format-pill {
+  flex: 1;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.format-pill:hover { color: var(--text); border-color: var(--muted); }
+.format-pill.active {
+  background: var(--accent);
+  color: #1e1e2e;
+  border-color: var(--accent);
+}
+
 .actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
 .actions-row { display: flex; gap: 8px; }
 .actions-row button { flex: 1; }
