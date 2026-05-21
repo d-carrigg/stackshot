@@ -1,6 +1,9 @@
-// Topbar: every primary control lives here. Layout / theme / size /
-// format / download / overflow menu, plus the brand. The right rail is
-// gone in this concept — the topbar is the only chrome.
+// Topbar: every primary control lives here, plus a ⋯ overflow menu
+// that progressively absorbs them as the viewport narrows. Each pill
+// group has a builder that returns a self-contained element wired to
+// the store; the topbar mounts one instance and the menu mounts a
+// second compact instance. CSS @media rules hide one or the other at
+// each breakpoint, so the controls stay reachable at every width.
 import type { Store, Layout, ExportFormat } from "../state";
 import { exportImage, copyImageToClipboard, resolveExportFormat } from "../export";
 import { showToast } from "./util";
@@ -34,46 +37,226 @@ const resolveScalePreset = (scale: number): ScalePreset => {
   return "custom";
 };
 
+type Variant = "topbar" | "menu";
+
+const buildLayoutGroup = (store: Store, variant: Variant): HTMLElement => {
+  const wrap = document.createElement("div");
+  wrap.className = variant === "topbar" ? "topbar-layout seg" : "menu-layout seg";
+  wrap.setAttribute("role", "group");
+  wrap.setAttribute("aria-label", "Layout");
+  wrap.innerHTML = `
+    <button type="button" data-layout-val="vertical" title="Vertical layout" aria-label="Vertical layout"></button>
+    <button type="button" data-layout-val="horizontal" title="Horizontal layout" aria-label="Horizontal layout"></button>
+    <button type="button" data-layout-val="grid" title="Grid layout" aria-label="Grid layout"></button>
+  `;
+  const btns = wrap.querySelectorAll<HTMLButtonElement>("button");
+  btns[0]?.appendChild(rowsIcon());
+  btns[1]?.appendChild(colsIcon());
+  btns[2]?.appendChild(gridIcon());
+  for (const b of btns) {
+    b.addEventListener("click", () => store.patch({ layout: b.dataset.layoutVal as Layout }));
+  }
+  const render = () => {
+    const c = store.get();
+    for (const b of btns) b.classList.toggle("active", b.dataset.layoutVal === c.layout);
+  };
+  render();
+  store.subscribe(render);
+  return wrap;
+};
+
+const buildThemeGroup = (store: Store, variant: Variant): HTMLElement => {
+  const wrap = document.createElement("div");
+  wrap.className = variant === "topbar" ? "topbar-themes" : "menu-themes";
+
+  const themeButtons: { id: string; el: HTMLButtonElement }[] = [];
+  for (const t of THEMES) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "theme-pill";
+    btn.dataset.theme = t.id;
+    btn.title = t.label;
+    btn.setAttribute("aria-label", t.label);
+    btn.style.setProperty("--swatch-bg", t.bg);
+    btn.style.setProperty("--swatch-arrow", t.arrow);
+    btn.addEventListener("click", () => store.patch({ bgColor: t.bg, arrowColor: t.arrow }));
+    wrap.appendChild(btn);
+    themeButtons.push({ id: t.id, el: btn });
+  }
+  const customBtn = document.createElement("button");
+  customBtn.type = "button";
+  customBtn.className = "theme-pill theme-pill-custom";
+  customBtn.dataset.theme = "custom";
+  customBtn.title = "Custom colors";
+  customBtn.setAttribute("aria-label", "Custom colors");
+  customBtn.textContent = "+";
+  wrap.appendChild(customBtn);
+  themeButtons.push({ id: "custom", el: customBtn });
+
+  // Topbar variant: floating popover. Menu variant: inline color inputs.
+  let bg: HTMLInputElement;
+  let arrow: HTMLInputElement;
+  if (variant === "topbar") {
+    const pop = document.createElement("div");
+    pop.className = "topbar-color-pop";
+    pop.hidden = true;
+    pop.innerHTML = `
+      <label>BG <input type="color" data-bg /></label>
+      <label>Arrow <input type="color" data-arrow /></label>
+    `;
+    wrap.appendChild(pop);
+    bg = pop.querySelector<HTMLInputElement>("[data-bg]")!;
+    arrow = pop.querySelector<HTMLInputElement>("[data-arrow]")!;
+    customBtn.addEventListener("click", () => {
+      pop.hidden = !pop.hidden;
+      if (!pop.hidden) bg.focus();
+    });
+    document.addEventListener("click", (e) => {
+      if (pop.hidden) return;
+      const t = e.target as Node;
+      if (pop.contains(t) || customBtn.contains(t)) return;
+      pop.hidden = true;
+    });
+  } else {
+    const row = document.createElement("div");
+    row.className = "menu-themes-custom";
+    row.innerHTML = `
+      <label>BG <input type="color" data-bg /></label>
+      <label>Arrow <input type="color" data-arrow /></label>
+    `;
+    wrap.appendChild(row);
+    bg = row.querySelector<HTMLInputElement>("[data-bg]")!;
+    arrow = row.querySelector<HTMLInputElement>("[data-arrow]")!;
+  }
+  bg.addEventListener("input", () => store.patch({ bgColor: bg.value }));
+  arrow.addEventListener("input", () => store.patch({ arrowColor: arrow.value }));
+
+  const render = () => {
+    const c = store.get();
+    const activeId = resolveTheme(c.bgColor, c.arrowColor).id;
+    for (const tb of themeButtons) tb.el.classList.toggle("active", tb.id === activeId);
+    bg.value = c.bgColor;
+    arrow.value = c.arrowColor;
+  };
+  render();
+  store.subscribe(render);
+  return wrap;
+};
+
+const buildScaleGroup = (store: Store, variant: Variant): HTMLElement => {
+  const wrap = document.createElement("div");
+  wrap.className = variant === "topbar" ? "topbar-scale" : "menu-scale";
+  wrap.setAttribute("role", "group");
+  wrap.setAttribute("aria-label", "Scale");
+  wrap.innerHTML = `
+    <button type="button" class="topbar-pill" data-scale-val="low">low</button>
+    <button type="button" class="topbar-pill" data-scale-val="med">med</button>
+    <button type="button" class="topbar-pill" data-scale-val="high">high</button>
+    <button type="button" class="topbar-pill" data-scale-val="custom" data-scale-custom>custom</button>
+    <input type="number" class="topbar-scale-input" min="0.5" max="6" step="0.1" data-scale-input hidden />
+  `;
+  const pills = wrap.querySelectorAll<HTMLButtonElement>("[data-scale-val]");
+  const customPill = wrap.querySelector<HTMLButtonElement>("[data-scale-custom]")!;
+  const input = wrap.querySelector<HTMLInputElement>("[data-scale-input]")!;
+
+  for (const pill of pills) {
+    pill.addEventListener("click", () => {
+      const val = pill.dataset.scaleVal as ScalePreset;
+      if (val === "custom") {
+        input.hidden = false;
+        input.value = String(store.get().scale);
+        input.focus();
+        input.select();
+        return;
+      }
+      input.hidden = true;
+      store.patch({ scale: SCALE_VALUES[val] });
+    });
+  }
+  input.addEventListener("input", () => {
+    const v = Number(input.value);
+    if (Number.isFinite(v) && v > 0) store.patch({ scale: v });
+  });
+  input.addEventListener("blur", () => {
+    if (resolveScalePreset(store.get().scale) !== "custom") input.hidden = true;
+  });
+
+  const render = () => {
+    const c = store.get();
+    const preset = resolveScalePreset(c.scale);
+    for (const p of pills) p.classList.toggle("active", p.dataset.scaleVal === preset);
+    if (preset === "custom") {
+      input.hidden = false;
+      if (document.activeElement !== input) input.value = String(c.scale);
+      customPill.textContent = `${c.scale.toFixed(1)}×`;
+    } else {
+      customPill.textContent = "custom";
+      if (document.activeElement !== input) input.hidden = true;
+    }
+  };
+  render();
+  store.subscribe(render);
+  return wrap;
+};
+
+const buildFormatGroup = (store: Store, variant: Variant): HTMLElement => {
+  const wrap = document.createElement("div");
+  wrap.className = variant === "topbar" ? "topbar-format" : "menu-format";
+  wrap.setAttribute("role", "group");
+  wrap.setAttribute("aria-label", "Export format");
+  wrap.innerHTML = `
+    <button type="button" class="topbar-pill" data-format-val="webp">webp</button>
+    <button type="button" class="topbar-pill" data-format-val="png">png</button>
+    <button type="button" class="topbar-pill" data-format-val="gif">gif</button>
+  `;
+  const pills = wrap.querySelectorAll<HTMLButtonElement>("[data-format-val]");
+  for (const pill of pills) {
+    pill.addEventListener("click", () =>
+      store.patch({ exportFormat: pill.dataset.formatVal as ExportFormat }),
+    );
+  }
+  const render = () => {
+    const resolved = resolveExportFormat(store.get());
+    for (const pill of pills) pill.classList.toggle("active", pill.dataset.formatVal === resolved);
+  };
+  render();
+  store.subscribe(render);
+  return wrap;
+};
+
+// Section wrapper used inside the overflow menu — a small label sits
+// above the group of pills so users know what the controls are.
+const wrapMenuSection = (label: string, el: HTMLElement): HTMLElement => {
+  const sec = document.createElement("div");
+  sec.className = "menu-section";
+  sec.innerHTML = `<div class="menu-section-label">${label}</div>`;
+  sec.appendChild(el);
+  return sec;
+};
+
 export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions = {}): void => {
   root.innerHTML = `
     <header class="topbar">
       <span class="brand">codeimg</span>
 
-      <div class="topbar-layout seg" role="group" aria-label="Layout">
-        <button type="button" data-layout-val="vertical" title="Vertical layout" aria-label="Vertical layout"></button>
-        <button type="button" data-layout-val="horizontal" title="Horizontal layout" aria-label="Horizontal layout"></button>
-        <button type="button" data-layout-val="grid" title="Grid layout" aria-label="Grid layout"></button>
-      </div>
+      <div class="topbar-slot" data-slot="layout"></div>
+      <span class="topbar-sep" data-sep-after="layout" aria-hidden="true"></span>
 
-      <span class="topbar-sep" aria-hidden="true"></span>
+      <div class="topbar-slot" data-slot="themes"></div>
+      <span class="topbar-sep" data-sep-after="themes" aria-hidden="true"></span>
 
-      <div class="topbar-themes" data-themes></div>
+      <div class="topbar-slot" data-slot="scale"></div>
+      <span class="topbar-sep" data-sep-after="scale" aria-hidden="true"></span>
 
-      <span class="topbar-sep" aria-hidden="true"></span>
-
-      <div class="topbar-scale" role="group" aria-label="Scale">
-        <button type="button" class="topbar-pill" data-scale-val="low">low</button>
-        <button type="button" class="topbar-pill" data-scale-val="med">med</button>
-        <button type="button" class="topbar-pill" data-scale-val="high">high</button>
-        <button type="button" class="topbar-pill" data-scale-val="custom" data-scale-custom>custom</button>
-        <input type="number" class="topbar-scale-input" min="0.5" max="6" step="0.1" data-scale-input hidden />
-      </div>
-
-      <span class="topbar-sep" aria-hidden="true"></span>
-
-      <div class="topbar-format" role="group" aria-label="Export format">
-        <button type="button" class="topbar-pill" data-format-val="webp">webp</button>
-        <button type="button" class="topbar-pill" data-format-val="png">png</button>
-        <button type="button" class="topbar-pill" data-format-val="gif">gif</button>
-      </div>
+      <div class="topbar-slot" data-slot="format"></div>
 
       <span class="spacer"></span>
 
-      <button type="button" class="topbar-secondary" data-preview hidden>
-        <span class="ico" data-preview-ico></span><span>Preview</span>
+      <button type="button" class="topbar-secondary" data-preview-top hidden>
+        <span class="ico" data-preview-top-ico></span><span>Preview</span>
       </button>
-      <button type="button" class="topbar-secondary" data-copy>
-        <span class="ico" data-copy-ico></span><span>Copy</span>
+      <button type="button" class="topbar-secondary" data-copy-top>
+        <span class="ico" data-copy-top-ico></span><span>Copy</span>
       </button>
       <button type="button" class="topbar-export" data-export>
         <span class="ico" data-dl-ico></span><span>Download</span>
@@ -84,6 +267,21 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
           <span aria-hidden="true">⋯</span>
         </button>
         <div class="topbar-more-menu" data-more-menu hidden role="menu">
+          <div class="menu-overflow" data-overflow="layout"></div>
+          <div class="menu-overflow" data-overflow="themes"></div>
+          <div class="menu-overflow" data-overflow="scale"></div>
+          <div class="menu-overflow" data-overflow="format"></div>
+          <div class="menu-overflow" data-overflow="preview">
+            <button type="button" class="menu-action" data-preview-menu role="menuitem" hidden>
+              <span class="ico" data-preview-menu-ico></span><span>Preview</span>
+            </button>
+          </div>
+          <div class="menu-overflow" data-overflow="copy">
+            <button type="button" class="menu-action" data-copy-menu role="menuitem">
+              <span class="ico" data-copy-menu-ico></span><span>Copy to clipboard</span>
+            </button>
+          </div>
+          <div class="topbar-more-sep menu-always-sep"></div>
           <label class="topbar-more-toggle" role="menuitemcheckbox">
             <input type="checkbox" data-border />
             <span>Inner panel border</span>
@@ -99,120 +297,54 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     </header>
   `;
 
-  // Layout segment ----------------------------------------------------
-  const segButtons = root.querySelectorAll<HTMLButtonElement>(".topbar-layout button");
-  segButtons[0]?.appendChild(rowsIcon());
-  segButtons[1]?.appendChild(colsIcon());
-  segButtons[2]?.appendChild(gridIcon());
-  for (const btn of segButtons) {
-    btn.addEventListener("click", () => {
-      store.patch({ layout: btn.dataset.layoutVal as Layout });
-    });
-  }
+  // Mount primary (topbar) instances + overflow (menu) instances of
+  // each group. CSS toggles which one is visible at each breakpoint.
+  const slot = (name: string) =>
+    root.querySelector<HTMLDivElement>(`.topbar-slot[data-slot="${name}"]`)!;
+  const over = (name: string) =>
+    root.querySelector<HTMLDivElement>(`.menu-overflow[data-overflow="${name}"]`)!;
 
-  // Themes ------------------------------------------------------------
-  const themesEl = root.querySelector<HTMLDivElement>("[data-themes]")!;
-  const themeButtons: { id: string; el: HTMLButtonElement }[] = [];
-  for (const t of THEMES) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "theme-pill";
-    btn.dataset.theme = t.id;
-    btn.title = t.label;
-    btn.setAttribute("aria-label", t.label);
-    btn.style.setProperty("--swatch-bg", t.bg);
-    btn.style.setProperty("--swatch-arrow", t.arrow);
-    btn.addEventListener("click", () => store.patch({ bgColor: t.bg, arrowColor: t.arrow }));
-    themesEl.appendChild(btn);
-    themeButtons.push({ id: t.id, el: btn });
-  }
-  // Custom pill — distinct, opens a tiny popover with bg + arrow color
-  // pickers. Keeps the topbar free of always-visible color inputs.
-  const customBtn = document.createElement("button");
-  customBtn.type = "button";
-  customBtn.className = "theme-pill theme-pill-custom";
-  customBtn.dataset.theme = "custom";
-  customBtn.title = "Custom colors";
-  customBtn.setAttribute("aria-label", "Custom colors");
-  customBtn.textContent = "+";
-  themesEl.appendChild(customBtn);
-  themeButtons.push({ id: "custom", el: customBtn });
+  slot("layout").appendChild(buildLayoutGroup(store, "topbar"));
+  over("layout").appendChild(wrapMenuSection("Layout", buildLayoutGroup(store, "menu")));
 
-  const customPop = document.createElement("div");
-  customPop.className = "topbar-color-pop";
-  customPop.hidden = true;
-  customPop.innerHTML = `
-    <label>BG <input type="color" data-bg /></label>
-    <label>Arrow <input type="color" data-arrow /></label>
-  `;
-  themesEl.appendChild(customPop);
-  const bg = customPop.querySelector<HTMLInputElement>("[data-bg]")!;
-  const arrow = customPop.querySelector<HTMLInputElement>("[data-arrow]")!;
-  bg.addEventListener("input", () => store.patch({ bgColor: bg.value }));
-  arrow.addEventListener("input", () => store.patch({ arrowColor: arrow.value }));
-  customBtn.addEventListener("click", () => {
-    customPop.hidden = !customPop.hidden;
-    if (!customPop.hidden) bg.focus();
-  });
-  document.addEventListener("click", (e) => {
-    if (customPop.hidden) return;
-    const t = e.target as Node;
-    if (customPop.contains(t) || customBtn.contains(t)) return;
-    customPop.hidden = true;
-  });
+  slot("themes").appendChild(buildThemeGroup(store, "topbar"));
+  over("themes").appendChild(wrapMenuSection("Theme", buildThemeGroup(store, "menu")));
 
-  // Scale -------------------------------------------------------------
-  const scalePills = root.querySelectorAll<HTMLButtonElement>(".topbar-scale [data-scale-val]");
-  const customScalePill = root.querySelector<HTMLButtonElement>("[data-scale-custom]")!;
-  const scaleInput = root.querySelector<HTMLInputElement>("[data-scale-input]")!;
-  for (const pill of scalePills) {
-    pill.addEventListener("click", () => {
-      const val = pill.dataset.scaleVal as ScalePreset;
-      if (val === "custom") {
-        scaleInput.hidden = false;
-        scaleInput.value = String(store.get().scale);
-        scaleInput.focus();
-        scaleInput.select();
-        return;
-      }
-      scaleInput.hidden = true;
-      store.patch({ scale: SCALE_VALUES[val] });
-    });
-  }
-  scaleInput.addEventListener("input", () => {
-    const v = Number(scaleInput.value);
-    if (Number.isFinite(v) && v > 0) store.patch({ scale: v });
-  });
-  scaleInput.addEventListener("blur", () => {
-    if (resolveScalePreset(store.get().scale) !== "custom") scaleInput.hidden = true;
-  });
+  slot("scale").appendChild(buildScaleGroup(store, "topbar"));
+  over("scale").appendChild(wrapMenuSection("Scale", buildScaleGroup(store, "menu")));
 
-  // Format ------------------------------------------------------------
-  const formatPills = root.querySelectorAll<HTMLButtonElement>(".topbar-format [data-format-val]");
-  for (const pill of formatPills) {
-    pill.addEventListener("click", () =>
-      store.patch({ exportFormat: pill.dataset.formatVal as ExportFormat }),
-    );
-  }
+  slot("format").appendChild(buildFormatGroup(store, "topbar"));
+  over("format").appendChild(wrapMenuSection("Format", buildFormatGroup(store, "menu")));
 
-  // Preview / Copy / Export -------------------------------------------
-  const previewBtn = root.querySelector<HTMLButtonElement>("[data-preview]")!;
-  root.querySelector<HTMLSpanElement>("[data-preview-ico]")!.appendChild(eyeIcon());
+  // Preview / Copy / Download -----------------------------------------
+  const previewTop = root.querySelector<HTMLButtonElement>("[data-preview-top]")!;
+  root.querySelector<HTMLSpanElement>("[data-preview-top-ico]")!.appendChild(eyeIcon());
+  const previewMenu = root.querySelector<HTMLButtonElement>("[data-preview-menu]")!;
+  root.querySelector<HTMLSpanElement>("[data-preview-menu-ico]")!.appendChild(eyeIcon());
   if (opts.onPreview) {
-    previewBtn.hidden = false;
-    previewBtn.addEventListener("click", () => opts.onPreview?.());
+    previewTop.hidden = false;
+    previewMenu.hidden = false;
+    previewTop.addEventListener("click", () => opts.onPreview?.());
+    previewMenu.addEventListener("click", () => {
+      closeMenu();
+      opts.onPreview?.();
+    });
   }
 
-  const copyTopBtn = root.querySelector<HTMLButtonElement>("[data-copy]")!;
-  root.querySelector<HTMLSpanElement>("[data-copy-ico]")!.appendChild(clipIcon());
-  copyTopBtn.addEventListener("click", async () => {
+  const copyTop = root.querySelector<HTMLButtonElement>("[data-copy-top]")!;
+  root.querySelector<HTMLSpanElement>("[data-copy-top-ico]")!.appendChild(clipIcon());
+  const copyMenu = root.querySelector<HTMLButtonElement>("[data-copy-menu]")!;
+  root.querySelector<HTMLSpanElement>("[data-copy-menu-ico]")!.appendChild(clipIcon());
+  const doCopy = async () => {
     try {
       await copyImageToClipboard(store.get());
       showToast("Copied to clipboard");
     } catch (e) {
       showToast(`Copy failed: ${(e as Error).message}`);
     }
-  });
+  };
+  copyTop.addEventListener("click", doCopy);
+  copyMenu.addEventListener("click", () => { closeMenu(); doCopy(); });
 
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
   root.querySelector<HTMLSpanElement>("[data-dl-ico]")!.appendChild(dlIcon());
@@ -224,11 +356,10 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     }
   });
 
-  // Overflow menu -----------------------------------------------------
+  // Overflow ⋯ menu --------------------------------------------------
   const moreBtn = root.querySelector<HTMLButtonElement>("[data-more]")!;
   const moreMenu = root.querySelector<HTMLDivElement>("[data-more-menu]")!;
-  const ghSpan = moreMenu.querySelector<HTMLSpanElement>(".topbar-more-gh")!;
-  ghSpan.appendChild(ghIcon());
+  moreMenu.querySelector<HTMLSpanElement>(".topbar-more-gh")!.appendChild(ghIcon());
   const closeMenu = () => {
     moreMenu.hidden = true;
     moreBtn.setAttribute("aria-expanded", "false");
@@ -262,7 +393,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     store.set(() => defaultComposition());
   });
 
-  // ⌘S / ⌘C keyboard shortcuts (advertised in the footer) -------------
+  // ⌘S / ⌘C keyboard shortcuts ---------------------------------------
   window.addEventListener("keydown", async (e) => {
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
@@ -287,36 +418,9 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     }
   });
 
-  // Render ------------------------------------------------------------
-  const render = () => {
-    const c = store.get();
-    for (const btn of segButtons) {
-      btn.classList.toggle("active", btn.dataset.layoutVal === c.layout);
-    }
-    const activeTheme = resolveTheme(c.bgColor, c.arrowColor).id;
-    for (const tb of themeButtons) tb.el.classList.toggle("active", tb.id === activeTheme);
-    bg.value = c.bgColor;
-    arrow.value = c.arrowColor;
-
-    const preset = resolveScalePreset(c.scale);
-    for (const pill of scalePills) {
-      pill.classList.toggle("active", pill.dataset.scaleVal === preset);
-    }
-    if (preset === "custom") {
-      scaleInput.hidden = false;
-      if (document.activeElement !== scaleInput) scaleInput.value = String(c.scale);
-      customScalePill.textContent = `${c.scale.toFixed(1)}×`;
-    } else {
-      customScalePill.textContent = "custom";
-      if (document.activeElement !== scaleInput) scaleInput.hidden = true;
-    }
-
-    const resolved = resolveExportFormat(c);
-    for (const pill of formatPills) {
-      pill.classList.toggle("active", pill.dataset.formatVal === resolved);
-    }
-    border.checked = c.innerBorder;
-  };
-  render();
-  store.subscribe(render);
+  // Inner border checkbox needs to follow store updates so the menu
+  // mirror is always correct when reopened.
+  const renderBorder = () => { border.checked = store.get().innerBorder; };
+  renderBorder();
+  store.subscribe(renderBorder);
 };

@@ -290,6 +290,140 @@ html, body {
 .topbar-more-sep { height: 1px; background: var(--border); margin: 4px 2px; }
 .topbar-more-gh { display: inline-flex; font-size: 14px; }
 
+/* Slot wrappers — transparent containers in the topbar that hold each
+   group. display: contents lets them disappear from layout, so the
+   inner group inherits the topbar's flex behaviour directly. */
+.topbar-slot { display: contents; }
+
+/* Overflow sections inside the ⋯ menu. Hidden by default; @media
+   rules below show them as their corresponding topbar slot is hidden. */
+.menu-overflow { display: none; }
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.menu-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.menu-layout {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  width: max-content;
+}
+.menu-layout button {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.menu-layout button:hover { color: var(--text); background: var(--surface-2); }
+.menu-layout button.active { background: var(--surface-2); color: var(--accent); }
+.menu-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.menu-themes-custom {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  flex-basis: 100%;
+}
+.menu-themes-custom label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.menu-themes-custom input[type="color"] {
+  width: 28px; height: 22px; padding: 0;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: transparent; cursor: pointer;
+}
+.menu-scale,
+.menu-format {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.menu-scale .topbar-pill,
+.menu-format .topbar-pill {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.menu-scale .topbar-scale-input {
+  width: 64px;
+  margin-left: 6px;
+}
+/* The Copy/Preview rows inside the menu — same look as the other menu
+   buttons, with the icon left-aligned. */
+.menu-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.menu-action[hidden] { display: none; }
+.menu-action .ico { display: inline-flex; font-size: 14px; line-height: 1; }
+/* Hide the always-on separator when no overflow items are visible, so
+   we don't end up with two dividers stacked. The first divider only
+   matters when at least one item above it is showing. */
+.menu-always-sep { display: none; }
+
+/* Show separator when any overflow item above it is visible. */
+.topbar-more-menu:has(.menu-overflow:not([style*="display: none"])) .menu-always-sep,
+.topbar-more-menu:has([data-preview-menu]:not([hidden])) .menu-always-sep,
+.topbar-more-menu:has([data-copy-menu]:not([hidden])) .menu-always-sep { display: block; }
+
+/* Responsive fold-into-⋯ breakpoints. Each breakpoint hides one
+   topbar slot (or button) and reveals its overflow counterpart in
+   the menu. Order = priority: lower-priority items hide first. */
+@media (max-width: 1200px) {
+  .topbar-secondary[data-copy-top] { display: none; }
+  .menu-overflow[data-overflow="copy"] { display: block; }
+}
+@media (max-width: 1050px) {
+  .topbar-secondary[data-preview-top] { display: none; }
+  .menu-overflow[data-overflow="preview"] { display: block; }
+}
+@media (max-width: 920px) {
+  .topbar-slot[data-slot="format"] { display: none; }
+  .topbar-sep[data-sep-after="scale"] { display: none; }
+  .menu-overflow[data-overflow="format"] { display: block; }
+}
+@media (max-width: 780px) {
+  .topbar-slot[data-slot="scale"] { display: none; }
+  .topbar-sep[data-sep-after="themes"] { display: none; }
+  .menu-overflow[data-overflow="scale"] { display: block; }
+}
+@media (max-width: 640px) {
+  .topbar-slot[data-slot="themes"] { display: none; }
+  .topbar-sep[data-sep-after="layout"] { display: none; }
+  .menu-overflow[data-overflow="themes"] { display: block; }
+}
+@media (max-width: 520px) {
+  .topbar-slot[data-slot="layout"] { display: none; }
+  .menu-overflow[data-overflow="layout"] { display: block; }
+}
+
 .center { overflow: hidden; min-height: 0; min-width: 0; }
 .center {
   grid-area: center;
@@ -806,12 +940,13 @@ html, body {
   pointer-events: none;
 }
 
-/* Narrow viewports — hide non-essential topbar items (scale + status
-   meta) so the primary controls still fit. The cards already
-   horizontal-scroll. Not pretty on phones but it doesn't break. */
-@media (max-width: 720px) {
-  .topbar-scale,
-  .topbar-sep { display: none; }
+/* Narrow viewports — at mobile widths, allow the topbar to wrap onto
+   two rows as a fallback in case the brand + Download + ⋯ trio still
+   doesn't fit (e.g. very long brand or system font). Status meta hides
+   so the keyboard-shortcut hints stay visible. */
+@media (max-width: 480px) {
+  .topbar { flex-wrap: wrap; padding: 6px 12px; gap: 8px; }
+  #app { grid-template-rows: auto minmax(0, 1fr) 32px; }
   .status-meta { display: none; }
-  .panel-card { min-width: 280px; }
+  .panel-card { min-width: 240px; }
 }
