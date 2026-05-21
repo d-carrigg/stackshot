@@ -18,11 +18,11 @@ root.innerHTML = `
 const initial = (await loadPersisted()) ?? defaultComposition();
 const store = new Store(initial);
 
-mountTopbar(document.getElementById("topbar")!, store);
 const preview = mountPreviewModal(store);
-mountCompositionView(document.getElementById("composition")!, store, {
+mountTopbar(document.getElementById("topbar")!, store, {
   onPreview: () => preview.open(),
 });
+mountCompositionView(document.getElementById("composition")!, store);
 mountStatusBar(document.getElementById("statusbar")!, store);
 
 // Auto-save to localStorage, debounced.

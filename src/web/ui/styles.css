@@ -191,6 +191,30 @@ html, body {
   background: transparent; cursor: pointer;
 }
 
+/* Secondary topbar action buttons (Preview, Copy). Outlined, sit
+   immediately left of the primary Download. */
+.topbar-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.topbar-secondary:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.topbar-secondary[hidden] { display: none; }
+.topbar-secondary .ico { display: inline-flex; font-size: 14px; line-height: 1; }
+
 /* Primary export button — solid accent, sits beside the more menu. */
 .topbar-export {
   display: inline-flex;
@@ -576,23 +600,20 @@ html, body {
   border-color: var(--accent);
   background: rgba(137, 180, 250, 0.06);
 }
-/* Preview button reads as a primary action — solid border, accent
-   colour, sits inline with the +code/+image affordances. */
-.composition-add-row button.composition-preview {
-  border-style: solid;
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(137, 180, 250, 0.08);
+/* Clear-all button sits inline with the +code/+image affordances but
+   styled as a danger action — dashed-to-solid on hover, danger colour. */
+.composition-add-row button.composition-clear {
   margin-left: 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-.composition-add-row button.composition-preview:hover {
-  background: var(--accent);
-  color: #1e1e2e;
+.composition-add-row button.composition-clear:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: rgba(243, 139, 168, 0.06);
 }
-.composition-add-row button.composition-preview .ico {
+.composition-add-row button.composition-clear .ico {
   display: inline-flex;
   font-size: 16px;
 }

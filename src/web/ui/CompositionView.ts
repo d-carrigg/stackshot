@@ -2,19 +2,18 @@
 // row or vertical stack), with SVG arrows between them and an "add panel"
 // affordance at the end.
 import type { Store } from "../state";
-import { makeCodePanel } from "../state";
+import { emptyComposition, makeCodePanel } from "../state";
+import { clearPersisted } from "../persist";
 import { createPanelCard } from "./PanelCard";
-import { eye as eyeIcon } from "./icons";
+import { trash as trashIcon } from "./icons";
 import { resolveTheme, applyThemeVars } from "../themes";
 
-export type CompositionViewOptions = {
-  onPreview?: () => void;
-};
+export type CompositionViewOptions = {};
 
 export const mountCompositionView = (
   root: HTMLElement,
   store: Store,
-  opts: CompositionViewOptions = {},
+  _opts: CompositionViewOptions = {},
 ): void => {
   root.innerHTML = `
     <div class="composition-scroll">
@@ -112,7 +111,7 @@ export const mountCompositionView = (
       });
     }
 
-    stage.appendChild(buildAddRow(store, opts.onPreview));
+    stage.appendChild(buildAddRow(store));
   };
 
   render();
@@ -241,21 +240,24 @@ const buildArrow = (layout: "horizontal" | "vertical"): HTMLElement => {
   return wrap;
 };
 
-const buildAddRow = (store: Store, onPreview?: () => void): HTMLElement => {
+const buildAddRow = (store: Store): HTMLElement => {
   const wrap = document.createElement("div");
   wrap.className = "composition-add-row";
   wrap.innerHTML = `
     <button type="button" data-add="code">+ code</button>
     <button type="button" data-add="image">+ image</button>
-    <button type="button" class="composition-preview" data-preview>
-      <span class="ico"></span><span>Preview</span>
+    <button type="button" class="composition-clear" data-clear>
+      <span class="ico"></span><span>Clear all</span>
     </button>
     <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/*" multiple hidden />
   `;
-  const previewBtn = wrap.querySelector<HTMLButtonElement>("[data-preview]")!;
-  previewBtn.querySelector(".ico")!.appendChild(eyeIcon());
-  previewBtn.addEventListener("click", () => onPreview?.());
-  if (!onPreview) previewBtn.remove();
+  const clearBtn = wrap.querySelector<HTMLButtonElement>("[data-clear]")!;
+  clearBtn.querySelector(".ico")!.appendChild(trashIcon());
+  clearBtn.addEventListener("click", () => {
+    if (store.get().panels.length > 0 && !confirm("Remove all panels?")) return;
+    clearPersisted();
+    store.set(() => emptyComposition());
+  });
   const codeBtn = wrap.querySelector<HTMLButtonElement>('[data-add="code"]')!;
   const imgBtn = wrap.querySelector<HTMLButtonElement>('[data-add="image"]')!;
   const fileInput = wrap.querySelector<HTMLInputElement>('input[type="file"]')!;

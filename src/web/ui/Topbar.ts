@@ -5,15 +5,21 @@ import type { Store, Layout, ExportFormat } from "../state";
 import { exportImage, copyImageToClipboard, resolveExportFormat } from "../export";
 import { showToast } from "./util";
 import { clearPersisted } from "../persist";
-import { defaultComposition, emptyComposition } from "../state";
+import { defaultComposition } from "../state";
 import {
   rows as rowsIcon,
   columns as colsIcon,
   grid as gridIcon,
   download as dlIcon,
+  clipboard as clipIcon,
+  eye as eyeIcon,
   github as ghIcon,
 } from "./icons";
 import { THEMES, resolveTheme } from "../themes";
+
+export type TopbarOptions = {
+  onPreview?: () => void;
+};
 
 type ScalePreset = "low" | "med" | "high" | "custom";
 const SCALE_VALUES: Record<Exclude<ScalePreset, "custom">, number> = {
@@ -28,7 +34,7 @@ const resolveScalePreset = (scale: number): ScalePreset => {
   return "custom";
 };
 
-export const mountTopbar = (root: HTMLElement, store: Store): void => {
+export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions = {}): void => {
   root.innerHTML = `
     <header class="topbar">
       <span class="brand">codeimg</span>
@@ -63,6 +69,12 @@ export const mountTopbar = (root: HTMLElement, store: Store): void => {
 
       <span class="spacer"></span>
 
+      <button type="button" class="topbar-secondary" data-preview hidden>
+        <span class="ico" data-preview-ico></span><span>Preview</span>
+      </button>
+      <button type="button" class="topbar-secondary" data-copy>
+        <span class="ico" data-copy-ico></span><span>Copy</span>
+      </button>
       <button type="button" class="topbar-export" data-export>
         <span class="ico" data-dl-ico></span><span>Download</span>
       </button>
@@ -72,13 +84,11 @@ export const mountTopbar = (root: HTMLElement, store: Store): void => {
           <span aria-hidden="true">⋯</span>
         </button>
         <div class="topbar-more-menu" data-more-menu hidden role="menu">
-          <button type="button" role="menuitem" data-copy>Copy to clipboard</button>
           <label class="topbar-more-toggle" role="menuitemcheckbox">
             <input type="checkbox" data-border />
             <span>Inner panel border</span>
           </label>
           <div class="topbar-more-sep"></div>
-          <button type="button" role="menuitem" data-clear>Clear all panels</button>
           <button type="button" role="menuitem" data-default>Reset to default</button>
           <div class="topbar-more-sep"></div>
           <a href="https://github.com/d-carrigg/codeimg" target="_blank" rel="noreferrer" role="menuitem">
@@ -185,7 +195,25 @@ export const mountTopbar = (root: HTMLElement, store: Store): void => {
     );
   }
 
-  // Export / Copy -----------------------------------------------------
+  // Preview / Copy / Export -------------------------------------------
+  const previewBtn = root.querySelector<HTMLButtonElement>("[data-preview]")!;
+  root.querySelector<HTMLSpanElement>("[data-preview-ico]")!.appendChild(eyeIcon());
+  if (opts.onPreview) {
+    previewBtn.hidden = false;
+    previewBtn.addEventListener("click", () => opts.onPreview?.());
+  }
+
+  const copyTopBtn = root.querySelector<HTMLButtonElement>("[data-copy]")!;
+  root.querySelector<HTMLSpanElement>("[data-copy-ico]")!.appendChild(clipIcon());
+  copyTopBtn.addEventListener("click", async () => {
+    try {
+      await copyImageToClipboard(store.get());
+      showToast("Copied to clipboard");
+    } catch (e) {
+      showToast(`Copy failed: ${(e as Error).message}`);
+    }
+  });
+
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
   root.querySelector<HTMLSpanElement>("[data-dl-ico]")!.appendChild(dlIcon());
   exportBtn.addEventListener("click", async () => {
@@ -223,27 +251,10 @@ export const mountTopbar = (root: HTMLElement, store: Store): void => {
     if (e.key === "Escape" && !moreMenu.hidden) closeMenu();
   });
 
-  const copyBtn = moreMenu.querySelector<HTMLButtonElement>("[data-copy]")!;
-  const clearBtn = moreMenu.querySelector<HTMLButtonElement>("[data-clear]")!;
   const defaultBtn = moreMenu.querySelector<HTMLButtonElement>("[data-default]")!;
   const border = moreMenu.querySelector<HTMLInputElement>("[data-border]")!;
 
-  copyBtn.addEventListener("click", async () => {
-    closeMenu();
-    try {
-      await copyImageToClipboard(store.get());
-      showToast("Copied to clipboard");
-    } catch (e) {
-      showToast(`Copy failed: ${(e as Error).message}`);
-    }
-  });
   border.addEventListener("change", () => store.patch({ innerBorder: border.checked }));
-  clearBtn.addEventListener("click", () => {
-    closeMenu();
-    if (store.get().panels.length > 0 && !confirm("Remove all panels?")) return;
-    clearPersisted();
-    store.set(() => emptyComposition());
-  });
   defaultBtn.addEventListener("click", () => {
     closeMenu();
     if (store.get().panels.length > 0 && !confirm("Replace the current composition with the default?")) return;
