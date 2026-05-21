@@ -8,11 +8,14 @@ import { createPanelCard } from "./PanelCard";
 export const mountCompositionView = (root: HTMLElement, store: Store): void => {
   root.innerHTML = `
     <div class="composition-scroll">
-      <div class="composition" data-layout="horizontal"></div>
+      <div class="composition" data-layout="horizontal">
+        <div class="composition-panels"></div>
+      </div>
     </div>
   `;
 
   const stage = root.querySelector<HTMLDivElement>(".composition")!;
+  const panelsRow = stage.querySelector<HTMLDivElement>(".composition-panels")!;
 
   const render = () => {
     const c = store.get();
@@ -32,7 +35,7 @@ export const mountCompositionView = (root: HTMLElement, store: Store): void => {
     const desired = c.layout + ":" + c.panels.map((p) => p.id).join("|");
     if (stage.dataset.signature === desired) {
       // In-place update each card.
-      const cards = stage.querySelectorAll<HTMLElement>(".panel-card");
+      const cards = panelsRow.querySelectorAll<HTMLElement>(".panel-card");
       cards.forEach((cardEl, i) => {
         const panel = c.panels[i];
         if (!panel) return;
@@ -42,20 +45,24 @@ export const mountCompositionView = (root: HTMLElement, store: Store): void => {
       return;
     }
     stage.dataset.signature = desired;
-    stage.innerHTML = "";
+    panelsRow.innerHTML = "";
+    // Drop the old add-row (anything that isn't the panels container).
+    Array.from(stage.children).forEach((el) => {
+      if (el !== panelsRow) el.remove();
+    });
 
     if (c.panels.length === 0) {
       const empty = document.createElement("div");
       empty.className = "composition-empty";
       empty.innerHTML = `<p>No panels yet.</p><p class="hint">Paste code/images, drag files here, or use the buttons below.</p>`;
-      stage.appendChild(empty);
+      panelsRow.appendChild(empty);
     } else {
       c.panels.forEach((p, i) => {
         const handle = createPanelCard(store, p);
         (handle.root as any)._update = handle.update;
-        stage.appendChild(handle.root);
+        panelsRow.appendChild(handle.root);
         if (i < c.panels.length - 1) {
-          stage.appendChild(buildArrow(c.layout));
+          panelsRow.appendChild(buildArrow(c.layout));
         }
       });
     }
@@ -94,8 +101,8 @@ const buildAddRow = (store: Store): HTMLElement => {
   const wrap = document.createElement("div");
   wrap.className = "composition-add-row";
   wrap.innerHTML = `
-    <button type="button" data-add="code">+ Code panel</button>
-    <button type="button" data-add="image">+ Image panel</button>
+    <button type="button" data-add="code">+ code</button>
+    <button type="button" data-add="image">+ image</button>
     <input type="file" accept="image/*" multiple hidden />
   `;
   const codeBtn = wrap.querySelector<HTMLButtonElement>('[data-add="code"]')!;

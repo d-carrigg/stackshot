@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.3 — 2026-05-20
+
+### Fixed
+- Web: language `<select>` no longer triggers password-manager /
+  browser autofill. Adds `autocomplete="off"` plus
+  `data-1p-ignore` / `data-lpignore` / `data-form-type="other"`
+  hints, and a unique `name` so 1Password and similar stop matching
+  it as a country/language field.
+- Web: dragging files or text over a code editor no longer shows the
+  textarea's native drop-caret indicator and can no longer replace
+  the editor contents. The global drop handler still catches the
+  file and adds a new panel.
+
+### Changed
+- Web: in horizontal layout, the "+ code" / "+ image" buttons now sit
+  in a row beneath the panels instead of stacked to the right, so the
+  panel row reads as a single composition. Buttons restyled as
+  dashed-outline affordances ("+ code", "+ image") to match the
+  empty/placeholder visual language.
+
 ## 0.4.2 — 2026-05-20
 
 ### Added

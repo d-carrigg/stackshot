@@ -29,6 +29,14 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
   if (panel.kind === "code") {
     const langSelect = document.createElement("select");
     langSelect.className = "panel-card-lang";
+    // Suppress password managers / browser autofill — they latch onto
+    // <select> with values like "python" / "english" and try to fill it
+    // as a country or language field.
+    langSelect.setAttribute("autocomplete", "off");
+    langSelect.setAttribute("name", "panel-syntax-" + panel.id);
+    langSelect.setAttribute("data-1p-ignore", "true");
+    langSelect.setAttribute("data-lpignore", "true");
+    langSelect.setAttribute("data-form-type", "other");
     for (const lang of languageOptions()) {
       const opt = document.createElement("option");
       opt.value = lang;

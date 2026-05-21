@@ -102,6 +102,20 @@ export const createCodeEditor = (opts: {
     pre.scrollTop = ta.scrollTop;
     pre.scrollLeft = ta.scrollLeft;
   });
+  // Block the browser's native "drop text/file into textarea" behaviour
+  // so dragging a file over a code panel doesn't show a caret-insert
+  // indicator and doesn't replace the editor's contents on drop. The
+  // global drop handler still picks the file up.
+  const blockDrop = (e: DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
+  };
+  ta.addEventListener("dragenter", blockDrop);
+  ta.addEventListener("dragover", blockDrop);
+  ta.addEventListener("drop", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
 
   ta.value = opts.initialCode;
   schedule();
