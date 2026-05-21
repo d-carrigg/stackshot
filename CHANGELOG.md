@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.1 — 2026-05-21
+
+### Fixed
+- CI: **Standalone binaries ship again.** The release workflow's
+  PyInstaller stage was copying the whole `src/` tree (which now
+  contains both `cli/` and `web/`) into `codeimg/`, nesting the
+  entry point at `codeimg/cli/__main__.py` and breaking the build
+  with "Script file 'codeimg/__main__.py' does not exist." Stage
+  step now mirrors only `src/cli/` → `codeimg/`, matching the
+  setuptools `package-dir` layout. v0.7.0 shipped without binaries;
+  v0.7.1 is a re-cut with the same source + working binaries.
+
 ## 0.7.0 — 2026-05-21
 
 ### Fixed
