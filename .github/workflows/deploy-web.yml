@@ -1,22 +1,36 @@
 name: deploy-web
 
-# Deploy the static web app to Azure Static Web Apps. Mirrors release.yml's
-# trigger model: production deploys ship on v* tag pushes (the same tags
-# auto-tag.yml creates from a version bump), and PR previews go up for
-# every PR against main so reviewers can click through the change.
+# Deploy the static web app to Azure Static Web Apps.
+#
+# Production deploys ship on every push to main. We deliberately don't
+# chain off the v* tags that auto-tag.yml creates, because GitHub's
+# workflow recursion guard means a tag pushed using GITHUB_TOKEN does
+# NOT trigger other workflows — so the tag chain has been silently
+# broken since auto-tag took over. Triggering on push to main is the
+# simplest fix and matches the user-stated goal of "deploy on merge".
+#
+# workflow_dispatch is exposed so a redeploy can be kicked off from
+# the Actions tab without a code change.
+#
+# PR previews go up for every PR against main so reviewers can click
+# through the change.
 #
 # The deployment token lives in the AZURE_STATIC_WEB_APPS_API_TOKEN secret.
 # It's an Azure SWA "deployment token" — scoped to this single SWA resource;
 # rotate from the Azure portal if leaked.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths:
+      - "src/web/**"
+      - ".github/workflows/deploy-web.yml"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: [main]
     paths:
       - "src/web/**"
       - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -24,7 +38,7 @@ permissions:
 
 jobs:
   build-and-deploy:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     name: Build and deploy
     steps:
