@@ -28,40 +28,59 @@ mountSettingsPanel(document.getElementById("settings")!, store);
 const debouncedSave = debounce(() => savePersisted(store.get()), 300);
 store.subscribe(debouncedSave);
 
-// Global file-drop overlay → adds images / code as new panels.
-let dragDepth = 0;
+// Global file-drop overlay → adds images / code as new panels. Handlers
+// run on document in the capture phase so they fire BEFORE Firefox's
+// default file-handling (open-file or paste-path-into-textarea) and
+// before any child element gets the event.
 const dropOverlay = document.createElement("div");
 dropOverlay.className = "global-drop-overlay";
 dropOverlay.textContent = "Drop to add panel";
 dropOverlay.style.display = "none";
 document.body.appendChild(dropOverlay);
 
-const hasFiles = (e: DragEvent): boolean =>
-  Array.from(e.dataTransfer?.types ?? []).includes("Files");
+const isFileDrag = (e: DragEvent): boolean => {
+  const dt = e.dataTransfer;
+  if (!dt) return false;
+  const types = Array.from(dt.types ?? []);
+  // "Files" in Chrome/Firefox; "application/x-moz-file" in some Firefox flows.
+  return types.includes("Files") || types.includes("application/x-moz-file");
+};
 
-window.addEventListener("dragenter", (e) => {
-  if (!hasFiles(e)) return;
+let dragDepth = 0;
+
+document.addEventListener("dragenter", (e) => {
+  if (!isFileDrag(e)) return;
   e.preventDefault();
   dragDepth++;
   dropOverlay.style.display = "flex";
-});
-window.addEventListener("dragover", (e) => {
-  if (!hasFiles(e)) return;
+}, true);
+
+document.addEventListener("dragover", (e) => {
+  if (!isFileDrag(e)) return;
+  // Required: without preventDefault on dragover, the element isn't
+  // treated as a drop target and `drop` never fires.
   e.preventDefault();
-});
-window.addEventListener("dragleave", (e) => {
-  if (!hasFiles(e)) return;
+  if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+}, true);
+
+document.addEventListener("dragleave", (e) => {
+  if (!isFileDrag(e)) return;
   dragDepth = Math.max(0, dragDepth - 1);
   if (dragDepth === 0) dropOverlay.style.display = "none";
-});
-window.addEventListener("drop", async (e) => {
-  if (!hasFiles(e)) return;
-  // Don't intercept drops onto editable image cards — they have their own handler.
-  const target = e.target as HTMLElement | null;
-  if (target?.closest(".image-card-body")) return;
-  e.preventDefault();
+}, true);
+
+document.addEventListener("drop", async (e) => {
+  if (!isFileDrag(e)) return;
   dragDepth = 0;
   dropOverlay.style.display = "none";
+
+  // Drops onto an existing image card route to its own handler (replace
+  // the image). Image cards mark themselves so we can detect it here.
+  const target = e.target as HTMLElement | null;
+  if (target?.closest(".image-card-body")) return;
+
+  e.preventDefault();
+  e.stopPropagation();
   const files = Array.from(e.dataTransfer?.files ?? []);
   for (const f of files) {
     if (f.type.startsWith("image/")) {
@@ -84,7 +103,7 @@ window.addEventListener("drop", async (e) => {
       }));
     }
   }
-});
+}, true);
 
 // Paste handler — image from clipboard adds an image panel. Skip when
 // pasting into an input/textarea so normal text paste works.
