@@ -854,19 +854,22 @@ html, body {
   border-color: var(--accent);
   background: rgba(137, 180, 250, 0.06);
 }
-/* Clear-all button sits inline with the +code/+image affordances but
-   styled as a danger action — dashed-to-solid on hover, danger colour. */
+/* Reset + Clear-all share the inline layout. Reset is neutral (hover
+   accent); Clear-all leans danger. */
+.composition-add-row button.composition-reset,
 .composition-add-row button.composition-clear {
-  margin-left: 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
+.composition-add-row button.composition-reset { margin-left: 12px; }
+.composition-add-row button.composition-clear { margin-left: 4px; }
 .composition-add-row button.composition-clear:hover {
   color: var(--danger);
   border-color: var(--danger);
   background: rgba(243, 139, 168, 0.06);
 }
+.composition-add-row button.composition-reset .ico,
 .composition-add-row button.composition-clear .ico {
   display: inline-flex;
   font-size: 16px;
@@ -1041,6 +1044,134 @@ html, body {
 }
 .preview-modal-overlay:hover { opacity: 1; }
 .preview-modal-overlay:active { transform: scale(0.94); }
+
+/* Standard chrome dialog used for licenses + templates. Anchored
+   centre, with a surface card and a scrollable body. */
+.app-dialog,
+.licenses-modal,
+.templates-modal {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+  width: min(720px, 92vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.app-dialog::backdrop,
+.licenses-modal::backdrop,
+.templates-modal::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+}
+.licenses-modal-header,
+.templates-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.licenses-modal-header h2,
+.templates-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+.licenses-modal-body {
+  overflow: auto;
+  padding: 16px 20px;
+  flex: 1;
+}
+.licenses-modal-text {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Templates modal — a card grid. Each card is a clickable preview. */
+.templates-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 18px;
+  overflow: auto;
+  flex: 1;
+}
+.template-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: inherit;
+  overflow: hidden;
+  transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+.template-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.template-card:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.template-card-thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+.template-card-thumb img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.template-card-spinner {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 12px;
+  text-align: center;
+}
+.template-card-meta {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.template-card-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+.template-card-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .preview-modal-loading {
   color: var(--muted);
   font-size: 13px;

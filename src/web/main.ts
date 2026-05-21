@@ -6,6 +6,8 @@ import { mountCompositionView } from "./ui/CompositionView";
 import { mountTopbar } from "./ui/Topbar";
 import { mountStatusBar } from "./ui/StatusBar";
 import { mountPreviewModal } from "./ui/PreviewModal";
+import { mountLicensesModal } from "./ui/LicensesModal";
+import { mountTemplatesModal } from "./ui/TemplatesModal";
 import { fileToImagePanel, debounce, showToast } from "./ui/util";
 import { load as loadPersisted, save as savePersisted } from "./persist";
 
@@ -20,8 +22,12 @@ const initial = (await loadPersisted()) ?? defaultComposition();
 const store = new Store(initial);
 
 const preview = mountPreviewModal(store);
+const licenses = mountLicensesModal();
+const templates = mountTemplatesModal(store);
 mountTopbar(document.getElementById("topbar")!, store, {
   onPreview: () => preview.open(),
+  onLicenses: () => licenses.open(),
+  onTemplates: () => templates.open(),
 });
 mountCompositionView(document.getElementById("composition")!, store);
 mountStatusBar(document.getElementById("statusbar")!, store);

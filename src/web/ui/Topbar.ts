@@ -5,10 +5,9 @@
 // second compact instance. CSS @media rules hide one or the other at
 // each breakpoint, so the controls stay reachable at every width.
 import type { Store, Layout, ExportFormat, ScalePreset } from "../state";
-import { SCALE_VALUES, resolveScalePreset, defaultComposition, GRID_MAX_PANELS } from "../state";
+import { SCALE_VALUES, resolveScalePreset, GRID_MAX_PANELS } from "../state";
 import { exportImage, copyImageToClipboard, resolveExportFormat } from "../export";
 import { showToast } from "./util";
-import { clearPersisted } from "../persist";
 import {
   rows as rowsIcon,
   columns as colsIcon,
@@ -22,6 +21,8 @@ import { THEMES, resolveTheme } from "../themes";
 
 export type TopbarOptions = {
   onPreview?: () => void;
+  onTemplates?: () => void;
+  onLicenses?: () => void;
 };
 
 type Variant = "topbar" | "menu";
@@ -269,7 +270,8 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
           <div class="menu-overflow" data-overflow="scale"></div>
           <div class="menu-overflow" data-overflow="format"></div>
           <div class="topbar-more-sep menu-always-sep"></div>
-          <button type="button" role="menuitem" data-default>Reset to default</button>
+          <button type="button" role="menuitem" data-templates>Browse templates…</button>
+          <button type="button" role="menuitem" data-licenses>Open-source licenses</button>
           <div class="topbar-more-sep"></div>
           <a href="https://github.com/d-carrigg/codeimg" target="_blank" rel="noreferrer" role="menuitem">
             <span class="topbar-more-gh"></span><span>View on GitHub</span>
@@ -353,13 +355,15 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     if (e.key === "Escape" && !moreMenu.hidden) closeMenu();
   });
 
-  const defaultBtn = moreMenu.querySelector<HTMLButtonElement>("[data-default]")!;
-
-  defaultBtn.addEventListener("click", () => {
+  const templatesBtn = moreMenu.querySelector<HTMLButtonElement>("[data-templates]")!;
+  templatesBtn.addEventListener("click", () => {
     closeMenu();
-    if (store.get().panels.length > 0 && !confirm("Replace the current composition with the default?")) return;
-    clearPersisted();
-    store.set(() => defaultComposition());
+    opts.onTemplates?.();
+  });
+  const licensesBtn = moreMenu.querySelector<HTMLButtonElement>("[data-licenses]")!;
+  licensesBtn.addEventListener("click", () => {
+    closeMenu();
+    opts.onLicenses?.();
   });
 
   // ⌘S / ⌘C keyboard shortcuts ---------------------------------------

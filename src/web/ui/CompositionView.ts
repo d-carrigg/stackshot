@@ -2,10 +2,10 @@
 // row or vertical stack), with SVG arrows between them and an "add panel"
 // affordance at the end.
 import type { Store } from "../state";
-import { emptyComposition, makeCodePanel, GRID_MAX_PANELS } from "../state";
+import { emptyComposition, makeCodePanel, defaultComposition, GRID_MAX_PANELS } from "../state";
 import { clearPersisted } from "../persist";
 import { createPanelCard } from "./PanelCard";
-import { trash as trashIcon } from "./icons";
+import { trash as trashIcon, refresh as refreshIcon } from "./icons";
 import { resolveTheme, applyThemeVars } from "../themes";
 import { showToast } from "./util";
 
@@ -274,6 +274,9 @@ const buildAddRow = (store: Store): HTMLElement => {
   wrap.innerHTML = `
     <button type="button" data-add="code">+ code</button>
     <button type="button" data-add="image">+ image</button>
+    <button type="button" class="composition-reset" data-reset>
+      <span class="ico"></span><span>Reset</span>
+    </button>
     <button type="button" class="composition-clear" data-clear>
       <span class="ico"></span><span>Clear all</span>
     </button>
@@ -285,6 +288,13 @@ const buildAddRow = (store: Store): HTMLElement => {
     if (store.get().panels.length > 0 && !confirm("Remove all panels?")) return;
     clearPersisted();
     store.set(() => emptyComposition());
+  });
+  const resetBtn = wrap.querySelector<HTMLButtonElement>("[data-reset]")!;
+  resetBtn.querySelector(".ico")!.appendChild(refreshIcon());
+  resetBtn.addEventListener("click", () => {
+    if (store.get().panels.length > 0 && !confirm("Replace the current composition with the default?")) return;
+    clearPersisted();
+    store.set(() => defaultComposition());
   });
   const codeBtn = wrap.querySelector<HTMLButtonElement>('[data-add="code"]')!;
   const imgBtn = wrap.querySelector<HTMLButtonElement>('[data-add="image"]')!;

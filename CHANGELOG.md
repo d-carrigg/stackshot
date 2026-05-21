@@ -28,6 +28,18 @@
   itself is themed (surface / border / accent tokens) instead of
   using the browser's default `<select>` chrome.
 
+### Added
+- Web: **Templates modal.** "Browse templates…" in the overflow menu
+  opens a card grid of starter compositions (Code → Code,
+  Code → Image, Code → GIF) with live-rendered thumbnails. Picking a
+  card replaces the current composition (confirms when non-empty).
+- Web: **Open-source licenses modal.** Overflow menu entry that
+  surfaces THIRD_PARTY_LICENSES.md inline so users can read the
+  attribution without leaving the app.
+- Web: **Reset button** moved from the overflow menu into the bottom
+  add-row alongside +code / +image / Clear-all, so restoring the
+  default composition isn't buried two clicks deep.
+
 ### Changed
 - Web: **Inner panel border is now per-image, default off.** Removed
   the composition-wide "Inner panel border" toggle from the overflow
