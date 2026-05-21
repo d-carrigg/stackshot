@@ -4,7 +4,7 @@ import { Store, defaultComposition, makeCodePanel } from "./state";
 import { mountCompositionView } from "./ui/CompositionView";
 import { mountSettingsPanel } from "./ui/SettingsPanel";
 import { fileToImagePanel, debounce } from "./ui/util";
-import { decodeFromHash, writeHash } from "./share";
+import { load as loadPersisted, save as savePersisted } from "./persist";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
 root.innerHTML = `
@@ -18,15 +18,15 @@ root.innerHTML = `
   <aside class="right" id="settings"></aside>
 `;
 
-const initial = decodeFromHash(location.hash) ?? defaultComposition();
+const initial = loadPersisted() ?? defaultComposition();
 const store = new Store(initial);
 
 mountCompositionView(document.getElementById("composition")!, store);
 mountSettingsPanel(document.getElementById("settings")!, store);
 
-// Persist to URL hash, debounced.
-const debouncedHash = debounce(() => writeHash(store.get()), 250);
-store.subscribe(debouncedHash);
+// Auto-save to localStorage, debounced.
+const debouncedSave = debounce(() => savePersisted(store.get()), 300);
+store.subscribe(debouncedSave);
 
 // Global file-drop overlay → adds images / code as new panels.
 let dragDepth = 0;

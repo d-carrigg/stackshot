@@ -1,6 +1,7 @@
 import type { Store } from "../state";
 import { exportPng, copyPngToClipboard } from "../export";
 import { showToast } from "./util";
+import { clearPersisted } from "../persist";
 
 export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   root.innerHTML = `
@@ -39,7 +40,7 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
     <div class="actions">
       <button data-export>Export PNG</button>
       <button class="secondary" data-copy>Copy to clipboard</button>
-      <button class="secondary" data-share>Copy shareable link</button>
+      <button class="secondary" data-reset>Start over</button>
     </div>
   `;
 
@@ -51,7 +52,7 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   const border = root.querySelector<HTMLInputElement>("[data-border]")!;
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
   const copyBtn = root.querySelector<HTMLButtonElement>("[data-copy]")!;
-  const shareBtn = root.querySelector<HTMLButtonElement>("[data-share]")!;
+  const resetBtn = root.querySelector<HTMLButtonElement>("[data-reset]")!;
 
   for (const btn of layoutSeg.querySelectorAll<HTMLButtonElement>("button")) {
     btn.addEventListener("click", () => {
@@ -79,13 +80,10 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
       showToast(`Copy failed: ${(e as Error).message}`);
     }
   });
-  shareBtn.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(location.href);
-      showToast("Link copied");
-    } catch {
-      showToast("Could not copy link");
-    }
+  resetBtn.addEventListener("click", () => {
+    if (!confirm("Discard the current composition and start over?")) return;
+    clearPersisted();
+    location.reload();
   });
 
   const render = () => {
