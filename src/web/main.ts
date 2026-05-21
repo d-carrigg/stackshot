@@ -1,11 +1,14 @@
 import "./ui/styles.css";
 
-import { Store, defaultComposition, makeCodePanel } from "./state";
+import { Store, defaultComposition, makeCodePanel, GRID_MAX_PANELS } from "./state";
+import type { Panel } from "./state";
 import { mountCompositionView } from "./ui/CompositionView";
 import { mountTopbar } from "./ui/Topbar";
 import { mountStatusBar } from "./ui/StatusBar";
 import { mountPreviewModal } from "./ui/PreviewModal";
-import { fileToImagePanel, debounce } from "./ui/util";
+import { mountLicensesModal } from "./ui/LicensesModal";
+import { mountTemplatesModal } from "./ui/TemplatesModal";
+import { fileToImagePanel, debounce, showToast } from "./ui/util";
 import { load as loadPersisted, save as savePersisted } from "./persist";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
@@ -19,8 +22,12 @@ const initial = (await loadPersisted()) ?? defaultComposition();
 const store = new Store(initial);
 
 const preview = mountPreviewModal(store);
+const licenses = mountLicensesModal();
+const templates = mountTemplatesModal(store);
 mountTopbar(document.getElementById("topbar")!, store, {
   onPreview: () => preview.open(),
+  onLicenses: () => licenses.open(),
+  onTemplates: () => templates.open(),
 });
 mountCompositionView(document.getElementById("composition")!, store);
 mountStatusBar(document.getElementById("statusbar")!, store);
@@ -83,10 +90,15 @@ document.addEventListener("drop", async (e) => {
   e.preventDefault();
   e.stopPropagation();
   const files = Array.from(e.dataTransfer?.files ?? []);
+  const tryAdd = (panel: Panel): boolean => {
+    const added = store.addPanel(panel);
+    if (!added) showToast(`Grid mode is capped at ${GRID_MAX_PANELS} panels`);
+    return added;
+  };
   for (const f of files) {
     if (f.type.startsWith("image/")) {
       const panel = await fileToImagePanel(f);
-      if (panel) store.addPanel(panel);
+      if (panel && !tryAdd(panel)) break;
     } else if (f.type.startsWith("text/") || /\.(py|js|ts|tsx|jsx|rs|go|java|c|cpp|h|hpp|sh|rb|php|swift|kt|scala|html|css|scss|json|yaml|yml|toml|xml|sql|md|markdown)$/i.test(f.name)) {
       const text = await f.text();
       const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
@@ -97,11 +109,11 @@ document.addEventListener("drop", async (e) => {
         html: "html", css: "css", scss: "scss", json: "json", yaml: "yaml", yml: "yaml",
         toml: "toml", xml: "xml", sql: "sql", md: "markdown", markdown: "markdown",
       };
-      store.addPanel(makeCodePanel({
+      if (!tryAdd(makeCodePanel({
         code: text,
         language: langByExt[ext] ?? "auto",
         title: f.name,
-      }));
+      }))) break;
     }
   }
 }, true);
@@ -118,7 +130,9 @@ window.addEventListener("paste", async (e) => {
       const file = item.getAsFile();
       if (file) {
         const p = await fileToImagePanel(file);
-        if (p) store.addPanel(p);
+        if (p && !store.addPanel(p)) {
+          showToast(`Grid mode is capped at ${GRID_MAX_PANELS} panels`);
+        }
       }
       e.preventDefault();
       return;

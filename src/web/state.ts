@@ -6,6 +6,21 @@ const ARROW_HEX = DARK_THEME.arrow;
 export type Layout = "horizontal" | "vertical" | "grid";
 export type ExportFormat = "auto" | "png" | "webp" | "gif";
 
+// Grid mode renders panels into a fixed cell grid. Beyond 6 panels the
+// layout stops being readable at any export size, and our compose path
+// only draws panels whose (gridRow, gridCol) fall in-bounds — so silently
+// dropping the 7th was the bug we used to ship. Hard-cap and auto-size
+// the grid dims to fit the current panel count.
+export const GRID_MAX_PANELS = 6;
+export const gridDimsFor = (panelCount: number): { rows: number; cols: number } => {
+  const n = Math.max(1, Math.min(panelCount, GRID_MAX_PANELS));
+  if (n === 1) return { rows: 1, cols: 1 };
+  if (n === 2) return { rows: 1, cols: 2 };
+  if (n === 3) return { rows: 1, cols: 3 };
+  if (n === 4) return { rows: 2, cols: 2 };
+  return { rows: 2, cols: 3 }; // 5, 6
+};
+
 // Scale presets — the topbar exposes these as low/med/high pills with a
 // "custom" escape hatch (numeric input). Centralised here so the default
 // composition stays in sync with the preset map.
@@ -45,6 +60,10 @@ export type ImagePanel = {
   animated?: boolean;  // true if the source has more than one frame
   naturalW: number;
   naturalH: number;
+  // true → image sits inside a padded panel bg (matching code panels);
+  // false (default) → just the image with rounded corners. Used to be a
+  // composition-wide toggle; per-image since 0.7.
+  innerBorder?: boolean;
   gridRow?: number;
   gridCol?: number;
 };
@@ -57,7 +76,6 @@ export type Composition = {
   bgColor: string;     // hex
   arrowColor: string;  // hex
   scale: number;       // 1.0 - 8.0 (presets: low=3, med=4, high=5)
-  innerBorder: boolean; // when false → image panels get rounded corners, no inner panel bg
   gridRows: number;    // only used when layout === "grid"
   gridCols: number;    // only used when layout === "grid"
   exportFormat: ExportFormat; // "auto" → webp
@@ -97,7 +115,6 @@ export const emptyComposition = (): Composition => ({
   bgColor: DEFAULT_BG_HEX,
   arrowColor: ARROW_HEX,
   scale: DEFAULT_SCALE,
-  innerBorder: true,
   gridRows: 2,
   gridCols: 2,
   exportFormat: "auto",
@@ -124,7 +141,6 @@ export const defaultComposition = (): Composition => {
     bgColor: DEFAULT_BG_HEX,
     arrowColor: ARROW_HEX,
     scale: DEFAULT_SCALE,
-    innerBorder: true,
     gridRows: 2,
     gridCols: 2,
     exportFormat: "auto",
@@ -196,10 +212,12 @@ export class Store {
   patch(partial: Partial<Composition>): void {
     this.set((c) => {
       const next = { ...c, ...partial };
-      // When entering grid mode (or resizing the grid), make sure every
-      // panel has a (gridRow, gridCol) within bounds. Fill row-by-row.
+      // When entering grid mode (or resizing the grid), auto-fit the grid
+      // dims to the panel count and make sure every panel has a
+      // (gridRow, gridCol) within bounds.
       if (next.layout === "grid") {
-        return ensureGridPositions(next);
+        const dims = gridDimsFor(next.panels.length);
+        return ensureGridPositions({ ...next, gridRows: dims.rows, gridCols: dims.cols });
       }
       return next;
     });
@@ -212,14 +230,23 @@ export class Store {
     }));
   }
 
-  addPanel(p: Panel, position?: number): void {
+  // Returns false when the panel would have pushed grid mode past
+  // GRID_MAX_PANELS. Callers can surface a toast on false.
+  addPanel(p: Panel, position?: number): boolean {
+    if (this.state.layout === "grid" && this.state.panels.length >= GRID_MAX_PANELS) {
+      return false;
+    }
     this.set((c) => {
       const idx = position ?? c.panels.length;
       const panels = [...c.panels.slice(0, idx), p, ...c.panels.slice(idx)];
       const next = { ...c, panels, selectedId: p.id };
-      if (next.layout === "grid") return ensureGridPositions(next);
+      if (next.layout === "grid") {
+        const dims = gridDimsFor(panels.length);
+        return ensureGridPositions({ ...next, gridRows: dims.rows, gridCols: dims.cols });
+      }
       return next;
     });
+    return true;
   }
 
   removePanel(id: string): void {
@@ -227,7 +254,12 @@ export class Store {
       const panels = c.panels.filter((p) => p.id !== id);
       const selectedId =
         c.selectedId === id ? panels[0]?.id ?? null : c.selectedId;
-      return { ...c, panels, selectedId };
+      const next = { ...c, panels, selectedId };
+      if (next.layout === "grid") {
+        const dims = gridDimsFor(panels.length);
+        return ensureGridPositions({ ...next, gridRows: dims.rows, gridCols: dims.cols });
+      }
+      return next;
     });
   }
 

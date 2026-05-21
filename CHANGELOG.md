@@ -1,5 +1,65 @@
 # Changelog
 
+## 0.7.0 — 2026-05-21
+
+### Fixed
+- Web: **Panel reorder drops now register reliably.** The code-editor
+  textarea was calling `stopPropagation()` on every drop, including
+  panel-reorder drags — so the drop indicator showed but the actual
+  move never reached the card's drop handler when the cursor landed
+  over the editor body. The textarea now only blocks file/text drops
+  and lets `text/x-panel-id` bubble.
+- Web: Drop indicators no longer flash on adjacent same-side drops
+  that would result in no movement (e.g. dropping a panel on the
+  half right next to its current slot). Cleared stale indicator
+  classes that could linger if a drag ended outside any target.
+- Web: **Image panels are now centered horizontally** in vertical
+  layout instead of pinning to the left edge of the wider column.
+- Web: **Sunset theme chrome no longer clashes.** Themes now carry
+  their own `accent` (and `accentText`) so the brand text, active
+  pill underline, and download button adapt instead of staying
+  catppuccin blue on the peach bg. Sunset uses dark navy as its
+  accent for a monochromatic warm-on-cool look; muted text and
+  borders were retuned to warm tones too.
+
+### Added
+- Web: **Language picker is now a typed-filter combobox.** The flat
+  text input narrows the dropdown as you type and the dropdown
+  itself is themed (surface / border / accent tokens) instead of
+  using the browser's default `<select>` chrome.
+
+### Added
+- Web: **Templates modal.** "Browse templates…" in the overflow menu
+  opens a card grid of starter compositions (Code → Code,
+  Code → Image, Code → GIF) with live-rendered thumbnails. Picking a
+  card replaces the current composition (confirms when non-empty).
+- Web: **Open-source licenses modal.** Overflow menu entry that
+  surfaces both `THIRD_PARTY_LICENSES.md` (CLI/Python binaries) and
+  `THIRD_PARTY_LICENSES_WEB.md` (web bundle deps, generated from
+  the production npm tree) in a tabbed dialog. Content is rendered
+  as proper HTML — headings, code blocks, tables, links — via a
+  tiny in-house markdown renderer rather than dumped as raw text.
+- Web: **Reset button** moved from the overflow menu into the bottom
+  add-row alongside +code / +image / Clear-all, so restoring the
+  default composition isn't buried two clicks deep.
+
+### Changed
+- Web: **Inner panel border is now per-image, default off.** Removed
+  the composition-wide "Inner panel border" toggle from the overflow
+  menu; each image panel now carries its own `innerBorder` flag with
+  a small `border` checkbox in the panel header controls. The UI
+  card mirror reflects the toggle live (padded frame when on, just
+  the image with rounded corners when off).
+- Web: **Grid mode caps at 6 panels.** Grid dimensions auto-fit the
+  panel count (1×1 → 1×2 → 1×3 → 2×2 → 2×3) so every added panel
+  shows up in the export instead of silently falling off-grid. Add
+  buttons disable at the cap; switching to grid with more than six
+  panels is refused with a toast.
+- Web: **Form/textarea inputs use `data-form-type="other"`** instead
+  of `autocomplete="off"`, which password managers were ignoring on
+  some form-shaped widgets. Title input, code textarea, and the new
+  language combobox all carry the hint.
+
 ## 0.6.1 — 2026-05-21
 
 ### Fixed

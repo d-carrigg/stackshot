@@ -2,11 +2,12 @@
 // row or vertical stack), with SVG arrows between them and an "add panel"
 // affordance at the end.
 import type { Store } from "../state";
-import { emptyComposition, makeCodePanel } from "../state";
+import { emptyComposition, makeCodePanel, defaultComposition, GRID_MAX_PANELS } from "../state";
 import { clearPersisted } from "../persist";
 import { createPanelCard } from "./PanelCard";
-import { trash as trashIcon } from "./icons";
+import { trash as trashIcon, refresh as refreshIcon } from "./icons";
 import { resolveTheme, applyThemeVars } from "../themes";
+import { showToast } from "./util";
 
 export type CompositionViewOptions = {};
 
@@ -118,6 +119,12 @@ export const mountCompositionView = (
   store.subscribe(render);
 };
 
+// Source panel id of the active drag. The DataTransfer API only exposes
+// getData() during the actual drop event, so we mirror the id in module
+// scope to make it readable from dragover (e.g. to hide the drop
+// indicator on no-op positions).
+let activeDragPanelId: string | null = null;
+
 // Arm the card to be draggable only when the user grabs it by the grip
 // handle. Returns the "armed" state ref so dragstart can early-cancel
 // drags that start from text inputs, selects, etc.
@@ -137,11 +144,18 @@ const wireGripDrag = (el: HTMLElement, panelId: string): { isArmed: () => boolea
     e.dataTransfer?.setData("text/x-panel-id", panelId);
     if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
     el.classList.add("dragging");
+    activeDragPanelId = panelId;
   });
   el.addEventListener("dragend", () => {
     armed = false;
     el.draggable = false;
     el.classList.remove("dragging");
+    activeDragPanelId = null;
+    // Pure-CSS leaks: drop fires before dragend on success and clears
+    // these, but if the drop landed outside any handler they linger.
+    document
+      .querySelectorAll<HTMLElement>(".panel-card.drop-before, .panel-card.drop-after, .panel-card.drop-target")
+      .forEach((c) => c.classList.remove("drop-before", "drop-after", "drop-target"));
   });
   return { isArmed: () => armed };
 };
@@ -188,13 +202,27 @@ const attachSeqDragHandlers = (
       ? e.clientX - rect.left < rect.width / 2
       : e.clientY - rect.top < rect.height / 2;
   };
+  // True if dropping at (before|after) this card would actually move
+  // the dragged panel — used to suppress the indicator on adjacent
+  // same-side drops that would otherwise be silent no-ops.
+  const wouldMove = (before: boolean): boolean => {
+    if (!activeDragPanelId || activeDragPanelId === panelId) return false;
+    const panels = store.get().panels;
+    const fromIdx = panels.findIndex((p) => p.id === activeDragPanelId);
+    const toIdx = panels.findIndex((p) => p.id === panelId);
+    if (fromIdx < 0 || toIdx < 0) return false;
+    let target = before ? toIdx : toIdx + 1;
+    if (fromIdx < target) target -= 1;
+    return target !== fromIdx;
+  };
   el.addEventListener("dragover", (e) => {
     if (!e.dataTransfer?.types.includes("text/x-panel-id")) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     const before = insertBeforeFromEvent(e);
-    el.classList.toggle("drop-before", before);
-    el.classList.toggle("drop-after", !before);
+    const show = wouldMove(before);
+    el.classList.toggle("drop-before", show && before);
+    el.classList.toggle("drop-after", show && !before);
   });
   el.addEventListener("dragleave", () => {
     el.classList.remove("drop-before", "drop-after");
@@ -246,6 +274,9 @@ const buildAddRow = (store: Store): HTMLElement => {
   wrap.innerHTML = `
     <button type="button" data-add="code">+ code</button>
     <button type="button" data-add="image">+ image</button>
+    <button type="button" class="composition-reset" data-reset>
+      <span class="ico"></span><span>Reset</span>
+    </button>
     <button type="button" class="composition-clear" data-clear>
       <span class="ico"></span><span>Clear all</span>
     </button>
@@ -258,19 +289,41 @@ const buildAddRow = (store: Store): HTMLElement => {
     clearPersisted();
     store.set(() => emptyComposition());
   });
+  const resetBtn = wrap.querySelector<HTMLButtonElement>("[data-reset]")!;
+  resetBtn.querySelector(".ico")!.appendChild(refreshIcon());
+  resetBtn.addEventListener("click", () => {
+    if (store.get().panels.length > 0 && !confirm("Replace the current composition with the default?")) return;
+    clearPersisted();
+    store.set(() => defaultComposition());
+  });
   const codeBtn = wrap.querySelector<HTMLButtonElement>('[data-add="code"]')!;
   const imgBtn = wrap.querySelector<HTMLButtonElement>('[data-add="image"]')!;
   const fileInput = wrap.querySelector<HTMLInputElement>('input[type="file"]')!;
-  codeBtn.addEventListener("click", () => store.addPanel(makeCodePanel()));
+  const tryAdd = (p: Parameters<Store["addPanel"]>[0]): boolean => {
+    const added = store.addPanel(p);
+    if (!added) showToast(`Grid mode is capped at ${GRID_MAX_PANELS} panels`);
+    return added;
+  };
+  codeBtn.addEventListener("click", () => tryAdd(makeCodePanel()));
   imgBtn.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", async () => {
     if (!fileInput.files) return;
     const { fileToImagePanel } = await import("./util");
     for (const f of Array.from(fileInput.files)) {
       const p = await fileToImagePanel(f);
-      if (p) store.addPanel(p);
+      if (p && !tryAdd(p)) break;
     }
     fileInput.value = "";
   });
+  const renderDisabled = () => {
+    const c = store.get();
+    const atMax = c.layout === "grid" && c.panels.length >= GRID_MAX_PANELS;
+    codeBtn.disabled = atMax;
+    imgBtn.disabled = atMax;
+    codeBtn.title = atMax ? `Grid mode is capped at ${GRID_MAX_PANELS} panels` : "";
+    imgBtn.title = atMax ? `Grid mode is capped at ${GRID_MAX_PANELS} panels` : "";
+  };
+  renderDisabled();
+  store.subscribe(renderDisabled);
   return wrap;
 };

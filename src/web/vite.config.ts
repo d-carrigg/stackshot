@@ -50,5 +50,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    fs: {
+      // THIRD_PARTY_LICENSES.md lives at the repo root, two levels above
+      // the vite root. The ?raw import for the licenses modal needs
+      // read access to it.
+      allow: ["..", "../.."],
+    },
   },
 });

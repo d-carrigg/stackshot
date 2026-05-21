@@ -7,6 +7,7 @@
   --text: #cdd6f4;
   --muted: #7f849c;
   --accent: #89b4fa;
+  --accent-text: #0c0c12;
   --accent-2: #a6e3a1;
   --danger: #f38ba8;
   --radius: 8px;
@@ -219,12 +220,12 @@ html, body {
 .topbar-icon-btn .ico { display: inline-flex; line-height: 1; }
 .topbar-icon-btn-primary {
   background: var(--accent);
-  color: #0c0c12;
+  color: var(--accent-text);
   border-color: var(--accent);
 }
 .topbar-icon-btn-primary:hover {
   background: var(--accent);
-  color: #0c0c12;
+  color: var(--accent-text);
   border-color: var(--accent);
   filter: brightness(1.08);
 }
@@ -261,8 +262,7 @@ html, body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 .topbar-more-menu button,
-.topbar-more-menu a,
-.topbar-more-menu label.topbar-more-toggle {
+.topbar-more-menu a {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -278,10 +278,7 @@ html, body {
   text-decoration: none;
 }
 .topbar-more-menu button:hover,
-.topbar-more-menu a:hover,
-.topbar-more-menu label.topbar-more-toggle:hover { background: var(--surface-2); }
-.topbar-more-toggle { user-select: none; }
-.topbar-more-toggle input { margin: 0; }
+.topbar-more-menu a:hover { background: var(--surface-2); }
 .topbar-more-sep { height: 1px; background: var(--border); margin: 4px 2px; }
 .topbar-more-gh { display: inline-flex; font-size: 14px; }
 
@@ -564,27 +561,147 @@ html, body {
   gap: 4px;
   align-items: center;
 }
-.panel-card-lang {
+/* Language picker: themed combobox. The wrapper hosts the input,
+   a chevron toggle, and an absolutely-positioned dropdown list. */
+.combobox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.combobox-input {
   background: transparent;
   color: var(--muted);
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 3px 6px;
+  padding: 3px 22px 3px 6px;
   font-family: inherit;
   font-size: 12px;
-  cursor: pointer;
+  width: 110px;
+  min-width: 0;
+  outline: none;
   transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
-.panel-card-lang:hover {
+.combobox-input:hover {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border);
 }
-.panel-card-lang:focus {
-  outline: none;
+.combobox-input:focus {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border);
+}
+.combobox-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  padding: 2px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: none;
+}
+.combobox-input:hover + .combobox-toggle,
+.combobox-input:focus + .combobox-toggle { color: var(--text); }
+.combobox-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  min-width: 140px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  font-size: 12px;
+}
+.combobox-option {
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.combobox-option.active { background: var(--surface-2); }
+.combobox-option.selected { color: var(--accent); }
+.combobox-option.selected.active { background: var(--surface-2); }
+.combobox-empty {
+  padding: 4px 8px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Google-style switch for the per-image "border" toggle. The native
+   checkbox is visually hidden but still focusable; the track + thumb
+   are CSS. */
+.panel-card-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+.panel-card-switch:hover { color: var(--text); }
+.panel-card-switch input {
+  /* Visually hidden but still in the tab order. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.panel-card-switch-track {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+  flex-shrink: 0;
+}
+.panel-card-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+  transform: translateY(-50%);
+  transition: left 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.18s ease;
+}
+.panel-card-switch input:checked + .panel-card-switch-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.panel-card-switch input:checked + .panel-card-switch-track::after {
+  left: 14px;
+  background: var(--bg);
+}
+.panel-card-switch input:focus-visible + .panel-card-switch-track {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+.panel-card-switch input:checked ~ .panel-card-switch-label {
+  color: var(--text);
 }
 .icon-btn {
   background: transparent;
@@ -622,9 +739,12 @@ html, body {
 }
 
 /* Image cards --------------------------------------------------------- */
+/* The image always sits inside a 24px inset; the bordered modifier
+   only fades a panel-bg layer in behind it via ::before. Toggling
+   never resizes the image, so there's no layout shift — just a soft
+   crossfade of the frame. */
 .image-card-body {
   position: relative;
-  background: var(--panel-bg);
   border-radius: var(--panel-radius);
   min-height: 120px;
   display: flex;
@@ -633,13 +753,33 @@ html, body {
   overflow: hidden;
   cursor: pointer;
   width: 100%;
+  padding: 24px;
 }
+.image-card-body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--panel-radius);
+  background: var(--panel-bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+  z-index: 0;
+}
+.image-card-body.bordered::before { opacity: 1; }
 .image-card-body img {
+  position: relative;
+  z-index: 1;
   max-width: 100%;
   max-height: 480px;
   display: block;
   border-radius: var(--panel-radius);
+  transition: border-radius 0.22s ease;
 }
+.image-card-body.bordered img {
+  border-radius: 4px;
+}
+.image-card-overlay { z-index: 2; }
 .image-card-body.drag-over { outline: 2px dashed var(--accent); outline-offset: -8px; }
 .image-card-overlay {
   position: absolute;
@@ -714,19 +854,22 @@ html, body {
   border-color: var(--accent);
   background: rgba(137, 180, 250, 0.06);
 }
-/* Clear-all button sits inline with the +code/+image affordances but
-   styled as a danger action — dashed-to-solid on hover, danger colour. */
+/* Reset + Clear-all share the inline layout. Reset is neutral (hover
+   accent); Clear-all leans danger. */
+.composition-add-row button.composition-reset,
 .composition-add-row button.composition-clear {
-  margin-left: 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
+.composition-add-row button.composition-reset { margin-left: 12px; }
+.composition-add-row button.composition-clear { margin-left: 4px; }
 .composition-add-row button.composition-clear:hover {
   color: var(--danger);
   border-color: var(--danger);
   background: rgba(243, 139, 168, 0.06);
 }
+.composition-add-row button.composition-reset .ico,
 .composition-add-row button.composition-clear .ico {
   display: inline-flex;
   font-size: 16px;
@@ -901,6 +1044,208 @@ html, body {
 }
 .preview-modal-overlay:hover { opacity: 1; }
 .preview-modal-overlay:active { transform: scale(0.94); }
+
+/* Standard chrome dialog used for licenses + templates. Anchored
+   centre, with a surface card and a scrollable body. */
+.app-dialog,
+.licenses-modal,
+.templates-modal {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0;
+  width: min(720px, 92vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.app-dialog::backdrop,
+.licenses-modal::backdrop,
+.templates-modal::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+}
+.licenses-modal-header,
+.templates-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.licenses-modal-header h2,
+.templates-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+.licenses-modal-tabs {
+  display: inline-flex;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+}
+.licenses-modal-tab {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.licenses-modal-tab:hover { color: var(--text); }
+.licenses-modal-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.licenses-modal-body {
+  overflow: auto;
+  padding: 16px 20px 24px;
+  flex: 1;
+}
+
+/* Rendered-markdown chrome — scoped to bodies tagged .markdown-body so
+   the styles don't leak into other modals. */
+.markdown-body { color: var(--text); font-size: 13px; line-height: 1.55; }
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 1.4em 0 0.5em;
+  line-height: 1.25;
+  color: var(--text);
+}
+.markdown-body h1 { font-size: 22px; }
+.markdown-body h2 { font-size: 17px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.markdown-body h3 { font-size: 15px; }
+.markdown-body p { margin: 0.6em 0; }
+.markdown-body a { color: var(--accent); text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+.markdown-body ul { margin: 0.4em 0 0.8em; padding-left: 22px; }
+.markdown-body li { margin: 0.2em 0; }
+.markdown-body code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.markdown-body pre {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow: auto;
+  margin: 0.8em 0;
+}
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  white-space: pre;
+  line-height: 1.5;
+}
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+  font-size: 12px;
+}
+.markdown-body th,
+.markdown-body td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.markdown-body th { color: var(--muted); font-weight: 600; }
+.markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
+
+/* Templates modal — a card grid. Each card is a clickable preview. */
+.templates-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 18px;
+  overflow: auto;
+  flex: 1;
+}
+.template-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: inherit;
+  overflow: hidden;
+  transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+.template-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.template-card:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.template-card-thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+.template-card-thumb img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.template-card-spinner {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 12px;
+  text-align: center;
+}
+.template-card-meta {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.template-card-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+.template-card-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .preview-modal-loading {
   color: var(--muted);
   font-size: 13px;

@@ -1,13 +1,57 @@
+# Combined tag + release pipeline. Runs on every push to main:
+#   1. Read the version from pyproject.toml. If the v<version> tag
+#      doesn't exist yet, create and push it.
+#   2. If a new tag was created, fan out to a per-OS PyInstaller matrix
+#      that builds the standalone binary and attaches it to the release.
+#
+# Why one workflow instead of two? GitHub Actions deliberately suppresses
+# workflow triggers from pushes made by GITHUB_TOKEN (to prevent
+# recursive run loops). So a separate "build on tag push" workflow
+# never fired when auto-tag pushed via the default token. Folding the
+# binary-build job into the same workflow as the tag step sidesteps
+# that limitation entirely — no PAT required.
 name: release
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
 
 permissions:
   contents: write
   id-token: write
 
 jobs:
+  tag-version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      new-tag: ${{ steps.check.outputs.exists == 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read version from pyproject.toml
+        id: version
+        run: |
+          version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+      - name: Check if tag already exists
+        id: check
+        run: |
+          if git rev-parse "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag ${{ steps.version.outputs.tag }} already exists — skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create and push tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
   # PyPI publish is disabled until the repo is public and trusted publishing
   # is configured on PyPI. To enable:
   #   1. Make the repo public (or upgrade to a PyPI org plan that supports private).
@@ -15,18 +59,23 @@ jobs:
   #      (owner=d-carrigg, project=codeimg, workflow=release.yml, environment=pypi).
   #   3. Create GitHub Environment named `pypi` (Settings → Environments).
   #   4. Uncomment the publish-pypi job below.
-  #   5. Add `needs: publish-pypi` back to build-binaries.
+  #   5. Add `needs: [tag-version, publish-pypi]` to build-binaries.
   #
   # publish-pypi:
+  #   needs: tag-version
+  #   if: needs.tag-version.outputs.new-tag == 'true'
   #   runs-on: ubuntu-latest
   #   environment: pypi
   #   steps:
   #     - uses: actions/checkout@v4
+  #       with: { ref: ${{ needs.tag-version.outputs.tag }} }
   #     - uses: astral-sh/setup-uv@v3
   #     - run: uv build
   #     - run: uv publish --trusted-publishing always
 
   build-binaries:
+    needs: tag-version
+    if: needs.tag-version.outputs.new-tag == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -37,6 +86,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Pull the tagged commit so the binary reports the right
+          # version even if main has moved on by the time the matrix
+          # finishes (e.g. a second merge while binaries are building).
+          ref: ${{ needs.tag-version.outputs.tag }}
       - uses: astral-sh/setup-uv@v3
       - run: uv sync
       - run: uv pip install pyinstaller
@@ -55,13 +109,16 @@ jobs:
         run: mv "dist/codeimg${{ matrix.ext }}" "dist/${{ matrix.asset }}"
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.tag-version.outputs.tag }}
           files: dist/${{ matrix.asset }}
           fail_on_unmatched_files: true
       - name: Attach license bundle to release
         if: matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.tag-version.outputs.tag }}
           files: |
             LICENSE
             THIRD_PARTY_LICENSES.md
+            THIRD_PARTY_LICENSES_WEB.md
           fail_on_unmatched_files: true

@@ -90,7 +90,6 @@ const migrateV1 = async (parsed: any): Promise<Composition> => {
     bgColor: parsed.bgColor,
     arrowColor: parsed.arrowColor,
     scale: parsed.scale ?? 2.0,
-    innerBorder: parsed.innerBorder ?? true,
     gridRows: parsed.gridRows ?? 2,
     gridCols: parsed.gridCols ?? 2,
     exportFormat: parsed.exportFormat ?? "auto",

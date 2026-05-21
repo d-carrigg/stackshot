@@ -33,7 +33,7 @@ export const createCodeEditor = (opts: {
   root.className = "code-editor";
   root.innerHTML = `
     <pre class="hl" aria-hidden="true"><code></code></pre>
-    <textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+    <textarea spellcheck="false" data-form-type="other" autocorrect="off" autocapitalize="off"></textarea>
   `;
 
   const pre = root.querySelector<HTMLPreElement>("pre.hl")!;
@@ -112,13 +112,21 @@ export const createCodeEditor = (opts: {
   // so dragging a file over a code panel doesn't show a caret-insert
   // indicator and doesn't replace the editor's contents on drop. The
   // global drop handler still picks the file up.
+  //
+  // Panel-reorder drags (text/x-panel-id) must bubble to the card's
+  // drop handler — otherwise dropping on the editor body silently
+  // swallows the reorder even though the indicator showed.
+  const isPanelDrag = (e: DragEvent): boolean =>
+    !!e.dataTransfer?.types.includes("text/x-panel-id");
   const blockDrop = (e: DragEvent) => {
+    if (isPanelDrag(e)) return;
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
   };
   ta.addEventListener("dragenter", blockDrop);
   ta.addEventListener("dragover", blockDrop);
   ta.addEventListener("drop", (e) => {
+    if (isPanelDrag(e)) return;
     e.preventDefault();
     e.stopPropagation();
   });

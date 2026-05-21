@@ -1,5 +1,6 @@
 import type { Store, Panel } from "../state";
 import { createCodeEditor, type CodeEditorHandle } from "./CodeEditor";
+import { createCombobox } from "./Combobox";
 import { fileToImagePanel, languageOptions } from "./util";
 import { gripVertical, trash } from "./icons";
 import type { Theme } from "../themes";
@@ -21,6 +22,7 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
   titleInput.placeholder = "Title (optional)";
   titleInput.value = panel.title ?? "";
   titleInput.className = "panel-card-title";
+  titleInput.setAttribute("data-form-type", "other");
   titleInput.addEventListener("input", () => {
     store.patchPanel(panel.id, { title: titleInput.value || undefined });
   });
@@ -29,29 +31,43 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
   const controls = document.createElement("div");
   controls.className = "panel-card-controls";
 
+  let lang: ReturnType<typeof createCombobox> | null = null;
+  let borderToggle: HTMLInputElement | null = null;
   if (panel.kind === "code") {
-    const langSelect = document.createElement("select");
-    langSelect.className = "panel-card-lang";
-    // Suppress password managers / browser autofill — they latch onto
-    // <select> with values like "python" / "english" and try to fill it
-    // as a country or language field.
-    langSelect.setAttribute("autocomplete", "off");
-    langSelect.setAttribute("name", "panel-syntax-" + panel.id);
-    langSelect.setAttribute("data-1p-ignore", "true");
-    langSelect.setAttribute("data-lpignore", "true");
-    langSelect.setAttribute("data-form-type", "other");
-    for (const lang of languageOptions()) {
-      const opt = document.createElement("option");
-      opt.value = lang;
-      opt.textContent = lang;
-      langSelect.appendChild(opt);
-    }
-    langSelect.value = panel.language;
-    langSelect.addEventListener("change", () => {
-      store.patchPanel(panel.id, { language: langSelect.value });
-      editor?.setLanguage(langSelect.value);
+    lang = createCombobox({
+      value: panel.language,
+      options: languageOptions(),
+      placeholder: "Language",
+      ariaLabel: "Syntax language",
+      onChange: (value) => {
+        store.patchPanel(panel.id, { language: value });
+        editor?.setLanguage(value);
+      },
     });
-    controls.appendChild(langSelect);
+    controls.appendChild(lang.root);
+  } else {
+    // Per-image "inner border" toggle. Off by default so a freshly added
+    // image sits flush in the layout without an unrequested panel frame.
+    // Rendered as a Google-style switch so it reads as a clear binary,
+    // not a vestigial checkbox.
+    const label = document.createElement("label");
+    label.className = "panel-card-switch";
+    label.title = "Wrap the image in a panel background";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!panel.innerBorder;
+    cb.addEventListener("change", () => {
+      store.patchPanel(panel.id, { innerBorder: cb.checked });
+    });
+    const track = document.createElement("span");
+    track.className = "panel-card-switch-track";
+    track.setAttribute("aria-hidden", "true");
+    const txt = document.createElement("span");
+    txt.className = "panel-card-switch-label";
+    txt.textContent = "border";
+    label.append(cb, track, txt);
+    controls.appendChild(label);
+    borderToggle = cb;
   }
 
   const grip = mkIconButton(gripVertical(), "Drag to reorder", "grip");
@@ -67,6 +83,7 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
   body.className = "panel-card-body";
   root.appendChild(body);
 
+  let imageBody: HTMLElement | null = null;
   if (panel.kind === "code") {
     editor = createCodeEditor({
       initialCode: panel.code,
@@ -76,7 +93,9 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
     });
     body.appendChild(editor.root);
   } else {
-    body.appendChild(buildImageEditor(store, panel));
+    imageBody = buildImageEditor(store, panel);
+    imageBody.classList.toggle("bordered", !!panel.innerBorder);
+    body.appendChild(imageBody);
   }
 
   return {
@@ -87,6 +106,13 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
       if (p.kind === "code" && editor) {
         editor.setCode(p.code);
         editor.setLanguage(p.language);
+        if (lang && lang.getValue() !== p.language) lang.setValue(p.language);
+      }
+      if (p.kind === "image" && imageBody) {
+        imageBody.classList.toggle("bordered", !!p.innerBorder);
+        if (borderToggle && borderToggle.checked !== !!p.innerBorder) {
+          borderToggle.checked = !!p.innerBorder;
+        }
       }
     },
     setTheme(t) {
