@@ -32,9 +32,16 @@ export const mountCompositionView = (root: HTMLElement, store: Store): void => {
     // Layout is baked into the signature so toggling horizontal/vertical
     // forces the arrow SVGs (which differ per orientation) to be
     // recreated.
-    const desired = c.layout + ":" + c.panels.map((p) => p.id).join("|");
+    // Signature includes grid dimensions and per-panel grid positions
+    // so a swap forces re-layout. For grid, we re-render the cell
+    // skeleton each pass; for other layouts we use the simpler row.
+    const gridSig =
+      c.layout === "grid"
+        ? `:${c.gridRows}x${c.gridCols}:` +
+          c.panels.map((p) => `${p.id}@${p.gridRow ?? "-"},${p.gridCol ?? "-"}`).join("|")
+        : "";
+    const desired = c.layout + ":" + c.panels.map((p) => p.id).join("|") + gridSig;
     if (stage.dataset.signature === desired) {
-      // In-place update each card.
       const cards = panelsRow.querySelectorAll<HTMLElement>(".panel-card");
       cards.forEach((cardEl, i) => {
         const panel = c.panels[i];
@@ -46,23 +53,42 @@ export const mountCompositionView = (root: HTMLElement, store: Store): void => {
     }
     stage.dataset.signature = desired;
     panelsRow.innerHTML = "";
-    // Drop the old add-row (anything that isn't the panels container).
     Array.from(stage.children).forEach((el) => {
       if (el !== panelsRow) el.remove();
     });
+
+    if (c.layout === "grid") {
+      panelsRow.style.gridTemplateColumns = `repeat(${c.gridCols}, minmax(0, 1fr))`;
+      panelsRow.style.gridTemplateRows = `repeat(${c.gridRows}, auto)`;
+    } else {
+      panelsRow.style.gridTemplateColumns = "";
+      panelsRow.style.gridTemplateRows = "";
+    }
 
     if (c.panels.length === 0) {
       const empty = document.createElement("div");
       empty.className = "composition-empty";
       empty.innerHTML = `<p>No panels yet.</p><p class="hint">Paste code/images, drag files here, or use the buttons below.</p>`;
       panelsRow.appendChild(empty);
+    } else if (c.layout === "grid") {
+      c.panels.forEach((p) => {
+        const handle = createPanelCard(store, p);
+        (handle.root as any)._update = handle.update;
+        if (p.gridRow !== undefined && p.gridCol !== undefined) {
+          handle.root.style.gridRow = String(p.gridRow + 1);
+          handle.root.style.gridColumn = String(p.gridCol + 1);
+        }
+        attachGridDragHandlers(handle.root, p.id, store);
+        panelsRow.appendChild(handle.root);
+      });
     } else {
+      const seqLayout = c.layout as "horizontal" | "vertical";
       c.panels.forEach((p, i) => {
         const handle = createPanelCard(store, p);
         (handle.root as any)._update = handle.update;
         panelsRow.appendChild(handle.root);
         if (i < c.panels.length - 1) {
-          panelsRow.appendChild(buildArrow(c.layout));
+          panelsRow.appendChild(buildArrow(seqLayout));
         }
       });
     }
@@ -72,6 +98,46 @@ export const mountCompositionView = (root: HTMLElement, store: Store): void => {
 
   render();
   store.subscribe(render);
+};
+
+// HTML5 drag/drop swap for grid mode: drag a card onto another card's
+// header to swap their (gridRow, gridCol). Drag handle is the whole
+// card; we ignore drag attempts that start inside inputs/textareas so
+// editing text still works.
+const attachGridDragHandlers = (el: HTMLElement, panelId: string, store: import("../state").Store): void => {
+  el.draggable = true;
+  el.dataset.panelId = panelId;
+  el.addEventListener("dragstart", (e) => {
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.tagName === "SELECT")) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer?.setData("text/x-panel-id", panelId);
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+    el.classList.add("dragging");
+  });
+  el.addEventListener("dragend", () => el.classList.remove("dragging"));
+  el.addEventListener("dragover", (e) => {
+    if (e.dataTransfer?.types.includes("text/x-panel-id")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      el.classList.add("drop-target");
+    }
+  });
+  el.addEventListener("dragleave", () => el.classList.remove("drop-target"));
+  el.addEventListener("drop", (e) => {
+    el.classList.remove("drop-target");
+    const fromId = e.dataTransfer?.getData("text/x-panel-id");
+    if (!fromId || fromId === panelId) return;
+    e.preventDefault();
+    const c = store.get();
+    const a = c.panels.find((p) => p.id === fromId);
+    const b = c.panels.find((p) => p.id === panelId);
+    if (!a || !b) return;
+    store.patchPanel(a.id, { gridRow: b.gridRow, gridCol: b.gridCol });
+    store.patchPanel(b.id, { gridRow: a.gridRow, gridCol: a.gridCol });
+  });
 };
 
 const buildArrow = (layout: "horizontal" | "vertical"): HTMLElement => {

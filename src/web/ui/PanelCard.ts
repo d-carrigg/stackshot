@@ -1,6 +1,7 @@
 import type { Store, Panel } from "../state";
 import { createCodeEditor, type CodeEditorHandle } from "./CodeEditor";
 import { fileToImagePanel, languageOptions } from "./util";
+import { chevronLeft, chevronRight, trash } from "./icons";
 
 export type PanelCardHandle = {
   root: HTMLElement;
@@ -51,9 +52,9 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
     controls.appendChild(langSelect);
   }
 
-  const moveLeft = mkIconButton("‹", "Move earlier");
-  const moveRight = mkIconButton("›", "Move later");
-  const del = mkIconButton("×", "Remove panel", "danger");
+  const moveLeft = mkIconButton(chevronLeft(), "Move earlier");
+  const moveRight = mkIconButton(chevronRight(), "Move later");
+  const del = mkIconButton(trash(), "Remove panel", "danger");
   moveLeft.addEventListener("click", () => {
     const idx = store.get().panels.findIndex((p) => p.id === panel.id);
     if (idx > 0) store.movePanel(panel.id, idx - 1);
@@ -98,10 +99,14 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
   };
 };
 
-const mkIconButton = (label: string, title: string, variant?: string): HTMLButtonElement => {
+const mkIconButton = (
+  icon: SVGSVGElement,
+  title: string,
+  variant?: string,
+): HTMLButtonElement => {
   const b = document.createElement("button");
   b.type = "button";
-  b.textContent = label;
+  b.appendChild(icon);
   b.title = title;
   b.setAttribute("aria-label", title);
   b.className = "icon-btn" + (variant ? " " + variant : "");
@@ -129,6 +134,9 @@ const buildImageEditor = (store: Store, panel: Panel & { kind: "image" }): HTMLE
     if (next) {
       store.patchPanel(panel.id, {
         src: next.src,
+        blobId: next.blobId,
+        mime: next.mime,
+        animated: next.animated,
         naturalW: next.naturalW,
         naturalH: next.naturalH,
       });

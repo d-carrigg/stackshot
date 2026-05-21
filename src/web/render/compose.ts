@@ -5,8 +5,8 @@ import { renderCodePanelImage } from "./codePanel";
 import { renderImagePanel, roundedRectPath } from "./imagePanel";
 import type { Composition, Panel } from "../state";
 
-type PanelImage = {
-  canvas: HTMLCanvasElement;
+export type PanelImage = {
+  canvas: HTMLCanvasElement | OffscreenCanvas;
   width: number;
   height: number;
   title?: string;
@@ -18,7 +18,7 @@ const TITLE_COLOR = "#cdd6f4";
 
 const titleFontPx = (scale: number) => Math.max(1, Math.round(24 * scale));
 
-const renderPanel = async (p: Panel, scale: number, noInnerBorder: boolean): Promise<PanelImage> => {
+export const renderPanel = async (p: Panel, scale: number, noInnerBorder: boolean): Promise<PanelImage> => {
   if (p.kind === "code") {
     const img = await renderCodePanelImage(p.code, p.language, scale);
     return { canvas: img.canvas, width: img.width, height: img.height, title: p.title, isImage: false };
@@ -62,9 +62,110 @@ export const composeCanvas = async (comp: Composition): Promise<HTMLCanvasElemen
 
   const items = await Promise.all(comp.panels.map((p) => renderPanel(p, scale, noInnerBorder)));
 
-  return comp.layout === "vertical"
-    ? composeVertical(items, comp, scale, noInnerBorder)
-    : composeHorizontal(items, comp, scale, noInnerBorder);
+  return composeFromItems(items, comp, scale, noInnerBorder);
+};
+
+export const composeFromItems = (
+  items: PanelImage[],
+  comp: Composition,
+  scale: number,
+  noInnerBorder: boolean,
+): HTMLCanvasElement => {
+  if (comp.layout === "vertical") return composeVertical(items, comp, scale, noInnerBorder);
+  if (comp.layout === "grid") return composeGrid(items, comp, scale, noInnerBorder);
+  return composeHorizontal(items, comp, scale, noInnerBorder);
+};
+
+const composeGrid = (
+  items: PanelImage[],
+  comp: Composition,
+  scale: number,
+  noInnerBorder: boolean,
+): HTMLCanvasElement => {
+  const margin = _s(40, scale);
+  const gutter = _s(24, scale);
+  const titleGap = _s(8, scale);
+  const basePanelPad = _s(24, scale);
+  const titleFont = titleFontPx(scale);
+  const panelRadius = _s(PANEL_RADIUS, scale);
+  const rows = Math.max(1, comp.gridRows);
+  const cols = Math.max(1, comp.gridCols);
+
+  const probe = document.createElement("canvas").getContext("2d")!;
+  const pads = items.map((it) => (noInnerBorder && it.isImage ? 0 : basePanelPad));
+  const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
+  const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
+  const titleHeights = items.map((it) =>
+    it.title ? measureTitleHeight(probe, it.title, titleFont) + titleGap : 0,
+  );
+
+  // Per-cell dimensions = max across the row/column for fairness.
+  const colMaxW = new Array<number>(cols).fill(0);
+  const rowMaxH = new Array<number>(rows).fill(0);
+  comp.panels.forEach((p, i) => {
+    const r = p.gridRow ?? Math.floor(i / cols);
+    const c = p.gridCol ?? i % cols;
+    if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+    colMaxW[c] = Math.max(colMaxW[c]!, panelW[i]!);
+    rowMaxH[r] = Math.max(rowMaxH[r]!, panelH[i]! + titleHeights[i]!);
+  });
+
+  const colX = new Array<number>(cols).fill(0);
+  let xCursor = margin;
+  for (let c = 0; c < cols; c++) {
+    colX[c] = xCursor;
+    xCursor += colMaxW[c]! + (c < cols - 1 ? gutter : 0);
+  }
+  const totalW = xCursor + margin;
+
+  const rowY = new Array<number>(rows).fill(0);
+  let yCursor = margin;
+  for (let r = 0; r < rows; r++) {
+    rowY[r] = yCursor;
+    yCursor += rowMaxH[r]! + (r < rows - 1 ? gutter : 0);
+  }
+  const totalH = yCursor + margin;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, totalW);
+  canvas.height = Math.max(1, totalH);
+  const ctx = canvas.getContext("2d")!;
+  fillBg(ctx, canvas.width, canvas.height, comp.bgColor);
+
+  comp.panels.forEach((p, i) => {
+    const it = items[i]!;
+    const pad = pads[i]!;
+    const pw = panelW[i]!;
+    const ph = panelH[i]!;
+    const th = titleHeights[i]!;
+    const r = p.gridRow ?? Math.floor(i / cols);
+    const c = p.gridCol ?? i % cols;
+    if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+    const cellX = colX[c]!;
+    const cellY = rowY[r]!;
+    const cellW = colMaxW[c]!;
+    const cellH = rowMaxH[r]!;
+    const px = cellX + Math.floor((cellW - pw) / 2);
+    const titleY = cellY + Math.floor((cellH - (ph + th)) / 2);
+    const py = titleY + th;
+
+    if (it.title) {
+      ctx.fillStyle = TITLE_COLOR;
+      ctx.font = `600 ${titleFont}px ${TITLE_FONT_FAMILY}`;
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      ctx.fillText(it.title, px + pad, titleY);
+    }
+    const drawBg = !(noInnerBorder && it.isImage);
+    if (drawBg) {
+      ctx.fillStyle = PANEL_BG_HEX;
+      roundedRectPath(ctx, px, py, pw, ph, panelRadius);
+      ctx.fill();
+    }
+    ctx.drawImage(it.canvas, px + pad, py + pad);
+  });
+
+  return canvas;
 };
 
 const composeHorizontal = (

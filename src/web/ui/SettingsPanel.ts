@@ -1,5 +1,6 @@
 import type { Store } from "../state";
-import { exportPng, copyPngToClipboard } from "../export";
+import { exportImage, copyImageToClipboard } from "../export";
+import { hasAnimatedPanel } from "../render/composeAnimated";
 import { showToast } from "./util";
 import { clearPersisted } from "../persist";
 import { defaultComposition, emptyComposition } from "../state";
@@ -8,12 +9,13 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   root.innerHTML = `
     <div class="section-header" style="padding: 0 0 12px 0">Composition</div>
 
-    <div class="setting">
-      <label>Layout</label>
-      <div class="seg" data-layout>
-        <button data-val="horizontal">Horizontal</button>
-        <button data-val="vertical">Vertical</button>
-      </div>
+    <div class="setting" data-grid-only hidden>
+      <label>Rows <span class="val" data-rows-val></span></label>
+      <input type="range" min="1" max="4" step="1" data-rows />
+    </div>
+    <div class="setting" data-grid-only hidden>
+      <label>Columns <span class="val" data-cols-val></span></label>
+      <input type="range" min="1" max="4" step="1" data-cols />
     </div>
 
     <div class="setting">
@@ -31,6 +33,7 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
       <div class="row"><input type="color" data-arrow /></div>
     </div>
 
+    <div class="section-subhead">Image options</div>
     <div class="setting">
       <label class="toggle">
         <input type="checkbox" data-border />
@@ -39,7 +42,7 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
     </div>
 
     <div class="actions">
-      <button data-export>Export PNG</button>
+      <button data-export>Export</button>
       <button class="secondary" data-copy>Copy to clipboard</button>
       <div class="actions-row">
         <button class="secondary" data-clear>Clear</button>
@@ -48,7 +51,11 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
     </div>
   `;
 
-  const layoutSeg = root.querySelector<HTMLDivElement>("[data-layout]")!;
+  const gridOnly = root.querySelectorAll<HTMLDivElement>("[data-grid-only]");
+  const rowsInput = root.querySelector<HTMLInputElement>("[data-rows]")!;
+  const rowsVal = root.querySelector<HTMLSpanElement>("[data-rows-val]")!;
+  const colsInput = root.querySelector<HTMLInputElement>("[data-cols]")!;
+  const colsVal = root.querySelector<HTMLSpanElement>("[data-cols-val]")!;
   const scale = root.querySelector<HTMLInputElement>("[data-scale]")!;
   const scaleVal = root.querySelector<HTMLSpanElement>("[data-scale-val]")!;
   const bg = root.querySelector<HTMLInputElement>("[data-bg]")!;
@@ -59,12 +66,8 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   const clearBtn = root.querySelector<HTMLButtonElement>("[data-clear]")!;
   const defaultBtn = root.querySelector<HTMLButtonElement>("[data-default]")!;
 
-  for (const btn of layoutSeg.querySelectorAll<HTMLButtonElement>("button")) {
-    btn.addEventListener("click", () => {
-      const val = btn.dataset.val as "horizontal" | "vertical";
-      store.patch({ layout: val });
-    });
-  }
+  rowsInput.addEventListener("input", () => store.patch({ gridRows: Number(rowsInput.value) }));
+  colsInput.addEventListener("input", () => store.patch({ gridCols: Number(colsInput.value) }));
   scale.addEventListener("input", () => store.patch({ scale: Number(scale.value) }));
   bg.addEventListener("input", () => store.patch({ bgColor: bg.value }));
   arrow.addEventListener("input", () => store.patch({ arrowColor: arrow.value }));
@@ -72,15 +75,15 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
 
   exportBtn.addEventListener("click", async () => {
     try {
-      await exportPng(store.get());
+      await exportImage(store.get());
     } catch (e) {
       showToast(`Export failed: ${(e as Error).message}`);
     }
   });
   copyBtn.addEventListener("click", async () => {
     try {
-      await copyPngToClipboard(store.get());
-      showToast("PNG copied to clipboard");
+      await copyImageToClipboard(store.get());
+      showToast("Copied to clipboard");
     } catch (e) {
       showToast(`Copy failed: ${(e as Error).message}`);
     }
@@ -98,14 +101,20 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
 
   const render = () => {
     const c = store.get();
-    for (const btn of layoutSeg.querySelectorAll<HTMLButtonElement>("button")) {
-      btn.classList.toggle("active", btn.dataset.val === c.layout);
-    }
+    const isGrid = c.layout === "grid";
+    for (const el of gridOnly) el.hidden = !isGrid;
+    rowsInput.value = String(c.gridRows);
+    rowsVal.textContent = String(c.gridRows);
+    colsInput.value = String(c.gridCols);
+    colsVal.textContent = String(c.gridCols);
     scale.value = String(c.scale);
     scaleVal.textContent = c.scale.toFixed(1) + "×";
     bg.value = c.bgColor;
     arrow.value = c.arrowColor;
     border.checked = c.innerBorder;
+    // Surface format that Export will produce so users see what they'll get.
+    const animated = hasAnimatedPanel(c);
+    exportBtn.textContent = animated ? "Export WEBP" : "Export PNG";
   };
   render();
   store.subscribe(render);

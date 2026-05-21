@@ -1,0 +1,124 @@
+// Animated compose: walks a timeline at a fixed cadence, swapping each
+// animated image panel for its current frame's ImageBitmap, then hands
+// the canvas to the WEBP muxer. Static panels (code, non-animated
+// images) are rendered once and reused.
+import type { Composition, Panel } from "../state";
+import { renderPanel, composeFromItems, type PanelImage } from "./compose";
+import { getBlob } from "../storage/blobStore";
+import { decodeFrames, type Frame } from "./motion";
+import { encodeAnimatedWebp, type AnimatedWebpFrame } from "./webpMuxer";
+import { PANEL_RADIUS } from "./colors";
+import { _s } from "./arrows";
+import { roundedRectPath } from "./imagePanel";
+
+const FPS = 25;
+const FRAME_MS = Math.round(1000 / FPS);
+const MAX_FRAMES = 120; // cap output length so a 10-second loop is the worst case
+
+type AnimSlot = {
+  panelIndex: number;
+  frames: Frame[];
+  totalMs: number;
+  rounded: boolean;
+  radius: number;
+};
+
+const renderFrameToCanvas = (
+  frame: Frame,
+  rounded: boolean,
+  radius: number,
+): HTMLCanvasElement => {
+  const c = document.createElement("canvas");
+  c.width = frame.bitmap.width;
+  c.height = frame.bitmap.height;
+  const ctx = c.getContext("2d")!;
+  if (rounded && radius > 0) {
+    ctx.save();
+    roundedRectPath(ctx, 0, 0, c.width, c.height, Math.min(radius, Math.min(c.width, c.height) / 2));
+    ctx.clip();
+    ctx.drawImage(frame.bitmap, 0, 0);
+    ctx.restore();
+  } else {
+    ctx.drawImage(frame.bitmap, 0, 0);
+  }
+  return c;
+};
+
+// Pick which frame plays at time `t` in a panel's timeline (looped).
+const frameAtTime = (slot: AnimSlot, t: number): Frame => {
+  const tm = ((t % slot.totalMs) + slot.totalMs) % slot.totalMs;
+  let acc = 0;
+  for (const f of slot.frames) {
+    const d = Math.max(20, f.durationMs);
+    acc += d;
+    if (tm < acc) return f;
+  }
+  return slot.frames[slot.frames.length - 1]!;
+};
+
+export const hasAnimatedPanel = (comp: Composition): boolean =>
+  comp.panels.some((p) => p.kind === "image" && p.animated === true);
+
+export const composeAnimatedBlob = async (comp: Composition): Promise<Blob> => {
+  const scale = comp.scale;
+  const noInnerBorder = !comp.innerBorder;
+  const radius = _s(PANEL_RADIUS, scale);
+
+  // Render every panel once. Animated image panels start on frame 0;
+  // we'll swap their canvas per output frame below.
+  const items: PanelImage[] = await Promise.all(
+    comp.panels.map((p) => renderPanel(p, scale, noInnerBorder)),
+  );
+
+  // Decode frames for every animated image panel.
+  const slots: AnimSlot[] = [];
+  for (let i = 0; i < comp.panels.length; i++) {
+    const p = comp.panels[i] as Panel;
+    if (p.kind !== "image" || !p.animated || !p.blobId) continue;
+    const blob = await getBlob(p.blobId);
+    if (!blob) continue;
+    const frames = await decodeFrames(blob);
+    if (frames.length < 2) continue;
+    const totalMs = frames.reduce((a, f) => a + Math.max(20, f.durationMs), 0);
+    slots.push({ panelIndex: i, frames, totalMs, rounded: noInnerBorder, radius });
+  }
+
+  if (slots.length === 0) {
+    // Caller should have checked hasAnimatedPanel; bail out with a
+    // first-frame render rather than throwing.
+    const canvas = composeFromItems(items, comp, scale, noInnerBorder);
+    return new Promise((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("toBlob webp null"))),
+        "image/webp",
+        0.92,
+      ),
+    );
+  }
+
+  const maxLen = slots.reduce((a, s) => Math.max(a, s.totalMs), 0);
+  const totalFrames = Math.min(MAX_FRAMES, Math.max(2, Math.ceil(maxLen / FRAME_MS)));
+
+  const output: AnimatedWebpFrame[] = [];
+  for (let i = 0; i < totalFrames; i++) {
+    const t = i * FRAME_MS;
+    // Mutate `items` in-place: swap each animated panel's canvas for
+    // the active frame at time t. Restoring at the end isn't needed —
+    // we throw items away after encoding.
+    for (const slot of slots) {
+      const f = frameAtTime(slot, t);
+      const swapped = renderFrameToCanvas(f, slot.rounded, slot.radius);
+      const existing = items[slot.panelIndex]!;
+      items[slot.panelIndex] = {
+        ...existing,
+        canvas: swapped,
+        width: swapped.width,
+        height: swapped.height,
+      };
+    }
+    const canvas = composeFromItems(items, comp, scale, noInnerBorder);
+    output.push({ canvas, durationMs: FRAME_MS });
+  }
+
+  return encodeAnimatedWebp(output, { quality: 0.9, loop: 0 });
+};
