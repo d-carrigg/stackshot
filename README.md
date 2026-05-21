@@ -7,6 +7,11 @@ layouts with arrows between panels.
 
 ![markdown demo](docs/img/markdown-demo.png)
 
+There's also a **browser version** that runs entirely client-side — no
+upload, no signup — for quick one-off compositions. See
+[`src/web/README.md`](src/web/README.md) for the dev/deploy story (Azure
+Static Web Apps free tier).
+
 ## Install
 
 From PyPI (Python ≥ 3.10):

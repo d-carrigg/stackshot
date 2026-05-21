@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.0 — 2026-05-20
+
+### Added
+- Browser-based composer in `src/web/`. Vite + TypeScript + Shiki +
+  Canvas; no backend, no Pyodide. Deploys as a static site (Azure
+  Static Web Apps free tier). Mirrors the CLI's palette, layout
+  geometry, and arrow rendering so output matches the Python pipeline.
+- Three-pane web UI: panel list (drag-reorder, +Code/+Image), per-panel
+  editor (styled textarea + language picker, or image dropzone), and
+  composition settings (layout, scale, colors, inner border).
+- Paste-to-add: paste an image from the clipboard or drop image/code
+  files anywhere on the page to create new panels.
+- Shareable URL: composition state is LZ-compressed into `location.hash`
+  on every change; opening the same URL restores the composition.
+- PNG export via `canvas.toBlob` and "Copy to clipboard" via the async
+  Clipboard API.
+- `staticwebapp.config.json` with SPA fallback for Azure SWA hosting.
+
+### Changed
+- Python sources moved from `src/*.py` to `src/cli/*.py` to make room
+  for `src/web/`. `pyproject.toml`'s `package-dir` re-points the
+  `codeimg` package at `src/cli`; imports and the `codeimg` console
+  script entry point are unchanged.
+
 ## 0.3.1 — 2026-05-20
 
 ### Added

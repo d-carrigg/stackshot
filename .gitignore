@@ -8,3 +8,7 @@ build/
 dist/
 /codeimg/
 *.cast
+
+# web app
+src/web/node_modules/
+src/web/dist/
