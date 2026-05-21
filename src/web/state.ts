@@ -44,6 +44,7 @@ export type CodePanel = {
   title?: string;
   code: string;
   language: string; // "auto" or a Shiki/CodeMirror language id
+  lineNumbers?: boolean; // render a line-number gutter on this panel
   gridRow?: number; // 0-indexed; only meaningful when composition.layout === "grid"
   gridCol?: number;
 };
@@ -247,6 +248,27 @@ export class Store {
       return next;
     });
     return true;
+  }
+
+  // Swap a panel for one of a different kind (e.g. dropping an image
+  // onto a code panel). Keeps the slot's id, title, and grid position so
+  // ordering, selection, and drag handlers stay stable.
+  replacePanel(id: string, panel: Panel): void {
+    this.set((c) => {
+      const idx = c.panels.findIndex((p) => p.id === id);
+      if (idx < 0) return c;
+      const prev = c.panels[idx]!;
+      const merged = {
+        ...panel,
+        id: prev.id,
+        title: prev.title,
+        gridRow: prev.gridRow,
+        gridCol: prev.gridCol,
+      } as Panel;
+      const panels = c.panels.slice();
+      panels[idx] = merged;
+      return { ...c, panels, selectedId: prev.id };
+    });
   }
 
   removePanel(id: string): void {

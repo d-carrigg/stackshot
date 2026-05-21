@@ -54,7 +54,12 @@ export const mountCompositionView = (
         ? `:${c.gridRows}x${c.gridCols}:` +
           c.panels.map((p) => `${p.id}@${p.gridRow ?? "-"},${p.gridCol ?? "-"}`).join("|")
         : "";
-    const desired = c.layout + ":" + c.panels.map((p) => p.id).join("|") + gridSig;
+    // Include `kind` so converting a code panel to an image (drag-replace)
+    // forces a full rebuild — the panel id stays the same, so an id-only
+    // signature would skip the rebuild and PanelCard.update() bails on a
+    // kind change, leaving the stale editor on screen.
+    const desired =
+      c.layout + ":" + c.panels.map((p) => `${p.id}:${p.kind}`).join("|") + gridSig;
     if (stage.dataset.signature === desired) {
       const cards = panelsRow.querySelectorAll<HTMLElement>(".panel-card");
       cards.forEach((cardEl, i) => {

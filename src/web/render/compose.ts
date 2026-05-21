@@ -25,7 +25,7 @@ export const renderPanel = async (
   theme: Theme,
 ): Promise<PanelImage> => {
   if (p.kind === "code") {
-    const img = await renderCodePanelImage(p.code, p.language, scale, theme);
+    const img = await renderCodePanelImage(p.code, p.language, scale, theme, !!p.lineNumbers);
     return { canvas: img.canvas, width: img.width, height: img.height, title: p.title, isImage: false, innerBorder: true };
   }
   const innerBorder = !!p.innerBorder;

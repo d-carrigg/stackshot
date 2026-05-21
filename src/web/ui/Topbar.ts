@@ -273,6 +273,9 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
           <button type="button" role="menuitem" data-templates>Browse templates…</button>
           <button type="button" role="menuitem" data-licenses>Open-source licenses</button>
           <div class="topbar-more-sep"></div>
+          <a href="https://github.com/d-carrigg/stackshot/releases" target="_blank" rel="noreferrer" role="menuitem">
+            <span class="topbar-more-dl"></span><span>Get the CLI</span>
+          </a>
           <a href="https://github.com/d-carrigg/stackshot" target="_blank" rel="noreferrer" role="menuitem">
             <span class="topbar-more-gh"></span><span>View on GitHub</span>
           </a>
@@ -333,6 +336,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
   const moreBtn = root.querySelector<HTMLButtonElement>("[data-more]")!;
   const moreMenu = root.querySelector<HTMLDivElement>("[data-more-menu]")!;
   moreMenu.querySelector<HTMLSpanElement>(".topbar-more-gh")!.appendChild(ghIcon());
+  moreMenu.querySelector<HTMLSpanElement>(".topbar-more-dl")!.appendChild(dlIcon());
   const closeMenu = () => {
     moreMenu.hidden = true;
     moreBtn.setAttribute("aria-expanded", "false");

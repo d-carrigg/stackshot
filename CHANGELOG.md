@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.9.0 — 2026-05-21
+
+### Added
+- **Per-panel line numbers** (web). Each code panel has a `#` toggle
+  in its header that renders a line-number gutter in both the live
+  editor and the exported image. ⌃/⌘-click (or a long-press on touch)
+  toggles every code panel at once. Off by default, persisted per
+  panel, and recorded in PNG export metadata.
+- **Get the CLI link** (web). The ⋯ menu now links to the GitHub
+  Releases page for the standalone binaries.
+
+### Changed
+- **Image drag-to-replace now works over code panels** (web).
+  Dropping a single image file onto a code panel converts it to an
+  image panel in place (keeping its position and title) instead of
+  appending a new panel at the end. The hovered code panel is
+  highlighted during the drag and the drop prompt reads "Drop to
+  replace".
+- **Horizontal-layout add buttons are centered** (web). The
+  add/reset/clear row now sits centered under the whole composition
+  rather than bunched under the first card.
+
 ## 0.8.0 — 2026-05-21
 
 ### Changed
