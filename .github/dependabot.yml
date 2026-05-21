@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/src/web"
+    schedule:
+      interval: "weekly"
+    # vite 8 ships rolldown (rust-based bundler) whose native bindings
+    # don't install reliably with the current npm optional-deps bug.
+    # Keep us on vite 7.x until the dust settles; revisit when rolldown
+    # is the default in stable npm distributions.
+    ignore:
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]

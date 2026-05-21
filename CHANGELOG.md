@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.1 — 2026-05-20
+
+### Fixed
+- Pin web app to `vite ^7.1.0`. Dependabot bumped to `vite ^8.0.13`
+  (#10), which requires Node 20.19+/22.12+ and ships the rolldown
+  bundler — whose Linux x64 native binding doesn't install cleanly
+  under the current npm optional-deps bug, breaking the production
+  build. Reverting unblocks the deploy.
+
+### Added
+- `.github/dependabot.yml` ignores major `vite` bumps until rolldown
+  stabilises in stable npm distributions, so this doesn't regress.
+
 ## 0.4.0 — 2026-05-20
 
 ### Added
