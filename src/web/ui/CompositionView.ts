@@ -4,8 +4,17 @@
 import type { Store } from "../state";
 import { makeCodePanel } from "../state";
 import { createPanelCard } from "./PanelCard";
+import { eye as eyeIcon } from "./icons";
 
-export const mountCompositionView = (root: HTMLElement, store: Store): void => {
+export type CompositionViewOptions = {
+  onPreview?: () => void;
+};
+
+export const mountCompositionView = (
+  root: HTMLElement,
+  store: Store,
+  opts: CompositionViewOptions = {},
+): void => {
   root.innerHTML = `
     <div class="composition-scroll">
       <div class="composition" data-layout="horizontal">
@@ -93,7 +102,7 @@ export const mountCompositionView = (root: HTMLElement, store: Store): void => {
       });
     }
 
-    stage.appendChild(buildAddRow(store));
+    stage.appendChild(buildAddRow(store, opts.onPreview));
   };
 
   render();
@@ -163,14 +172,21 @@ const buildArrow = (layout: "horizontal" | "vertical"): HTMLElement => {
   return wrap;
 };
 
-const buildAddRow = (store: Store): HTMLElement => {
+const buildAddRow = (store: Store, onPreview?: () => void): HTMLElement => {
   const wrap = document.createElement("div");
   wrap.className = "composition-add-row";
   wrap.innerHTML = `
     <button type="button" data-add="code">+ code</button>
     <button type="button" data-add="image">+ image</button>
-    <input type="file" accept="image/*" multiple hidden />
+    <button type="button" class="composition-preview" data-preview>
+      <span class="ico"></span><span>Preview</span>
+    </button>
+    <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/*" multiple hidden />
   `;
+  const previewBtn = wrap.querySelector<HTMLButtonElement>("[data-preview]")!;
+  previewBtn.querySelector(".ico")!.appendChild(eyeIcon());
+  previewBtn.addEventListener("click", () => onPreview?.());
+  if (!onPreview) previewBtn.remove();
   const codeBtn = wrap.querySelector<HTMLButtonElement>('[data-add="code"]')!;
   const imgBtn = wrap.querySelector<HTMLButtonElement>('[data-add="image"]')!;
   const fileInput = wrap.querySelector<HTMLInputElement>('input[type="file"]')!;

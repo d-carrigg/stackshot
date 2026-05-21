@@ -18,11 +18,12 @@ root.innerHTML = `
 const initial = (await loadPersisted()) ?? defaultComposition();
 const store = new Store(initial);
 
-const topbar = mountTopbar(document.getElementById("topbar")!, store);
-mountCompositionView(document.getElementById("composition")!, store);
-mountSettingsPanel(document.getElementById("settings")!, store);
+mountTopbar(document.getElementById("topbar")!, store);
 const preview = mountPreviewModal(store);
-topbar.onPreview(() => preview.open());
+mountCompositionView(document.getElementById("composition")!, store, {
+  onPreview: () => preview.open(),
+});
+mountSettingsPanel(document.getElementById("settings")!, store);
 
 // Auto-save to localStorage, debounced.
 const debouncedSave = debounce(() => savePersisted(store.get()), 300);
