@@ -39,6 +39,7 @@ export const renderCodePanelImage = async (
   language: string,
   scale: number,
   theme: Theme,
+  lineNumbers = false,
 ): Promise<CodePanelImage> => {
   const tokens = await tokenize(code, language, theme.syntax);
   const fontSize = baseFontSize(scale);
@@ -49,11 +50,18 @@ export const renderCodePanelImage = async (
   const probeCtx = probe.getContext("2d")!;
   const { charW, lineH } = measureCharWidth(probeCtx, fontSize);
 
+  // Line-number gutter: a column wide enough for the highest line number,
+  // plus a gap before the code. Zero-width when the toggle is off so the
+  // panel matches the CLI dimensions exactly.
+  const digits = String(Math.max(1, tokens.length)).length;
+  const gutterW = lineNumbers ? Math.ceil(digits * charW) + pad : 0;
+  const codeX = pad + gutterW;
+
   const longestChars = Math.max(1, computeWidth(tokens));
   const contentW = Math.ceil(longestChars * charW);
   const contentH = Math.max(lineH, tokens.length * lineH);
 
-  const width = contentW + pad * 2;
+  const width = codeX + contentW + pad;
   const height = contentH + pad * 2;
 
   const canvas = document.createElement("canvas");
@@ -73,12 +81,18 @@ export const renderCodePanelImage = async (
 
   for (let row = 0; row < tokens.length; row++) {
     const line = tokens[row]!;
-    let xChar = 0;
     const y = pad + row * lineH + ascent;
+    if (lineNumbers) {
+      ctx.fillStyle = theme.chromeMuted;
+      ctx.textAlign = "right";
+      ctx.fillText(String(row + 1), pad + digits * charW, y);
+      ctx.textAlign = "left";
+    }
+    let xChar = 0;
     for (const tok of line) {
       if (!tok.content) continue;
       ctx.fillStyle = tok.color;
-      ctx.fillText(tok.content, pad + xChar * charW, y);
+      ctx.fillText(tok.content, codeX + xChar * charW, y);
       xChar += tok.content.length;
     }
   }

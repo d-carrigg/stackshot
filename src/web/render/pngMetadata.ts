@@ -57,7 +57,12 @@ const makeItxtChunk = (keyword: string, text: string): Uint8Array => {
 export const composeMetadata = (comp: Composition): string => {
   const codes = comp.panels
     .filter((p): p is CodePanel => p.kind === "code")
-    .map((p) => ({ title: p.title ?? "", language: p.language, code: p.code }));
+    .map((p) => ({
+      title: p.title ?? "",
+      language: p.language,
+      code: p.code,
+      lineNumbers: !!p.lineNumbers,
+    }));
   return JSON.stringify({
     app: "stackshot",
     schema: 1,

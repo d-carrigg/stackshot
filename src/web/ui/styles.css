@@ -280,7 +280,8 @@ html, body {
 .topbar-more-menu button:hover,
 .topbar-more-menu a:hover { background: var(--surface-2); }
 .topbar-more-sep { height: 1px; background: var(--border); margin: 4px 2px; }
-.topbar-more-gh { display: inline-flex; font-size: 14px; }
+.topbar-more-gh,
+.topbar-more-dl { display: inline-flex; font-size: 14px; }
 
 /* Slot wrappers — transparent containers in the topbar that hold each
    group. display: contents lets them disappear from layout, so the
@@ -517,6 +518,14 @@ html, body {
   top: 0; bottom: 0; right: -8px; width: 3px;
 }
 
+/* A code panel highlights while a file is dragged over it — dropping an
+   image converts the panel in place. */
+.panel-card-code.file-drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--panel-radius);
+}
+
 .composition-empty {
   margin: auto;
   text-align: center;
@@ -721,6 +730,7 @@ html, body {
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border); }
 .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+.icon-btn.active { color: var(--accent); border-color: var(--accent); }
 .icon-btn.panel-card-grip { cursor: grab; }
 .panel-card.dragging .icon-btn.panel-card-grip { cursor: grabbing; }
 
@@ -830,7 +840,11 @@ html, body {
   flex-direction: row;
 }
 .composition[data-layout="horizontal"] .composition-add-row {
-  justify-content: flex-start;
+  /* Stretch across the full panel-row width and center the buttons, so
+     they sit under the whole composition rather than bunched under the
+     first card. */
+  align-self: stretch;
+  justify-content: center;
 }
 .composition[data-layout="vertical"] .composition-add-row {
   justify-content: center;
@@ -1275,4 +1289,14 @@ html, body {
   #app { grid-template-rows: auto minmax(0, 1fr) 32px; }
   .status-meta { display: none; }
   .panel-card { min-width: 240px; }
+}
+
+/* Narrow viewports — the add/reset/clear buttons can't fit on one row,
+   so let them wrap and flex to share the width (two per row) instead of
+   overflowing or being clipped. */
+@media (max-width: 600px) {
+  .composition-add-row { flex-wrap: wrap; gap: 8px; }
+  .composition-add-row button { flex: 1 1 40%; padding: 12px 8px; }
+  .composition-add-row button.composition-reset,
+  .composition-add-row button.composition-clear { margin-left: 0; }
 }

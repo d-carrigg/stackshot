@@ -2,7 +2,7 @@ import type { Store, Panel } from "../state";
 import { createCodeEditor, type CodeEditorHandle } from "./CodeEditor";
 import { createCombobox } from "./Combobox";
 import { fileToImagePanel, languageOptions } from "./util";
-import { gripVertical, trash } from "./icons";
+import { gripVertical, trash, hash } from "./icons";
 import type { Theme } from "../themes";
 
 export type PanelCardHandle = {
@@ -33,6 +33,7 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
 
   let lang: ReturnType<typeof createCombobox> | null = null;
   let borderToggle: HTMLInputElement | null = null;
+  let lnBtn: HTMLButtonElement | null = null;
   if (panel.kind === "code") {
     lang = createCombobox({
       value: panel.language,
@@ -45,6 +46,56 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
       },
     });
     controls.appendChild(lang.root);
+
+    // Per-panel line-number toggle. Plain click toggles this panel;
+    // ⌃/⌘-click (or a long-press on touch) applies the new state to
+    // every code panel at once.
+    lnBtn = mkIconButton(hash(), "Line numbers (⌃/⌘-click or long-press toggles all)", "linenums");
+    lnBtn.setAttribute("aria-pressed", String(!!panel.lineNumbers));
+    lnBtn.classList.toggle("active", !!panel.lineNumbers);
+    const nextValue = (): boolean => {
+      const cur = store.get().panels.find((p) => p.id === panel.id);
+      return !(cur && cur.kind === "code" && cur.lineNumbers);
+    };
+    const toggleAll = (next: boolean) =>
+      store.set((c) => ({
+        ...c,
+        panels: c.panels.map((p) => (p.kind === "code" ? { ...p, lineNumbers: next } : p)),
+      }));
+    let longPressed = false;
+    let lpTimer: number | undefined;
+    lnBtn.addEventListener("click", (e) => {
+      // The click that follows a long-press is a no-op — the long-press
+      // already toggled everything.
+      if (longPressed) {
+        longPressed = false;
+        return;
+      }
+      const next = nextValue();
+      if (e.ctrlKey || e.metaKey) toggleAll(next);
+      else store.patchPanel(panel.id, { lineNumbers: next });
+    });
+    lnBtn.addEventListener(
+      "touchstart",
+      () => {
+        longPressed = false;
+        lpTimer = window.setTimeout(() => {
+          longPressed = true;
+          toggleAll(nextValue());
+        }, 500);
+      },
+      { passive: true },
+    );
+    const cancelLongPress = () => {
+      if (lpTimer !== undefined) {
+        clearTimeout(lpTimer);
+        lpTimer = undefined;
+      }
+    };
+    lnBtn.addEventListener("touchend", cancelLongPress);
+    lnBtn.addEventListener("touchmove", cancelLongPress);
+    lnBtn.addEventListener("touchcancel", cancelLongPress);
+    controls.appendChild(lnBtn);
   } else {
     // Per-image "inner border" toggle. Off by default so a freshly added
     // image sits flush in the layout without an unrequested panel frame.
@@ -89,6 +140,7 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
       initialCode: panel.code,
       initialLanguage: panel.language,
       theme,
+      lineNumbers: panel.lineNumbers,
       onChange: (code) => store.patchPanel(panel.id, { code }),
     });
     body.appendChild(editor.root);
@@ -106,7 +158,12 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
       if (p.kind === "code" && editor) {
         editor.setCode(p.code);
         editor.setLanguage(p.language);
+        editor.setLineNumbers(!!p.lineNumbers);
         if (lang && lang.getValue() !== p.language) lang.setValue(p.language);
+        if (lnBtn) {
+          lnBtn.classList.toggle("active", !!p.lineNumbers);
+          lnBtn.setAttribute("aria-pressed", String(!!p.lineNumbers));
+        }
       }
       if (p.kind === "image" && imageBody) {
         imageBody.classList.toggle("bordered", !!p.innerBorder);

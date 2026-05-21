@@ -55,11 +55,19 @@ const isFileDrag = (e: DragEvent): boolean => {
 };
 
 let dragDepth = 0;
+// Code panel currently under the drag cursor — highlighted to advertise
+// that dropping an image here replaces the panel in place.
+let hoverCodeCard: HTMLElement | null = null;
+const clearHoverCard = () => {
+  hoverCodeCard?.classList.remove("file-drop-target");
+  hoverCodeCard = null;
+};
 
 document.addEventListener("dragenter", (e) => {
   if (!isFileDrag(e)) return;
   e.preventDefault();
   dragDepth++;
+  dropOverlay.textContent = "Drop to add panel";
   dropOverlay.style.display = "flex";
 }, true);
 
@@ -69,18 +77,29 @@ document.addEventListener("dragover", (e) => {
   // treated as a drop target and `drop` never fires.
   e.preventDefault();
   if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  const over = (e.target as HTMLElement | null)?.closest<HTMLElement>(".panel-card-code") ?? null;
+  if (over !== hoverCodeCard) {
+    clearHoverCard();
+    over?.classList.add("file-drop-target");
+    hoverCodeCard = over;
+    dropOverlay.textContent = over ? "Drop to replace" : "Drop to add panel";
+  }
 }, true);
 
 document.addEventListener("dragleave", (e) => {
   if (!isFileDrag(e)) return;
   dragDepth = Math.max(0, dragDepth - 1);
-  if (dragDepth === 0) dropOverlay.style.display = "none";
+  if (dragDepth === 0) {
+    dropOverlay.style.display = "none";
+    clearHoverCard();
+  }
 }, true);
 
 document.addEventListener("drop", async (e) => {
   if (!isFileDrag(e)) return;
   dragDepth = 0;
   dropOverlay.style.display = "none";
+  clearHoverCard();
 
   // Drops onto an existing image card route to its own handler (replace
   // the image). Image cards mark themselves so we can detect it here.
@@ -90,6 +109,20 @@ document.addEventListener("drop", async (e) => {
   e.preventDefault();
   e.stopPropagation();
   const files = Array.from(e.dataTransfer?.files ?? []);
+
+  // A single image dropped onto a code panel replaces it in place —
+  // parity with the image-card replace flow, but converting kind.
+  const codeCard = target?.closest<HTMLElement>(".panel-card-code");
+  const codeCardId = codeCard?.dataset.panelId;
+  if (codeCardId && files.length === 1 && files[0]!.type.startsWith("image/")) {
+    const panel = store.get().panels.find((p) => p.id === codeCardId);
+    if (panel?.kind === "code") {
+      const img = await fileToImagePanel(files[0]!);
+      if (img) store.replacePanel(codeCardId, img);
+      return;
+    }
+  }
+
   const tryAdd = (panel: Panel): boolean => {
     const added = store.addPanel(panel);
     if (!added) showToast(`Grid mode is capped at ${GRID_MAX_PANELS} panels`);
