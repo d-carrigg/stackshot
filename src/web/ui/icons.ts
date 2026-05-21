@@ -25,8 +25,15 @@ const make = (paths: string, viewBox = "0 0 24 24"): SVGSVGElement => {
   return svg;
 };
 
-export const chevronLeft = (): SVGSVGElement => make(`<path d="m15 18-6-6 6-6"/>`);
-export const chevronRight = (): SVGSVGElement => make(`<path d="m9 18 6-6-6-6"/>`);
+export const gripVertical = (): SVGSVGElement =>
+  make(
+    `<circle cx="9" cy="5" r="1.2"/>` +
+      `<circle cx="9" cy="12" r="1.2"/>` +
+      `<circle cx="9" cy="19" r="1.2"/>` +
+      `<circle cx="15" cy="5" r="1.2"/>` +
+      `<circle cx="15" cy="12" r="1.2"/>` +
+      `<circle cx="15" cy="19" r="1.2"/>`,
+  );
 export const trash = (): SVGSVGElement =>
   make(
     `<path d="M3 6h18"/>` +

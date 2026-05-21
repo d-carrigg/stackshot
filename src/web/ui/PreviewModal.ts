@@ -12,13 +12,12 @@ export type PreviewModalHandle = {
 };
 
 const mkOverlayButton = (
-  position: string,
   title: string,
   icon: SVGSVGElement,
 ): HTMLButtonElement => {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = `preview-modal-overlay ${position}`;
+  b.className = "preview-modal-overlay";
   b.title = title;
   b.setAttribute("aria-label", title);
   b.appendChild(icon);
@@ -28,7 +27,7 @@ const mkOverlayButton = (
 export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   const dlg = document.createElement("dialog");
   dlg.className = "preview-modal";
-  // The image is the dialog. Buttons float over its corners.
+  // The image is the dialog. A single icon toolbar sits at the top-right.
   const figure = document.createElement("div");
   figure.className = "preview-modal-figure";
   const loading = document.createElement("div");
@@ -38,10 +37,13 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   img.className = "preview-modal-img";
   img.alt = "composition preview";
   img.hidden = true;
-  const copyBtn = mkOverlayButton("top-left", "Copy to clipboard", clipIcon());
-  const dlBtn = mkOverlayButton("top-right-2", "Download", dlIcon());
-  const closeBtn = mkOverlayButton("top-right", "Close", xIcon());
-  figure.append(loading, img, copyBtn, dlBtn, closeBtn);
+  const toolbar = document.createElement("div");
+  toolbar.className = "preview-modal-toolbar";
+  const copyBtn = mkOverlayButton("Copy to clipboard", clipIcon());
+  const dlBtn = mkOverlayButton("Download", dlIcon());
+  const closeBtn = mkOverlayButton("Close", xIcon());
+  toolbar.append(copyBtn, dlBtn, closeBtn);
+  figure.append(loading, img, toolbar);
   dlg.appendChild(figure);
 
   let currentUrl: string | null = null;

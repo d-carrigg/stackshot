@@ -181,6 +181,32 @@ html, body {
   border-radius: var(--panel-radius);
 }
 
+/* Sequential (horizontal / vertical) drag-to-reorder: drop indicator is
+   a thin accent bar on the side the dragged card will land. */
+.composition[data-layout="horizontal"] .panel-card.dragging,
+.composition[data-layout="vertical"] .panel-card.dragging { opacity: 0.5; }
+.panel-card.drop-before::before,
+.panel-card.drop-after::after {
+  content: "";
+  position: absolute;
+  background: var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 5;
+}
+.composition[data-layout="vertical"] .panel-card.drop-before::before {
+  left: 0; right: 0; top: -8px; height: 3px;
+}
+.composition[data-layout="vertical"] .panel-card.drop-after::after {
+  left: 0; right: 0; bottom: -8px; height: 3px;
+}
+.composition[data-layout="horizontal"] .panel-card.drop-before::before {
+  top: 0; bottom: 0; left: -8px; width: 3px;
+}
+.composition[data-layout="horizontal"] .panel-card.drop-after::after {
+  top: 0; bottom: 0; right: -8px; width: 3px;
+}
+
 .composition-empty {
   margin: auto;
   text-align: center;
@@ -226,13 +252,26 @@ html, body {
   align-items: center;
 }
 .panel-card-lang {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
   border-radius: 6px;
   padding: 3px 6px;
   font-family: inherit;
   font-size: 12px;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.panel-card-lang:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.panel-card-lang:focus {
+  outline: none;
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
 }
 .icon-btn {
   background: transparent;
@@ -252,6 +291,8 @@ html, body {
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--border); }
 .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+.icon-btn.panel-card-grip { cursor: grab; }
+.panel-card.dragging .icon-btn.panel-card-grip { cursor: grabbing; }
 
 .panel-card-body {
   display: flex;
@@ -441,6 +482,75 @@ html, body {
   cursor: pointer; user-select: none;
 }
 
+/* Theme presets — color-swatch buttons in a row. Each pill shows the
+   background colour as the fill and a thin stripe in the arrow colour
+   so users can read both at a glance. */
+.theme-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.theme-pill {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--swatch-bg, #1e1e2e);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.12s ease, transform 0.08s ease;
+}
+.theme-pill::before {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 1;
+}
+.theme-pill:hover::before { opacity: 1; }
+.theme-pill::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--swatch-arrow, #fff);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.theme-pill:hover { border-color: var(--muted); }
+.theme-pill.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.25);
+}
+.theme-pill:active { transform: scale(0.94); }
+.theme-pill-custom {
+  background: linear-gradient(135deg, #f38ba8 0%, #fab387 33%, #a6e3a1 66%, #89b4fa 100%);
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-pill-custom::after { display: none; }
+
 .actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
 .actions-row { display: flex; gap: 8px; }
 .actions-row button { flex: 1; }
@@ -582,32 +692,38 @@ html, body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-.preview-modal-overlay {
+.preview-modal-toolbar {
   position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 0;
+  /* mix-blend-mode: difference inverts whatever's underneath. A pure-white
+     icon over a light image renders dark; over a dark image, light. Means
+     the three controls stay readable on ANY composition. */
+  mix-blend-mode: difference;
+}
+.preview-modal-overlay {
   width: 32px;
   height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(22, 22, 30, 0.75);
-  color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #ffffff;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
   padding: 0;
   font-family: inherit;
-  backdrop-filter: blur(4px);
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  transition: opacity 0.12s ease, transform 0.08s ease;
+  opacity: 0.85;
 }
-.preview-modal-overlay:hover {
-  background: var(--accent);
-  color: #1e1e2e;
-  border-color: var(--accent);
-}
-.preview-modal-overlay.top-left    { top: 8px; left: 8px; }
-.preview-modal-overlay.top-right   { top: 8px; right: 8px; }
-.preview-modal-overlay.top-right-2 { top: 8px; right: 48px; }
+.preview-modal-overlay:hover { opacity: 1; }
+.preview-modal-overlay:active { transform: scale(0.94); }
 .preview-modal-loading {
   color: var(--muted);
   font-size: 13px;

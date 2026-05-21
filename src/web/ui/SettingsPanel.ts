@@ -4,6 +4,7 @@ import { showToast } from "./util";
 import { clearPersisted } from "../persist";
 import { defaultComposition, emptyComposition } from "../state";
 import { download as dlIcon, clipboard as clipIcon } from "./icons";
+import { THEMES, resolveTheme } from "../themes";
 
 export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   root.innerHTML = `
@@ -24,11 +25,16 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
     </div>
 
     <div class="setting">
+      <label>Theme</label>
+      <div class="theme-pills" data-themes></div>
+    </div>
+
+    <div class="setting" data-custom-colors hidden>
       <label>Background</label>
       <div class="row"><input type="color" data-bg /></div>
     </div>
 
-    <div class="setting">
+    <div class="setting" data-custom-colors hidden>
       <label>Arrow color</label>
       <div class="row"><input type="color" data-arrow /></div>
     </div>
@@ -64,9 +70,51 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
   const colsVal = root.querySelector<HTMLSpanElement>("[data-cols-val]")!;
   const scale = root.querySelector<HTMLInputElement>("[data-scale]")!;
   const scaleVal = root.querySelector<HTMLSpanElement>("[data-scale-val]")!;
+  const themesEl = root.querySelector<HTMLDivElement>("[data-themes]")!;
+  const customRows = root.querySelectorAll<HTMLDivElement>("[data-custom-colors]");
   const bg = root.querySelector<HTMLInputElement>("[data-bg]")!;
   const arrow = root.querySelector<HTMLInputElement>("[data-arrow]")!;
   const border = root.querySelector<HTMLInputElement>("[data-border]")!;
+
+  const themeButtons: { id: string; el: HTMLButtonElement }[] = [];
+  for (const t of THEMES) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "theme-pill";
+    btn.dataset.theme = t.id;
+    btn.title = t.label;
+    btn.setAttribute("aria-label", t.label);
+    btn.style.setProperty("--swatch-bg", t.bg);
+    btn.style.setProperty("--swatch-arrow", t.arrow);
+    btn.addEventListener("click", () => store.patch({ bgColor: t.bg, arrowColor: t.arrow }));
+    themesEl.appendChild(btn);
+    themeButtons.push({ id: t.id, el: btn });
+  }
+  // Custom pill — visually distinct, opens/keeps the custom color pickers
+  // visible without changing any colors.
+  const customBtn = document.createElement("button");
+  customBtn.type = "button";
+  customBtn.className = "theme-pill theme-pill-custom";
+  customBtn.dataset.theme = "custom";
+  customBtn.title = "Custom";
+  customBtn.setAttribute("aria-label", "Custom");
+  customBtn.textContent = "+";
+  customBtn.addEventListener("click", () => {
+    // Force the custom-color rows visible even when the current colors
+    // happen to match a preset.
+    customForced = true;
+    syncCustomRows();
+    bg.focus();
+  });
+  themesEl.appendChild(customBtn);
+  themeButtons.push({ id: "custom", el: customBtn });
+
+  let customForced = false;
+  const syncCustomRows = () => {
+    const active = resolveTheme(store.get().bgColor, store.get().arrowColor).id;
+    const showCustom = active === "custom" || customForced;
+    for (const el of customRows) el.hidden = !showCustom;
+  };
   const formatPills = root.querySelectorAll<HTMLButtonElement>(".format-pill");
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
   root.querySelector<HTMLSpanElement>("[data-dl-ico]")!.appendChild(dlIcon());
@@ -126,6 +174,10 @@ export const mountSettingsPanel = (root: HTMLElement, store: Store): void => {
     bg.value = c.bgColor;
     arrow.value = c.arrowColor;
     border.checked = c.innerBorder;
+    const active = resolveTheme(c.bgColor, c.arrowColor).id;
+    if (active !== "custom") customForced = false;
+    for (const tb of themeButtons) tb.el.classList.toggle("active", tb.id === active);
+    syncCustomRows();
     const resolved = resolveExportFormat(c);
     for (const pill of formatPills) {
       pill.classList.toggle("active", pill.dataset.formatVal === resolved);

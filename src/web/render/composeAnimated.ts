@@ -10,6 +10,7 @@ import { encodeAnimatedWebp, type AnimatedWebpFrame } from "./webpMuxer";
 import { PANEL_RADIUS } from "./colors";
 import { _s } from "./arrows";
 import { roundedRectPath } from "./imagePanel";
+import { resolveTheme } from "../themes";
 
 const FPS = 25;
 const FRAME_MS = Math.round(1000 / FPS);
@@ -68,9 +69,10 @@ export const composeAnimatedFrames = async (
   const scale = comp.scale;
   const noInnerBorder = !comp.innerBorder;
   const radius = _s(PANEL_RADIUS, scale);
+  const theme = resolveTheme(comp.bgColor, comp.arrowColor);
 
   const items: PanelImage[] = await Promise.all(
-    comp.panels.map((p) => renderPanel(p, scale, noInnerBorder)),
+    comp.panels.map((p) => renderPanel(p, scale, noInnerBorder, theme)),
   );
 
   const slots: AnimSlot[] = [];

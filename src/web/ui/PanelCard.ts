@@ -1,14 +1,16 @@
 import type { Store, Panel } from "../state";
 import { createCodeEditor, type CodeEditorHandle } from "./CodeEditor";
 import { fileToImagePanel, languageOptions } from "./util";
-import { chevronLeft, chevronRight, trash } from "./icons";
+import { gripVertical, trash } from "./icons";
+import type { Theme } from "../themes";
 
 export type PanelCardHandle = {
   root: HTMLElement;
   update: (p: Panel) => void;
+  setTheme: (t: Theme) => void;
 };
 
-export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => {
+export const createPanelCard = (store: Store, panel: Panel, theme: Theme): PanelCardHandle => {
   const root = document.createElement("div");
   root.className = `panel-card panel-card-${panel.kind}`;
 
@@ -52,20 +54,10 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
     controls.appendChild(langSelect);
   }
 
-  const moveLeft = mkIconButton(chevronLeft(), "Move earlier");
-  const moveRight = mkIconButton(chevronRight(), "Move later");
+  const grip = mkIconButton(gripVertical(), "Drag to reorder", "grip");
   const del = mkIconButton(trash(), "Remove panel", "danger");
-  moveLeft.addEventListener("click", () => {
-    const idx = store.get().panels.findIndex((p) => p.id === panel.id);
-    if (idx > 0) store.movePanel(panel.id, idx - 1);
-  });
-  moveRight.addEventListener("click", () => {
-    const c = store.get();
-    const idx = c.panels.findIndex((p) => p.id === panel.id);
-    if (idx >= 0 && idx < c.panels.length - 1) store.movePanel(panel.id, idx + 1);
-  });
   del.addEventListener("click", () => store.removePanel(panel.id));
-  controls.append(moveLeft, moveRight, del);
+  controls.append(grip, del);
 
   header.appendChild(controls);
   root.appendChild(header);
@@ -79,6 +71,7 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
     editor = createCodeEditor({
       initialCode: panel.code,
       initialLanguage: panel.language,
+      theme,
       onChange: (code) => store.patchPanel(panel.id, { code }),
     });
     body.appendChild(editor.root);
@@ -96,6 +89,9 @@ export const createPanelCard = (store: Store, panel: Panel): PanelCardHandle => 
         editor.setLanguage(p.language);
       }
     },
+    setTheme(t) {
+      editor?.setTheme(t);
+    },
   };
 };
 
@@ -110,6 +106,7 @@ const mkIconButton = (
   b.title = title;
   b.setAttribute("aria-label", title);
   b.className = "icon-btn" + (variant ? " " + variant : "");
+  if (variant === "grip") b.classList.add("panel-card-grip");
   return b;
 };
 

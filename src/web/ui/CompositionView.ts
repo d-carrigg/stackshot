@@ -5,6 +5,7 @@ import type { Store } from "../state";
 import { makeCodePanel } from "../state";
 import { createPanelCard } from "./PanelCard";
 import { eye as eyeIcon } from "./icons";
+import { resolveTheme, applyThemeVars } from "../themes";
 
 export type CompositionViewOptions = {
   onPreview?: () => void;
@@ -28,9 +29,13 @@ export const mountCompositionView = (
 
   const render = () => {
     const c = store.get();
+    const theme = resolveTheme(c.bgColor, c.arrowColor);
     stage.dataset.layout = c.layout;
-    stage.style.setProperty("--bg", c.bgColor);
-    stage.style.setProperty("--arrow", c.arrowColor);
+    document.documentElement.dataset.theme = theme.id;
+    // Apply every theme token as a CSS var on the document root. The
+    // whole page (topbar, right rail, composition, dialogs) reads these
+    // via `var(--text)` etc., so the entire UI re-skins on theme change.
+    applyThemeVars(document.documentElement, theme);
 
     // Full rebuild each time keeps this code dead-simple and the perf is
     // fine at the panel counts we expect (handfuls, not hundreds). The
@@ -57,6 +62,8 @@ export const mountCompositionView = (
         if (!panel) return;
         const update = (cardEl as any)._update;
         update?.(panel);
+        const setTheme = (cardEl as any)._setTheme;
+        setTheme?.(theme);
       });
       return;
     }
@@ -81,8 +88,9 @@ export const mountCompositionView = (
       panelsRow.appendChild(empty);
     } else if (c.layout === "grid") {
       c.panels.forEach((p) => {
-        const handle = createPanelCard(store, p);
+        const handle = createPanelCard(store, p, theme);
         (handle.root as any)._update = handle.update;
+        (handle.root as any)._setTheme = handle.setTheme;
         if (p.gridRow !== undefined && p.gridCol !== undefined) {
           handle.root.style.gridRow = String(p.gridRow + 1);
           handle.root.style.gridColumn = String(p.gridCol + 1);
@@ -93,8 +101,10 @@ export const mountCompositionView = (
     } else {
       const seqLayout = c.layout as "horizontal" | "vertical";
       c.panels.forEach((p, i) => {
-        const handle = createPanelCard(store, p);
+        const handle = createPanelCard(store, p, theme);
         (handle.root as any)._update = handle.update;
+        (handle.root as any)._setTheme = handle.setTheme;
+        attachSeqDragHandlers(handle.root, p.id, store, seqLayout);
         panelsRow.appendChild(handle.root);
         if (i < c.panels.length - 1) {
           panelsRow.appendChild(buildArrow(seqLayout));
@@ -109,16 +119,19 @@ export const mountCompositionView = (
   store.subscribe(render);
 };
 
-// HTML5 drag/drop swap for grid mode: drag a card onto another card's
-// header to swap their (gridRow, gridCol). Drag handle is the whole
-// card; we ignore drag attempts that start inside inputs/textareas so
-// editing text still works.
-const attachGridDragHandlers = (el: HTMLElement, panelId: string, store: import("../state").Store): void => {
-  el.draggable = true;
+// Arm the card to be draggable only when the user grabs it by the grip
+// handle. Returns the "armed" state ref so dragstart can early-cancel
+// drags that start from text inputs, selects, etc.
+const wireGripDrag = (el: HTMLElement, panelId: string): { isArmed: () => boolean } => {
+  let armed = false;
   el.dataset.panelId = panelId;
-  el.addEventListener("dragstart", (e) => {
+  el.addEventListener("pointerdown", (e) => {
     const target = e.target as HTMLElement | null;
-    if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.tagName === "SELECT")) {
+    armed = !!target?.closest(".panel-card-grip");
+    el.draggable = armed;
+  });
+  el.addEventListener("dragstart", (e) => {
+    if (!armed) {
       e.preventDefault();
       return;
     }
@@ -126,7 +139,18 @@ const attachGridDragHandlers = (el: HTMLElement, panelId: string, store: import(
     if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
     el.classList.add("dragging");
   });
-  el.addEventListener("dragend", () => el.classList.remove("dragging"));
+  el.addEventListener("dragend", () => {
+    armed = false;
+    el.draggable = false;
+    el.classList.remove("dragging");
+  });
+  return { isArmed: () => armed };
+};
+
+// Grid drag/drop: drop the dragged card on another → swap their cell
+// positions. Drag must start from the grip handle.
+const attachGridDragHandlers = (el: HTMLElement, panelId: string, store: import("../state").Store): void => {
+  wireGripDrag(el, panelId);
   el.addEventListener("dragover", (e) => {
     if (e.dataTransfer?.types.includes("text/x-panel-id")) {
       e.preventDefault();
@@ -146,6 +170,51 @@ const attachGridDragHandlers = (el: HTMLElement, panelId: string, store: import(
     if (!a || !b) return;
     store.patchPanel(a.id, { gridRow: b.gridRow, gridCol: b.gridCol });
     store.patchPanel(b.id, { gridRow: a.gridRow, gridCol: a.gridCol });
+  });
+};
+
+// Sequential (horizontal / vertical) drag-to-reorder: pick a card up by
+// the grip, drop on another card; cursor position relative to that card
+// decides whether the insert lands before or after it.
+const attachSeqDragHandlers = (
+  el: HTMLElement,
+  panelId: string,
+  store: import("../state").Store,
+  layout: "horizontal" | "vertical",
+): void => {
+  wireGripDrag(el, panelId);
+  const insertBeforeFromEvent = (e: DragEvent): boolean => {
+    const rect = el.getBoundingClientRect();
+    return layout === "horizontal"
+      ? e.clientX - rect.left < rect.width / 2
+      : e.clientY - rect.top < rect.height / 2;
+  };
+  el.addEventListener("dragover", (e) => {
+    if (!e.dataTransfer?.types.includes("text/x-panel-id")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const before = insertBeforeFromEvent(e);
+    el.classList.toggle("drop-before", before);
+    el.classList.toggle("drop-after", !before);
+  });
+  el.addEventListener("dragleave", () => {
+    el.classList.remove("drop-before", "drop-after");
+  });
+  el.addEventListener("drop", (e) => {
+    el.classList.remove("drop-before", "drop-after");
+    const fromId = e.dataTransfer?.getData("text/x-panel-id");
+    if (!fromId || fromId === panelId) return;
+    e.preventDefault();
+    const c = store.get();
+    const fromIdx = c.panels.findIndex((p) => p.id === fromId);
+    const toIdx = c.panels.findIndex((p) => p.id === panelId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const before = insertBeforeFromEvent(e);
+    let target = before ? toIdx : toIdx + 1;
+    // movePanel splices: dragging downward, the index after the dragged
+    // element is removed shifts left by one.
+    if (fromIdx < target) target -= 1;
+    store.movePanel(fromId, target);
   });
 };
 

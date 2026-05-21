@@ -1,6 +1,7 @@
 import type { Composition, ExportFormat } from "./state";
 import { composeCanvas } from "./render/compose";
 import { composeAnimatedBlob, composeAnimatedFrames, hasAnimatedPanel } from "./render/composeAnimated";
+import { composeMetadata, injectPngText } from "./render/pngMetadata";
 
 export type RenderedImage = {
   blob: Blob;
@@ -13,12 +14,10 @@ const canvasToBlob = (canvas: HTMLCanvasElement, type = "image/png", quality?: n
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))), type, quality);
   });
 
-// "auto" picks the most faithful single-blob format for the content:
-// motion → animated WEBP, static → PNG.
+// "auto" → WEBP. Smaller than PNG for the same fidelity, and the same
+// codec handles animated panels without a format switch.
 export const resolveExportFormat = (comp: Composition): Exclude<ExportFormat, "auto"> => {
-  if (comp.exportFormat === "auto") {
-    return hasAnimatedPanel(comp) ? "webp" : "png";
-  }
+  if (comp.exportFormat === "auto") return "webp";
   return comp.exportFormat;
 };
 
@@ -28,9 +27,12 @@ export const renderForExport = async (comp: Composition): Promise<RenderedImage>
 
   if (format === "png") {
     // First-frame PNG. Animated input loses its motion; that's the
-    // honest behaviour for a single-frame format.
+    // honest behaviour for a single-frame format. Embed the source
+    // composition as an iTXt chunk so the image round-trips.
     const canvas = await composeCanvas(comp);
-    return { blob: await canvasToBlob(canvas, "image/png"), mime: "image/png", ext: "png" };
+    const raw = await canvasToBlob(canvas, "image/png");
+    const blob = await injectPngText(raw, "codeshot", composeMetadata(comp));
+    return { blob, mime: "image/png", ext: "png" };
   }
   if (format === "webp") {
     if (animated) {

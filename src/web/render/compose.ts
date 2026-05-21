@@ -1,9 +1,10 @@
 // Top-level Canvas composition. Mirrors compose_panels() in src/cli/compose.py.
-import { PANEL_BG_HEX, PANEL_RADIUS, hexToRgb, type RGB } from "./colors";
+import { PANEL_RADIUS, hexToRgb, type RGB } from "./colors";
 import { _s, arrowRight, arrowDown, drawArrowSupersampled, SHAFT_HALF, HEAD_LEN, HEAD_HALF } from "./arrows";
 import { renderCodePanelImage } from "./codePanel";
 import { renderImagePanel, roundedRectPath } from "./imagePanel";
 import type { Composition, Panel } from "../state";
+import { resolveTheme, type Theme } from "../themes";
 
 export type PanelImage = {
   canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -14,13 +15,17 @@ export type PanelImage = {
 };
 
 const TITLE_FONT_FAMILY = '"Inter", "Helvetica Neue", Arial, sans-serif';
-const TITLE_COLOR = "#cdd6f4";
 
 const titleFontPx = (scale: number) => Math.max(1, Math.round(24 * scale));
 
-export const renderPanel = async (p: Panel, scale: number, noInnerBorder: boolean): Promise<PanelImage> => {
+export const renderPanel = async (
+  p: Panel,
+  scale: number,
+  noInnerBorder: boolean,
+  theme: Theme,
+): Promise<PanelImage> => {
   if (p.kind === "code") {
-    const img = await renderCodePanelImage(p.code, p.language, scale);
+    const img = await renderCodePanelImage(p.code, p.language, scale, theme);
     return { canvas: img.canvas, width: img.width, height: img.height, title: p.title, isImage: false };
   }
   const rounded = noInnerBorder;
@@ -59,8 +64,11 @@ export const composeCanvas = async (comp: Composition): Promise<HTMLCanvasElemen
 
   const scale = comp.scale;
   const noInnerBorder = !comp.innerBorder;
+  const theme = resolveTheme(comp.bgColor, comp.arrowColor);
 
-  const items = await Promise.all(comp.panels.map((p) => renderPanel(p, scale, noInnerBorder)));
+  const items = await Promise.all(
+    comp.panels.map((p) => renderPanel(p, scale, noInnerBorder, theme)),
+  );
 
   return composeFromItems(items, comp, scale, noInnerBorder);
 };
@@ -90,6 +98,8 @@ const composeGrid = (
   const panelRadius = _s(PANEL_RADIUS, scale);
   const rows = Math.max(1, comp.gridRows);
   const cols = Math.max(1, comp.gridCols);
+  const theme = resolveTheme(comp.bgColor, comp.arrowColor);
+  const titleColor = theme.title;
 
   const probe = document.createElement("canvas").getContext("2d")!;
   const pads = items.map((it) => (noInnerBorder && it.isImage ? 0 : basePanelPad));
@@ -150,7 +160,7 @@ const composeGrid = (
     const py = titleY + th;
 
     if (it.title) {
-      ctx.fillStyle = TITLE_COLOR;
+      ctx.fillStyle = titleColor;
       ctx.font = `600 ${titleFont}px ${TITLE_FONT_FAMILY}`;
       ctx.textBaseline = "top";
       ctx.textAlign = "left";
@@ -158,7 +168,7 @@ const composeGrid = (
     }
     const drawBg = !(noInnerBorder && it.isImage);
     if (drawBg) {
-      ctx.fillStyle = PANEL_BG_HEX;
+      ctx.fillStyle = theme.panelBg;
       roundedRectPath(ctx, px, py, pw, ph, panelRadius);
       ctx.fill();
     }
@@ -184,6 +194,8 @@ const composeHorizontal = (
   const shaftHalf = _s(SHAFT_HALF, scale);
   const headLen = _s(HEAD_LEN, scale);
   const headHalf = _s(HEAD_HALF, scale);
+  const theme = resolveTheme(comp.bgColor, comp.arrowColor);
+  const titleColor = theme.title;
 
   const probe = document.createElement("canvas").getContext("2d")!;
   const titleH = Math.max(
@@ -221,12 +233,12 @@ const composeHorizontal = (
     const py = topPad + Math.floor((maxPanelH - ph) / 2);
     const drawBg = !(noInnerBorder && it.isImage);
     if (drawBg) {
-      ctx.fillStyle = PANEL_BG_HEX;
+      ctx.fillStyle = theme.panelBg;
       roundedRectPath(ctx, px, py, pw, ph, panelRadius);
       ctx.fill();
     }
     if (it.title) {
-      ctx.fillStyle = TITLE_COLOR;
+      ctx.fillStyle = titleColor;
       ctx.font = `600 ${titleFont}px ${TITLE_FONT_FAMILY}`;
       ctx.textBaseline = "top";
       ctx.textAlign = "left";
@@ -266,6 +278,8 @@ const composeVertical = (
   const shaftHalf = _s(SHAFT_HALF, scale);
   const headLen = _s(HEAD_LEN, scale);
   const headHalf = _s(HEAD_HALF, scale);
+  const theme = resolveTheme(comp.bgColor, comp.arrowColor);
+  const titleColor = theme.title;
 
   const probe = document.createElement("canvas").getContext("2d")!;
   const pads = items.map((it) => (noInnerBorder && it.isImage ? 0 : basePanelPad));
@@ -300,7 +314,7 @@ const composeVertical = (
     const ph = panelH[i]!;
     const th = titleHeights[i]!;
     if (it.title) {
-      ctx.fillStyle = TITLE_COLOR;
+      ctx.fillStyle = titleColor;
       ctx.font = `600 ${titleFont}px ${TITLE_FONT_FAMILY}`;
       ctx.textBaseline = "top";
       ctx.textAlign = "left";
@@ -309,7 +323,7 @@ const composeVertical = (
     }
     const drawBg = !(noInnerBorder && it.isImage);
     if (drawBg) {
-      ctx.fillStyle = PANEL_BG_HEX;
+      ctx.fillStyle = theme.panelBg;
       roundedRectPath(ctx, margin, y, maxPanelW, ph, panelRadius);
       ctx.fill();
     }

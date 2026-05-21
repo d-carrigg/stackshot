@@ -1,4 +1,7 @@
-import { ARROW_HEX, DEFAULT_BG_HEX } from "./render/colors";
+import { DARK_THEME } from "./themes";
+
+const DEFAULT_BG_HEX = DARK_THEME.bg;
+const ARROW_HEX = DARK_THEME.arrow;
 
 export type Layout = "horizontal" | "vertical" | "grid";
 export type ExportFormat = "auto" | "png" | "webp" | "gif";
@@ -40,7 +43,7 @@ export type Composition = {
   innerBorder: boolean; // when false → image panels get rounded corners, no inner panel bg
   gridRows: number;    // only used when layout === "grid"
   gridCols: number;    // only used when layout === "grid"
-  exportFormat: ExportFormat; // "auto" → png unless motion content present, then webp
+  exportFormat: ExportFormat; // "auto" → webp
   selectedId: string | null;
 };
 
@@ -86,14 +89,17 @@ export const emptyComposition = (): Composition => ({
 
 export const defaultComposition = (): Composition => {
   const first = makeCodePanel({
-    code: "def hello(name):\n    return f\"hello, {name}\"\n\nprint(hello(\"world\"))\n",
+    code:
+      "nums = [1, 2, 3, 4, 5]\n" +
+      "squares = [n ** 2 for n in nums]\n" +
+      "print(squares)\n",
     language: "python",
-    title: "before",
+    title: "input",
   });
   const second = makeCodePanel({
-    code: "def hello(name: str) -> str:\n    return f\"hello, {name}\"\n\nprint(hello(\"world\"))\n",
-    language: "python",
-    title: "after",
+    code: "[1, 4, 9, 16, 25]\n",
+    language: "text",
+    title: "output",
   });
   return {
     panels: [first, second],

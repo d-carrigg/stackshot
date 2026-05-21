@@ -8,14 +8,17 @@
 import { createHighlighterCore, type HighlighterCore } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import oneDarkPro from "shiki/themes/one-dark-pro.mjs";
+import githubLight from "shiki/themes/github-light.mjs";
 
-import { PANEL_BG_HEX } from "./colors";
+import type { SyntaxThemeId } from "../themes";
 
 export type Token = { content: string; color: string };
 export type TokenLine = Token[];
 
-const DEFAULT_FG = "#cdd6f4";
-const SHIKI_THEME = "one-dark-pro";
+const DEFAULT_FG_FOR: Record<SyntaxThemeId, string> = {
+  "one-dark-pro": "#cdd6f4",
+  "github-light": "#1e1e2e",
+};
 
 // Curated language set. Each entry is a dynamic import so Vite emits one
 // small chunk per grammar, fetched only when first requested. Keep in
@@ -72,7 +75,7 @@ const inflight = new Map<string, Promise<void>>();
 const getHighlighter = async (): Promise<HighlighterCore> => {
   if (!highlighterPromise) {
     highlighterPromise = createHighlighterCore({
-      themes: [oneDarkPro],
+      themes: [oneDarkPro, githubLight],
       langs: [],
       engine: createJavaScriptRegexEngine(),
     });
@@ -109,19 +112,19 @@ export const ensureLanguage = async (lang: string): Promise<string> => {
   return normalized;
 };
 
-export const tokenize = async (code: string, lang: string): Promise<TokenLine[]> => {
+export const tokenize = async (
+  code: string,
+  lang: string,
+  theme: SyntaxThemeId = "one-dark-pro",
+): Promise<TokenLine[]> => {
   const normalized = await ensureLanguage(lang);
+  const fallbackFg = DEFAULT_FG_FOR[theme];
   if (normalized === "text") {
-    return code.split("\n").map((line) => [{ content: line, color: DEFAULT_FG }]);
+    return code.split("\n").map((line) => [{ content: line, color: fallbackFg }]);
   }
   const h = await getHighlighter();
-  const result = h.codeToTokens(code, {
-    lang: normalized,
-    theme: SHIKI_THEME,
-  });
+  const result = h.codeToTokens(code, { lang: normalized, theme });
   return result.tokens.map((line) =>
-    line.map((t) => ({ content: t.content, color: t.color ?? DEFAULT_FG }))
+    line.map((t) => ({ content: t.content, color: t.color ?? fallbackFg }))
   );
 };
-
-export const themePanelBg = PANEL_BG_HEX;
