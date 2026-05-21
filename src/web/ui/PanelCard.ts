@@ -48,8 +48,10 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
   } else {
     // Per-image "inner border" toggle. Off by default so a freshly added
     // image sits flush in the layout without an unrequested panel frame.
+    // Rendered as a Google-style switch so it reads as a clear binary,
+    // not a vestigial checkbox.
     const label = document.createElement("label");
-    label.className = "panel-card-toggle";
+    label.className = "panel-card-switch";
     label.title = "Wrap the image in a panel background";
     const cb = document.createElement("input");
     cb.type = "checkbox";
@@ -57,9 +59,13 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
     cb.addEventListener("change", () => {
       store.patchPanel(panel.id, { innerBorder: cb.checked });
     });
+    const track = document.createElement("span");
+    track.className = "panel-card-switch-track";
+    track.setAttribute("aria-hidden", "true");
     const txt = document.createElement("span");
+    txt.className = "panel-card-switch-label";
     txt.textContent = "border";
-    label.append(cb, txt);
+    label.append(cb, track, txt);
     controls.appendChild(label);
     borderToggle = cb;
   }
