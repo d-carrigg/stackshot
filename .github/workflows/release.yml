@@ -96,8 +96,14 @@ jobs:
       - run: uv pip install pyinstaller
       - name: Stage package for PyInstaller
         shell: bash
+        # The setuptools layout maps the `codeimg` package to `src/cli`
+        # (see [tool.setuptools] in pyproject.toml). PyInstaller wants a
+        # real `codeimg/` directory with `__main__.py` at its root, so
+        # we mirror src/cli/ → codeimg/ (NOT all of src/ — that would
+        # nest the entry point under codeimg/cli/__main__.py and break
+        # the build).
         run: |
-          python -c "import shutil, os; shutil.rmtree('codeimg', ignore_errors=True); shutil.copytree('src', 'codeimg')"
+          python -c "import shutil; shutil.rmtree('codeimg', ignore_errors=True); shutil.copytree('src/cli', 'codeimg')"
       - name: Build binary
         shell: bash
         run: |
