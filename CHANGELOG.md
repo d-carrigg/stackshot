@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.6.0 — 2026-05-21
+
+### Changed
+- Web: **Topbar-only chrome**. The right rail is gone; every primary
+  control (layout, theme, scale, format, preview, copy, download)
+  lives in the topbar, with a `⋯` overflow menu and a footer status
+  bar carrying composition meta + keyboard-shortcut hints.
+- Web: **Scale as flat pills** — `LOW / MED / HIGH / CUSTOM` instead
+  of a slider. Defaults bumped: `low=3.0`, `med=4.0` (new default),
+  `high=5.0`. Custom accepts any value in `1.0–8.0` (step `0.5`).
+- Web: **Icon-only action buttons** for Preview / Copy / Download
+  with native tooltips. Download keeps its accent fill as the
+  primary CTA; the trio takes roughly a third of the horizontal
+  space its labeled predecessors did.
+- Web: **Theme-custom popover** replaces the always-on color inputs
+  — click the `+` swatch in the topbar theme strip (or in the menu's
+  Theme section) to open bg/arrow color pickers.
+- Web: **Clear all** moves from the overflow menu into the bottom
+  add-row alongside `+code` / `+image`, styled as a danger
+  affordance.
+
+### Added
+- Web: **Responsive collapse**. As the viewport narrows the topbar
+  progressively folds Format `<880`, Scale `<740`, Theme `<600`,
+  Layout `<460` into the `⋯` menu as clearly labeled sections.
+  Below `480` the topbar still flex-wraps as a fallback so labels
+  remain reachable.
+- Web: **Footer status bar** at the bottom of the viewport: live
+  composition meta on the left (panel count, layout, scale, border
+  state), `⌘S` / `⌘C` keyboard hints on the right. The shortcuts
+  are wired globally — `⌘S` triggers download, `⌘C` copies to
+  clipboard (skipped when a text selection or input is focused).
+- Web: **`SCALE_VALUES` / `DEFAULT_SCALE`** exported from
+  `state.ts`; the default composition tracks the named med preset
+  rather than a literal `2.0`.
+
+### Removed
+- Web: right-rail `SettingsPanel.ts` and its CSS.
+
 ## 0.5.0 — 2026-05-20
 
 ### Added
