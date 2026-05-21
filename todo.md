@@ -25,10 +25,13 @@ Numbers in parens map back to the original list.
 - [x] Open-source licenses modal (26)
 - [x] Reset button relocated into the add-panel row (27)
 - [x] "Canvas never leaves your browser" messaging (31)
+- [x] Per-panel line numbers — `#` toggle per code panel (live editor + export); ⌃/⌘-click or long-press toggles all (35)
+- [x] Image drag-to-replace — drop an image on an image or code panel to replace it in place (37)
+- [x] Center the add/action buttons in horizontal mode (18)
+- [x] Download-the-CLI link — "Get the CLI" → GitHub Releases, in the ⋯ menu (34)
 
 ## In progress
 - [~] Panel controls as an in-block overlay — lang indicator, remove, drag handle top-right of each panel (11)
-- [~] Image drag-to-replace — works on image panels; still doesn't work over code panels (37)
 - [~] Accessibility — aria labels + keyboard nav on combobox/modals; no full audit yet (36)
 
 ## Backlog
@@ -36,7 +39,6 @@ Numbers in parens map back to the original list.
 ### Canvas & layout
 - [ ] Device-aware default — zoom-to-fit 2 panels by screen size; default to vertical on small screens (7)
 - [ ] Horizontal mode: "after" panel gets cut off when zoomed (~130% on 1440p) — proper crop/scale (16)
-- [ ] Center the add/action buttons on the page in horizontal mode, not under the first card (18)
 
 ### Arrows
 - [ ] Multiple arrow styles/shapes (28)
@@ -45,13 +47,11 @@ Numbers in parens map back to the original list.
 
 ### Panels & content
 - [ ] Per-panel color customization (25)
-- [ ] Line numbers toggle (35)
 - [ ] Import code from a GitHub URL — file path + line selector/preview (38)
 - [ ] Better default example that shows a true input → output (12)
 
 ### Editing & UX
 - [ ] Undo / redo (32)
-- [ ] Download-the-CLI link (PyPI / GitHub binaries) (34)
 - [ ] Dialog icons — drop backgrounds, move to the right, polish (13)
 - [ ] On mobile, button actions (add code, image, reset, etc) don't flex to fit the width of the screen (39)
 - [ ] Integrate title into the panel (currently it's a separate text element above the panel) (40)
