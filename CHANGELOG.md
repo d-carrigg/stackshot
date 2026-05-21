@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.2 — 2026-05-20
+
+### Added
+- Web app loads Umami analytics from `cloud.umami.is`. CSP updated
+  to whitelist that origin in `script-src` and `connect-src`. Umami
+  is cookieless and PII-free, but a privacy-conscious update to the
+  topbar tagline ("data never leaves your browser") may be worth
+  considering separately.
+
+### Fixed
+- `tsc --noEmit` failed in CI with `TS2882: Cannot find module or type
+  declarations for side-effect import of './ui/styles.css'` because
+  `tsconfig.json` sets `types: []` (disables auto-loaded `@types/*`)
+  but never explicitly referenced Vite's client types. Add
+  `src/web/env.d.ts` with `/// <reference types="vite/client" />`
+  so CSS / asset side-effect imports type-check.
+
 ## 0.4.1 — 2026-05-20
 
 ### Fixed
