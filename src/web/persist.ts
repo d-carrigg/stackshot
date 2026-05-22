@@ -89,6 +89,8 @@ const migrateV1 = async (parsed: any): Promise<Composition> => {
     layout: parsed.layout ?? "vertical",
     bgColor: parsed.bgColor,
     arrowColor: parsed.arrowColor,
+    showArrows: parsed.showArrows ?? true,
+    arrows: parsed.arrows ?? {},
     scale: parsed.scale ?? 2.0,
     gridRows: parsed.gridRows ?? 2,
     gridCols: parsed.gridCols ?? 2,
@@ -114,6 +116,8 @@ export const load = async (): Promise<Composition | null> => {
       return {
         ...parsed,
         panels,
+        showArrows: parsed.showArrows ?? true,
+        arrows: parsed.arrows ?? {},
         gridRows: parsed.gridRows ?? 2,
         gridCols: parsed.gridCols ?? 2,
         gridNumbers: parsed.gridNumbers ?? false,

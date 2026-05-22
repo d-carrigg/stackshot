@@ -12,7 +12,7 @@ import {
 } from "./state";
 import { nextBlobId, putBlob, resolveBlobUrl } from "./storage/blobStore";
 
-export type TemplateId = "code-to-code" | "code-to-image" | "code-to-gif";
+export type TemplateId = "code-to-code" | "code-to-image" | "code-to-gif" | "image-vs-image";
 
 export type Template = {
   id: TemplateId;
@@ -35,6 +35,11 @@ export const TEMPLATES: Template[] = [
     id: "code-to-gif",
     label: "Code → GIF",
     description: "Show motion — an animated GIF next to the code that produced it.",
+  },
+  {
+    id: "image-vs-image",
+    label: "This vs That",
+    description: "Compare two images side by side with a VS badge between them. Drop your own screenshots in.",
   },
 ];
 
@@ -152,6 +157,19 @@ export const buildTemplate = async (id: TemplateId): Promise<Composition> => {
     return {
       ...emptyComposition(),
       panels: [code, image],
+    };
+  }
+  if (id === "image-vs-image") {
+    const before = await buildPlaceholderImagePanel();
+    before.title = "Before";
+    const after = await buildPlaceholderImagePanel();
+    after.title = "After";
+    return {
+      ...emptyComposition(),
+      panels: [before, after],
+      layout: "horizontal",
+      showArrows: true,
+      arrows: { [before.id]: { style: "vs" } },
     };
   }
   // code-to-gif

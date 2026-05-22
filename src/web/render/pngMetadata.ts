@@ -65,10 +65,12 @@ export const composeMetadata = (comp: Composition): string => {
     }));
   return JSON.stringify({
     app: "stackshot",
-    schema: 1,
+    schema: 2,
     layout: comp.layout,
     bgColor: comp.bgColor,
     arrowColor: comp.arrowColor,
+    showArrows: comp.showArrows,
+    arrows: comp.arrows,
     code: codes,
   });
 };

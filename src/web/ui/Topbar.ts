@@ -19,6 +19,7 @@ import {
   github as ghIcon,
   listOrdered as listOrderedIcon,
   layoutTemplate as templatesIcon,
+  arrowRight as arrowRightIcon,
 } from "./icons";
 import { THEMES, resolveTheme } from "../themes";
 
@@ -90,6 +91,30 @@ const buildGridNumbersToggle = (store: Store, variant: Variant): HTMLElement => 
   return wrap;
 };
 
+// Global show/hide arrows toggle. Unlike grid-numbers this applies in every
+// layout, so it never hides itself.
+const buildArrowsToggle = (store: Store, variant: Variant): HTMLElement => {
+  const wrap = document.createElement("div");
+  wrap.className = variant === "topbar" ? "topbar-arrows" : "menu-arrows";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "topbar-icon-toggle";
+  btn.title = "Show connector arrows";
+  btn.setAttribute("aria-label", "Show connector arrows");
+  btn.appendChild(arrowRightIcon());
+  btn.addEventListener("click", () => store.patch({ showArrows: !store.get().showArrows }));
+  wrap.appendChild(btn);
+
+  const render = () => {
+    const c = store.get();
+    btn.classList.toggle("active", c.showArrows);
+    btn.setAttribute("aria-pressed", String(c.showArrows));
+  };
+  render();
+  store.subscribe(render);
+  return wrap;
+};
+
 const buildThemeGroup = (store: Store, variant: Variant): HTMLElement => {
   const wrap = document.createElement("div");
   wrap.className = variant === "topbar" ? "topbar-themes" : "menu-themes";
@@ -105,7 +130,10 @@ const buildThemeGroup = (store: Store, variant: Variant): HTMLElement => {
     btn.setAttribute("aria-label", t.label);
     btn.style.setProperty("--swatch-bg", t.bg);
     btn.style.setProperty("--swatch-arrow", t.arrow);
-    btn.addEventListener("click", () => store.patch({ bgColor: t.bg, arrowColor: t.arrow }));
+    btn.addEventListener("click", () => {
+      store.patch({ bgColor: t.bg, arrowColor: t.arrow });
+      store.clearArrowColorOverrides();
+    });
     wrap.appendChild(btn);
     themeButtons.push({ id: t.id, el: btn });
   }
@@ -154,7 +182,10 @@ const buildThemeGroup = (store: Store, variant: Variant): HTMLElement => {
     arrow = row.querySelector<HTMLInputElement>("[data-arrow]")!;
   }
   bg.addEventListener("input", () => store.patch({ bgColor: bg.value }));
-  arrow.addEventListener("input", () => store.patch({ arrowColor: arrow.value }));
+  arrow.addEventListener("input", () => {
+    store.patch({ arrowColor: arrow.value });
+    store.clearArrowColorOverrides();
+  });
 
   const render = () => {
     const c = store.get();
@@ -266,6 +297,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
 
       <div class="topbar-slot" data-slot="layout"></div>
       <div class="topbar-slot" data-slot="gridnums"></div>
+      <div class="topbar-slot" data-slot="arrows"></div>
       <span class="topbar-sep" data-sep-after="layout" aria-hidden="true"></span>
 
       <div class="topbar-slot" data-slot="themes"></div>
@@ -302,6 +334,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
         <div class="topbar-more-menu" data-more-menu hidden role="menu">
           <div class="menu-overflow" data-overflow="layout"></div>
           <div class="menu-overflow" data-overflow="gridnums"></div>
+          <div class="menu-overflow" data-overflow="arrows"></div>
           <div class="menu-overflow" data-overflow="themes"></div>
           <div class="menu-overflow" data-overflow="scale"></div>
           <div class="menu-overflow" data-overflow="format"></div>
@@ -332,6 +365,9 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
 
   slot("gridnums").appendChild(buildGridNumbersToggle(store, "topbar"));
   over("gridnums").appendChild(wrapMenuSection("Numbering", buildGridNumbersToggle(store, "menu")));
+
+  slot("arrows").appendChild(buildArrowsToggle(store, "topbar"));
+  over("arrows").appendChild(wrapMenuSection("Arrows", buildArrowsToggle(store, "menu")));
 
   slot("themes").appendChild(buildThemeGroup(store, "topbar"));
   over("themes").appendChild(wrapMenuSection("Theme", buildThemeGroup(store, "menu")));

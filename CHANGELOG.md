@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.12.0 — 2026-05-22
+
+### Added
+- **Arrow styles** (web). Connectors between panels can now be **solid**
+  (the classic filled arrow), **dashed**, or a **VS badge** for
+  comparisons.
+- **Per-arrow editing** (web). Hover any connector in the editor to reveal
+  an edit button; pick its style and color, or "Apply to all" to push one
+  arrow's look onto every connector. Picking a theme or custom arrow color
+  resets per-arrow color overrides (it acts as an apply-to-all).
+- **Show-arrows toggle** (web). A new topbar toggle shows/hides connectors
+  in every layout.
+- **Arrows in grid layout** (web). Grid compositions now draw connectors
+  between orthogonally-adjacent cells (in reading order).
+- **"This vs That" template** (web). A two-image comparison starter with a
+  VS badge between the panels.
+
 ## 0.11.1 — 2026-05-22
 
 ### Added

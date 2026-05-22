@@ -6,6 +6,20 @@ const ARROW_HEX = DARK_THEME.arrow;
 export type Layout = "horizontal" | "vertical" | "grid";
 export type ExportFormat = "auto" | "png" | "webp" | "gif";
 
+// Connector between two consecutive panels. "solid" is the classic filled
+// arrow, "dashed" a dashed line + head, "vs" a "VS" badge for comparisons.
+export type ArrowStyle = "solid" | "dashed" | "vs";
+// Per-connector override. Both optional → fall back to global (arrowColor /
+// "solid"). Stored keyed by the "from" panel id so overrides survive
+// reorder/removal without index drift.
+export type ArrowSpec = { style?: ArrowStyle; color?: string };
+
+export type ResolvedArrow = { style: ArrowStyle; color: string };
+export const resolveArrow = (c: Composition, fromId: string): ResolvedArrow => {
+  const spec = c.arrows[fromId];
+  return { style: spec?.style ?? "solid", color: spec?.color ?? c.arrowColor };
+};
+
 // Grid mode renders panels into a fixed cell grid. Beyond 6 panels the
 // layout stops being readable at any export size, and our compose path
 // only draws panels whose (gridRow, gridCol) fall in-bounds — so silently
@@ -73,7 +87,9 @@ export type Composition = {
   panels: Panel[];
   layout: Layout;
   bgColor: string;     // hex
-  arrowColor: string;  // hex
+  arrowColor: string;  // hex — global default arrow color
+  showArrows: boolean; // global toggle; applies to every layout
+  arrows: Record<string, ArrowSpec>; // sparse per-connector overrides (key = "from" panel id)
   scale: number;       // 1.0 - 8.0 (presets: low=3, med=4, high=5)
   gridRows: number;    // only used when layout === "grid"
   gridCols: number;    // only used when layout === "grid"
@@ -114,6 +130,8 @@ export const emptyComposition = (): Composition => ({
   layout: "vertical",
   bgColor: DEFAULT_BG_HEX,
   arrowColor: ARROW_HEX,
+  showArrows: true,
+  arrows: {},
   scale: DEFAULT_SCALE,
   gridRows: 2,
   gridCols: 2,
@@ -141,6 +159,8 @@ export const defaultComposition = (): Composition => {
     layout: "vertical",
     bgColor: DEFAULT_BG_HEX,
     arrowColor: ARROW_HEX,
+    showArrows: true,
+    arrows: {},
     scale: DEFAULT_SCALE,
     gridRows: 2,
     gridCols: 2,
@@ -299,6 +319,40 @@ export class Store {
 
   select(id: string | null): void {
     this.set((c) => ({ ...c, selectedId: id }));
+  }
+
+  // Merge an override for the connector that starts after `fromId`.
+  setArrow(fromId: string, partial: ArrowSpec): void {
+    this.set((c) => ({
+      ...c,
+      arrows: { ...c.arrows, [fromId]: { ...c.arrows[fromId], ...partial } },
+    }));
+  }
+
+  // Push one spec onto every connector (the "apply to all" affordance). A
+  // color in the spec also becomes the new global default so future panels
+  // inherit it.
+  applyArrowToAll(spec: ArrowSpec): void {
+    this.set((c) => {
+      const arrows: Record<string, ArrowSpec> = {};
+      for (let i = 0; i < c.panels.length - 1; i++) {
+        arrows[c.panels[i]!.id] = { ...spec };
+      }
+      return { ...c, arrows, ...(spec.color ? { arrowColor: spec.color } : {}) };
+    });
+  }
+
+  // Drop per-arrow color overrides so the global arrowColor wins again. Used
+  // when a theme / custom color is picked — that acts as an apply-to-all.
+  // Style overrides are preserved.
+  clearArrowColorOverrides(): void {
+    this.set((c) => {
+      const arrows: Record<string, ArrowSpec> = {};
+      for (const [id, spec] of Object.entries(c.arrows)) {
+        if (spec.style) arrows[id] = { style: spec.style };
+      }
+      return { ...c, arrows };
+    });
   }
 
   subscribe(l: Listener): () => void {

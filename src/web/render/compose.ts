@@ -1,9 +1,12 @@
 // Top-level Canvas composition. Mirrors compose_panels() in src/cli/compose.py.
 import { PANEL_RADIUS, hexToRgb, type RGB } from "./colors";
-import { _s, arrowRight, arrowDown, drawArrowSupersampled, SHAFT_HALF, HEAD_LEN, HEAD_HALF } from "./arrows";
+import {
+  _s, arrowRight, arrowDown, drawArrowSupersampled, drawDashedArrow, drawVsBadge,
+  SHAFT_HALF, HEAD_LEN, HEAD_HALF,
+} from "./arrows";
 import { renderCodePanelImage } from "./codePanel";
 import { renderImagePanel, roundedRectPath } from "./imagePanel";
-import type { Composition, Panel } from "../state";
+import { resolveArrow, type Composition, type Panel } from "../state";
 import { resolveTheme, type Theme } from "../themes";
 
 export type PanelImage = {
@@ -74,6 +77,35 @@ const measurePanels = (items: PanelImage[], scale: number): PanelMetrics => {
   return { titleFont, panelRadius, probe, pads, panelW, panelH };
 };
 
+// Draw the connector between two consecutive panels, dispatching on the
+// per-arrow resolved style. `a1`/`a2` are the start/tip along the arrow axis;
+// `cross` is the fixed cross-axis coordinate. Shared by all three layouts.
+const drawConnector = (
+  ctx: CanvasRenderingContext2D,
+  comp: Composition,
+  fromId: string,
+  dir: "right" | "down",
+  a1: number, a2: number, cross: number,
+  shaftHalf: number, headLen: number, headHalf: number,
+  vsRadius: number,
+): void => {
+  const { style, color } = resolveArrow(comp, fromId);
+  if (style === "vs") {
+    const mid = (a1 + a2) / 2;
+    if (dir === "right") drawVsBadge(ctx, mid, cross, vsRadius, color);
+    else drawVsBadge(ctx, cross, mid, vsRadius, color);
+    return;
+  }
+  if (style === "dashed") {
+    drawDashedArrow(ctx, dir, a1, a2, cross, shaftHalf, headLen, headHalf, color);
+    return;
+  }
+  const poly = dir === "right"
+    ? arrowRight(a1, a2, cross, shaftHalf, headLen, headHalf)
+    : arrowDown(a1, a2, cross, shaftHalf, headLen, headHalf);
+  drawArrowSupersampled(ctx, poly, color);
+};
+
 export const composeFromItems = (
   items: PanelImage[],
   comp: Composition,
@@ -90,7 +122,9 @@ const composeGrid = (
   scale: number,
 ): HTMLCanvasElement => {
   const margin = _s(40, scale);
-  const gutter = _s(24, scale);
+  // Widen the cell gutter when arrows are shown so the connector has room to
+  // sit between cells instead of crammed against a panel edge.
+  const gutter = _s(comp.showArrows ? 64 : 24, scale);
   const titleGap = _s(8, scale);
   const rows = Math.max(1, comp.gridRows);
   const cols = Math.max(1, comp.gridCols);
@@ -181,6 +215,41 @@ const composeGrid = (
     ctx.drawImage(it.canvas, px + pad, py + pad);
   });
 
+  // Connectors between consecutive panels — only when the two land in
+  // orthogonally-adjacent cells (right or down). Diagonal/non-adjacent
+  // transitions are skipped so geometry stays purely horizontal/vertical.
+  if (comp.showArrows) {
+    const shaftHalf = _s(SHAFT_HALF, scale);
+    const headLen = _s(HEAD_LEN, scale);
+    const headHalf = _s(HEAD_HALF, scale);
+    const vsRadius = _s(13, scale);
+    const cellOf = (i: number) => {
+      const p = comp.panels[i]!;
+      return { r: p.gridRow ?? Math.floor(i / cols), c: p.gridCol ?? i % cols };
+    };
+    for (let i = 0; i < comp.panels.length - 1; i++) {
+      const a = cellOf(i);
+      const b = cellOf(i + 1);
+      if (a.r < 0 || a.r >= rows || a.c < 0 || a.c >= cols) continue;
+      if (b.r < 0 || b.r >= rows || b.c < 0 || b.c >= cols) continue;
+      const fromId = comp.panels[i]!.id;
+      const inset = Math.round(gutter * 0.18);
+      if (a.r === b.r && b.c === a.c + 1) {
+        const crossY = rowY[a.r]! + Math.floor(rowMaxH[a.r]! / 2);
+        const x1 = colX[a.c]! + colMaxW[a.c]! + inset;
+        const x2 = colX[b.c]! - inset;
+        drawConnector(ctx, comp, fromId, "right", x1, x2, crossY,
+          shaftHalf, headLen, headHalf, vsRadius);
+      } else if (a.c === b.c && b.r === a.r + 1) {
+        const crossX = colX[a.c]! + Math.floor(colMaxW[a.c]! / 2);
+        const y1 = rowY[a.r]! + rowMaxH[a.r]! + inset;
+        const y2 = rowY[b.r]! - inset;
+        drawConnector(ctx, comp, fromId, "down", y1, y2, crossX,
+          shaftHalf, headLen, headHalf, vsRadius);
+      }
+    }
+  }
+
   return canvas;
 };
 
@@ -210,7 +279,10 @@ const composeHorizontal = (
   const bottomPad = margin;
 
   const n = items.length;
-  const arrowSpan = (n - 1) * (gutter + arrowWidth + gutter);
+  // When arrows are hidden, panels sit a single gutter apart instead of
+  // reserving the full arrow span.
+  const connectorSpan = comp.showArrows ? gutter + arrowWidth + gutter : gutter;
+  const arrowSpan = (n - 1) * connectorSpan;
   const totalW = margin * 2 + panelW.reduce((a, b) => a + b, 0) + arrowSpan;
   const totalH = topPad + maxPanelH + bottomPad;
 
@@ -244,15 +316,14 @@ const composeHorizontal = (
     ctx.drawImage(it.canvas, px + pad, py + pad);
     x += pw;
     if (i < n - 1) {
-      const ax1 = x + gutter;
-      const ax2 = x + gutter + arrowWidth;
-      const shaftY = topPad + Math.floor(maxPanelH / 2);
-      drawArrowSupersampled(
-        ctx,
-        arrowRight(ax1, ax2, shaftY, shaftHalf, headLen, headHalf),
-        comp.arrowColor,
-      );
-      x += gutter + arrowWidth + gutter;
+      if (comp.showArrows) {
+        const ax1 = x + gutter;
+        const ax2 = x + gutter + arrowWidth;
+        const shaftY = topPad + Math.floor(maxPanelH / 2);
+        drawConnector(ctx, comp, comp.panels[i]!.id, "right", ax1, ax2, shaftY,
+          shaftHalf, headLen, headHalf, _s(20, scale));
+      }
+      x += connectorSpan;
     }
   }
 
@@ -282,7 +353,7 @@ const composeVertical = (
   );
 
   const n = items.length;
-  const arrowBlock = gutter + arrowHeight + gutter;
+  const arrowBlock = comp.showArrows ? gutter + arrowHeight + gutter : gutter;
   const totalH =
     margin +
     titleHeights.reduce((a, b) => a + b, 0) +
@@ -327,16 +398,17 @@ const composeVertical = (
     ctx.drawImage(it.canvas, px + pad, y + pad);
     y += ph;
     if (i < n - 1) {
-      y += gutter;
-      const shaftX = margin + Math.floor(maxPanelW / 2);
-      const ay1 = y;
-      const ay2 = y + arrowHeight;
-      drawArrowSupersampled(
-        ctx,
-        arrowDown(ay1, ay2, shaftX, shaftHalf, headLen, headHalf),
-        comp.arrowColor,
-      );
-      y += arrowHeight + gutter;
+      if (comp.showArrows) {
+        y += gutter;
+        const shaftX = margin + Math.floor(maxPanelW / 2);
+        const ay1 = y;
+        const ay2 = y + arrowHeight;
+        drawConnector(ctx, comp, comp.panels[i]!.id, "down", ay1, ay2, shaftX,
+          shaftHalf, headLen, headHalf, _s(20, scale));
+        y += arrowHeight + gutter;
+      } else {
+        y += gutter;
+      }
     }
   }
 
