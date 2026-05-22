@@ -144,7 +144,14 @@ export const renderFrames = async (
   return output;
 };
 
-// Single composed canvas — for raw previews and template thumbnails that
-// never animate. Reuses renderFrames so there's no second compose path.
-export const composeStill = async (comp: Composition): Promise<HTMLCanvasElement> =>
-  (await renderFrames(comp))[0]!.canvas;
+// A single composed still — for raw previews, template thumbnails, and
+// clipboard copy. Composes one frame; for animated panels `renderPanel`
+// rasterizes the source's first frame, so we never decode or compose the
+// whole timeline here.
+export const composeStill = async (comp: Composition): Promise<HTMLCanvasElement> => {
+  if (comp.panels.length === 0) return emptyPlaceholder(comp.bgColor);
+  const scale = comp.scale;
+  const theme = resolveTheme(comp.bgColor, comp.arrowColor);
+  const items = await Promise.all(comp.panels.map((p) => renderPanel(p, scale, theme)));
+  return composeFromItems(items, comp, scale);
+};

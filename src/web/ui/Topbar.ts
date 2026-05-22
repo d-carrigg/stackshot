@@ -348,7 +348,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
   const runWithBtnProgress = async (
     btn: HTMLButtonElement,
     ico: HTMLElement,
-    run: (onProgress: (f: number) => void) => Promise<void>,
+    run: (onProgress: (f: number) => void, onBusy: () => void) => Promise<void>,
   ): Promise<void> => {
     if (btn.disabled) return;
     btn.disabled = true;
@@ -357,10 +357,17 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     pct.className = "topbar-pct";
     pct.textContent = "0%";
     ico.replaceChildren(pct);
+    // Switch to an indeterminate spinner for steps with no progress signal
+    // (e.g. the OS clipboard write).
+    const onBusy = () => {
+      const spinner = document.createElement("span");
+      spinner.className = "topbar-spinner";
+      ico.replaceChildren(spinner);
+    };
     try {
       await run((f) => {
         pct.textContent = `${Math.round(f * 100)}%`;
-      });
+      }, onBusy);
     } finally {
       ico.replaceChildren(...saved);
       btn.disabled = false;
@@ -371,8 +378,8 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
   const copyIco = root.querySelector<HTMLSpanElement>("[data-copy-top-ico]")!;
   copyIco.appendChild(clipIcon());
   const doCopy = () =>
-    runWithBtnProgress(copyTop, copyIco, async (p) => {
-      await copyImageToClipboard(store.get(), p);
+    runWithBtnProgress(copyTop, copyIco, async (p, onBusy) => {
+      await copyImageToClipboard(store.get(), p, onBusy);
       showToast("Copied to clipboard");
     }).catch((e) => showToast(`Copy failed: ${(e as Error).message}`));
   copyTop.addEventListener("click", doCopy);

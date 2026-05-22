@@ -20,6 +20,13 @@
   render until something output-affecting changes (content, titles, styling,
   scale, layout, or format) — so copying after a preview is instant.
 
+### Fixed
+- **Copy to clipboard no longer fails on the first click.** The write is now
+  issued synchronously within the click (with a promised blob), so a slow
+  first render can't outlive the browser's user-activation window. Copy
+  writes a PNG still (the clipboard holds a static image), and the button
+  shows a spinner while the OS clipboard write completes.
+
 ## 0.10.4 — 2026-05-22
 
 ### Fixed

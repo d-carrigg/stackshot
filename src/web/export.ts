@@ -78,23 +78,29 @@ export const exportImage = async (comp: Composition, onProgress?: ProgressFn): P
   triggerDownload(img.blob, `stackshot-${Date.now()}.${img.ext}`);
 };
 
-export const copyImageToClipboard = async (comp: Composition, onProgress?: ProgressFn): Promise<void> => {
-  const img = await renderForExport(comp, onProgress);
+// Copy a PNG still to the clipboard. The clipboard only holds a static
+// image (you can't paste an animation), and image/png is the universally
+// writable type. Crucially, we hand clipboard.write() a Promise<Blob>
+// and call it synchronously within the click so the browser preserves
+// user activation while the render runs — otherwise a slow first render
+// outlives the activation window and the write is rejected.
+// `onCommitStart` fires once the blob is ready and the OS clipboard write
+// begins (which has no progress signal — callers show a spinner).
+export const copyImageToClipboard = async (
+  comp: Composition,
+  onProgress?: ProgressFn,
+  onCommitStart?: () => void,
+): Promise<void> => {
   if (!("clipboard" in navigator) || !("write" in navigator.clipboard)) {
     throw new Error("Clipboard API unavailable in this browser");
   }
-  try {
-    await navigator.clipboard.write([new ClipboardItem({ [img.mime]: img.blob })]);
-  } catch (err) {
-    // Some browsers refuse non-PNG types on the clipboard. Fall back to a
-    // first-frame PNG so users still get something usable.
-    if (img.mime !== "image/png") {
-      const png = await canvasToPng(await composeStill(comp));
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
-      return;
-    }
-    throw err;
-  }
+  const pngBlob = (async () => {
+    const blob = await canvasToPng(await composeStill(comp));
+    onProgress?.(1);
+    onCommitStart?.();
+    return blob;
+  })();
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })]);
 };
 
 // Back-compat aliases — existing call sites pass PNG semantics.

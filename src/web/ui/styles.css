@@ -247,6 +247,18 @@ html, body {
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
+/* Indeterminate spinner for steps with no progress signal (clipboard write). */
+.topbar-spinner {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: topbar-spin 0.6s linear infinite;
+}
+@keyframes topbar-spin {
+  to { transform: rotate(360deg); }
+}
 .topbar-icon-btn-primary {
   background: var(--accent);
   color: var(--accent-text);
