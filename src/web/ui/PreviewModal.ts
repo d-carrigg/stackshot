@@ -9,7 +9,7 @@
 // still flow through renderForExport because canvas alone can't play
 // a multi-frame animation.
 import type { Store } from "../state";
-import { renderForExport, exportImage, copyImageToClipboard } from "../export";
+import { renderForExport, exportImage, copyImageToClipboard, saveBlob } from "../export";
 import { composeStill, hasAnimatedPanel } from "../render/frames";
 import { showToast } from "./util";
 import { x as xIcon, download as dlIcon, clipboard as clipIcon } from "./icons";
@@ -57,6 +57,16 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   dlg.appendChild(figure);
 
   let currentUrl: string | null = null;
+  // The blob produced for the current preview (animated path), reused by
+  // Download so we don't encode a second time. null for static previews
+  // (which show the raw canvas) — those re-encode on download.
+  let renderedBlob: Blob | null = null;
+  let renderedExt = "png";
+
+  const setBusy = (busy: boolean) => {
+    copyBtn.disabled = busy;
+    dlBtn.disabled = busy;
+  };
 
   closeBtn.addEventListener("click", () => dlg.close());
   dlg.addEventListener("click", (e) => {
@@ -65,7 +75,8 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
 
   dlBtn.addEventListener("click", async () => {
     try {
-      await exportImage(store.get());
+      if (renderedBlob) saveBlob(renderedBlob, renderedExt);
+      else await exportImage(store.get());
     } catch (e) {
       showToast(`Export failed: ${(e as Error).message}`);
     }
@@ -90,6 +101,8 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
       canvasSlot.remove();
       canvasSlot = null;
     }
+    renderedBlob = null;
+    loading.textContent = "Rendering…";
     loading.hidden = false;
   });
 
@@ -97,8 +110,11 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
 
   return {
     async open() {
+      loading.textContent = "Rendering…";
       loading.hidden = false;
       img.hidden = true;
+      renderedBlob = null;
+      setBusy(true);
       if (canvasSlot) { canvasSlot.remove(); canvasSlot = null; }
       dlg.showModal();
       try {
@@ -107,7 +123,11 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
           // Animated → go through the export encoder so the modal can
           // actually play the result. Slightly lossy but matches what
           // the user will download.
-          const rendered = await renderForExport(comp);
+          const rendered = await renderForExport(comp, (f) => {
+            loading.textContent = `Rendering… ${Math.round(f * 100)}%`;
+          });
+          renderedBlob = rendered.blob;
+          renderedExt = rendered.ext;
           if (currentUrl) URL.revokeObjectURL(currentUrl);
           currentUrl = URL.createObjectURL(rendered.blob);
           img.src = currentUrl;
@@ -124,6 +144,7 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
           canvasSlot = canvas;
         }
         loading.hidden = true;
+        setBusy(false);
       } catch (e) {
         loading.textContent = `Render failed: ${(e as Error).message}`;
       }

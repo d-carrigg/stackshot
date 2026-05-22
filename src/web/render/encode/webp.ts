@@ -5,7 +5,7 @@
 // force every frame to a keyframe and hand the raw VP8 bitstreams to the
 // RIFF/WEBP container builders. This replaces N serial, main-thread
 // `canvas.toBlob("image/webp")` calls (the old freeze).
-import type { Frame } from "../frames";
+import type { Frame, ProgressFn } from "../frames";
 import { buildStaticWebp, buildAnimatedWebp, type WebpFrame } from "../webpContainer";
 
 // Per-frame bit budget = width*height*BPP. VP8 is efficient and our
@@ -24,7 +24,7 @@ const configFor = (width: number, height: number): VideoEncoderConfig => ({
   latencyMode: "quality",
 });
 
-export const encodeWebp = async (frames: Frame[]): Promise<Blob> => {
+export const encodeWebp = async (frames: Frame[], onProgress?: ProgressFn): Promise<Blob> => {
   if (frames.length === 0) throw new Error("No frames to encode");
   if (typeof VideoEncoder === "undefined") {
     throw new Error("This browser does not support WebCodecs VideoEncoder.");
@@ -44,6 +44,7 @@ export const encodeWebp = async (frames: Frame[]): Promise<Blob> => {
       const data = new Uint8Array(chunk.byteLength);
       chunk.copyTo(data);
       chunks.push({ ts: chunk.timestamp, data });
+      onProgress?.(chunks.length / frames.length);
     },
     error: (e) => errors.push(e),
   });

@@ -90,8 +90,15 @@ const emptyPlaceholder = (bgHex: string): HTMLCanvasElement => {
 export const hasAnimatedPanel = (comp: Composition): boolean =>
   comp.panels.some((p) => p.kind === "image" && p.animated === true);
 
-export const renderFrames = async (comp: Composition): Promise<Frame[]> => {
+// Reports compose progress as a 0→1 fraction (per output frame).
+export type ProgressFn = (fraction: number) => void;
+
+export const renderFrames = async (
+  comp: Composition,
+  onProgress?: ProgressFn,
+): Promise<Frame[]> => {
   if (comp.panels.length === 0) {
+    onProgress?.(1);
     return [{ canvas: emptyPlaceholder(comp.bgColor), durationMs: 0 }];
   }
 
@@ -116,6 +123,7 @@ export const renderFrames = async (comp: Composition): Promise<Frame[]> => {
 
   // No motion → a single still frame. Same compositor, just length 1.
   if (slots.length === 0) {
+    onProgress?.(1);
     return [{ canvas: composeFromItems(items, comp, scale), durationMs: 0 }];
   }
 
@@ -131,6 +139,7 @@ export const renderFrames = async (comp: Composition): Promise<Frame[]> => {
       items[slot.panelIndex] = { ...existing, canvas: swapped };
     }
     output.push({ canvas: composeFromItems(items, comp, scale), durationMs: FRAME_MS });
+    onProgress?.((i + 1) / totalFrames);
   }
   return output;
 };

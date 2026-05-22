@@ -1108,6 +1108,11 @@ html, body {
 }
 .preview-modal-overlay:hover { opacity: 1; }
 .preview-modal-overlay:active { transform: scale(0.94); }
+.preview-modal-overlay:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 /* Standard chrome dialog used for licenses + templates. Anchored
    centre, with a surface card and a scrollable body. */

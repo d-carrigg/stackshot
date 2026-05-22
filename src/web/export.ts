@@ -1,5 +1,5 @@
 import type { Composition } from "./state";
-import { renderFrames, composeStill } from "./render/frames";
+import { renderFrames, composeStill, type ProgressFn } from "./render/frames";
 import { encodeFrames, type EncodeFormat, type EncodeResult } from "./render/encode";
 
 export type RenderedImage = EncodeResult;
@@ -9,11 +9,21 @@ export type RenderedImage = EncodeResult;
 export const resolveExportFormat = (comp: Composition): EncodeFormat =>
   comp.exportFormat === "auto" ? "webp" : comp.exportFormat;
 
+// Share of total progress spent composing frames (the rest is encoding).
+// WEBP/PNG encode is fast (native), so compose dominates; GIF's gif.js
+// encode dominates, so compose is a small slice.
+const COMPOSE_SHARE: Record<EncodeFormat, number> = { webp: 0.85, png: 0.95, gif: 0.3 };
+
 // One pipeline: compose frames (1 for static, N for animated) → encode in
 // the chosen format. No static-vs-animated fork.
-export const renderForExport = async (comp: Composition): Promise<RenderedImage> => {
-  const frames = await renderFrames(comp);
-  return encodeFrames(frames, resolveExportFormat(comp), { comp });
+export const renderForExport = async (
+  comp: Composition,
+  onProgress?: ProgressFn,
+): Promise<RenderedImage> => {
+  const format = resolveExportFormat(comp);
+  const share = COMPOSE_SHARE[format];
+  const frames = await renderFrames(comp, (f) => onProgress?.(f * share));
+  return encodeFrames(frames, format, { comp }, (f) => onProgress?.(share + f * (1 - share)));
 };
 
 const canvasToPng = (canvas: HTMLCanvasElement): Promise<Blob> =>
@@ -31,6 +41,11 @@ const triggerDownload = (blob: Blob, filename: string): void => {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+// Download an already-rendered blob (lets the preview reuse its render
+// instead of encoding a second time).
+export const saveBlob = (blob: Blob, ext: string): void =>
+  triggerDownload(blob, `stackshot-${Date.now()}.${ext}`);
 
 export const exportImage = async (comp: Composition): Promise<void> => {
   const img = await renderForExport(comp);

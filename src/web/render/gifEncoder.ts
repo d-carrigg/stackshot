@@ -13,7 +13,10 @@ export type GifFrame = {
   delayMs: number;
 };
 
-export const encodeGif = (frames: GifFrame[]): Promise<Blob> => {
+export const encodeGif = (
+  frames: GifFrame[],
+  onProgress?: (fraction: number) => void,
+): Promise<Blob> => {
   if (frames.length === 0) return Promise.reject(new Error("No GIF frames"));
   const first = frames[0]!.canvas;
   const gif = new GIF({
@@ -28,6 +31,7 @@ export const encodeGif = (frames: GifFrame[]): Promise<Blob> => {
     gif.addFrame(f.canvas, { delay: Math.max(20, f.delayMs), copy: true });
   }
   return new Promise<Blob>((resolve, reject) => {
+    if (onProgress) gif.on("progress", (p: number) => onProgress(p));
     gif.on("finished", (blob: Blob) => resolve(blob));
     gif.on("abort", () => reject(new Error("GIF encode aborted")));
     gif.render();
