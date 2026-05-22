@@ -46,8 +46,11 @@ const PYTHON_DEMO = {
 
 const PRINT_LOOP_DEMO = {
   code:
-    "for i in range(5):\n" +
-    "    print(f\"loop iteration {i}\")\n",
+    "import time\n" +
+    "\n" +
+    "for i in range(1, 11):\n" +
+    "    print(f\"Hello {i}\", flush=True)\n" +
+    "    time.sleep(0.5)\n",
   language: "python",
   title: "input",
 };

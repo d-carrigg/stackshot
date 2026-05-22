@@ -239,6 +239,40 @@ html, body {
 }
 .topbar-icon-btn[hidden] { display: none; }
 .topbar-icon-btn .ico { display: inline-flex; line-height: 1; }
+/* Disabled: greyed + not-allowed (e.g. Copy when content is animated). */
+.topbar-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.topbar-icon-btn:disabled:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+/* While rendering we also disable the button but keep it legible and show
+   a progress cursor (it's busy, not unavailable). */
+.topbar-icon-btn--rendering:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+/* Live render percentage shown in place of the icon (≤32px button). */
+.topbar-pct {
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+/* Indeterminate spinner for steps with no progress signal (clipboard write). */
+.topbar-spinner {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: topbar-spin 0.6s linear infinite;
+}
+@keyframes topbar-spin {
+  to { transform: rotate(360deg); }
+}
 .topbar-icon-btn-primary {
   background: var(--accent);
   color: var(--accent-text);
@@ -1108,6 +1142,11 @@ html, body {
 }
 .preview-modal-overlay:hover { opacity: 1; }
 .preview-modal-overlay:active { transform: scale(0.94); }
+.preview-modal-overlay:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 /* Standard chrome dialog used for licenses + templates. Anchored
    centre, with a surface card and a scrollable body. */

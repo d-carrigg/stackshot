@@ -4,7 +4,7 @@
 // composition (with confirm when the canvas isn't empty).
 import type { Store, Composition } from "../state";
 import { TEMPLATES, buildTemplate, type TemplateId } from "../templates";
-import { composeCanvas } from "../render/compose";
+import { composeStill } from "../render/frames";
 import { x as xIcon } from "./icons";
 import { clearPersisted } from "../persist";
 
@@ -22,7 +22,7 @@ const renderThumbnail = async (id: TemplateId): Promise<string> => {
   const comp: Composition = await buildTemplate(id);
   // Force a small scale so thumbnail rendering is cheap.
   const small = { ...comp, scale: 1.5 };
-  const canvas = await composeCanvas(small);
+  const canvas = await composeStill(small);
   const url = await new Promise<string>((resolve, reject) =>
     canvas.toBlob(
       (b) => (b ? resolve(URL.createObjectURL(b)) : reject(new Error("toBlob failed"))),

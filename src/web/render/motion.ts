@@ -69,6 +69,3 @@ export const decodeFrames = async (file: Blob): Promise<Frame[]> => {
   decoder.close?.();
   return frames;
 };
-
-export const hasAnimatedPanel = (panels: { animated?: boolean }[]): boolean =>
-  panels.some((p) => p.animated === true);

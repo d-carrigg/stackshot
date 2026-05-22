@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.11.0 — 2026-05-22
+
+### Changed
+- **Animated WEBP export is dramatically faster** (web) and no longer freezes
+  the UI. Encoding now uses the browser's native WebCodecs `VideoEncoder`
+  (VP8 keyframes muxed straight into the WEBP container) instead of a serial,
+  main-thread `canvas.toBlob` per frame. Output is the same animated WEBP.
+- **Unified rendering pipeline.** All exports now flow through one frame
+  generator (`renderFrames` — one frame for a still, N for animation) and a
+  single per-format encoder dispatch. PNG, WEBP, and GIF — static and
+  animated — all share the same path; "static vs animated" is just frame
+  count, not a separate code path.
+- **Render progress is shown as a percentage.** The preview modal shows
+  "Rendering… NN%", and the copy/download buttons show a live percentage in
+  place of their icon while encoding. Copy/Download are disabled until the
+  render is ready.
+- **Renders are cached.** Repeated preview/copy/download reuse the last
+  render until something output-affecting changes (content, titles, styling,
+  scale, layout, or format) — so copying after a preview is instant.
+
+### Changed
+- **Copy is disabled when the composition is animated.** Browsers only put a
+  static image on the clipboard, so for animated content the Copy button (and
+  ⌘C) are disabled with a tooltip pointing to Download, which gives the real
+  webp/gif. The state stays in sync as panels are added or removed; a still
+  image leaves Copy enabled.
+
+### Fixed
+- **Copy to clipboard no longer fails on the first click.** The write is now
+  issued synchronously within the click (with a promised blob), so a slow
+  first render can't outlive the browser's user-activation window. Copy uses
+  the selected format where the browser supports it on the clipboard; since
+  browsers only accept PNG images on the clipboard in practice (webp/gif are
+  rejected), it falls back to a PNG still — download still produces the true
+  webp/gif file. The button shows a spinner while the OS clipboard write
+  completes.
+
 ## 0.10.4 — 2026-05-22
 
 ### Fixed

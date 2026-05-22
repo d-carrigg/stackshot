@@ -7,6 +7,7 @@
 import type { Store, Layout, ExportFormat, ScalePreset } from "../state";
 import { SCALE_VALUES, resolveScalePreset, GRID_MAX_PANELS } from "../state";
 import { exportImage, copyImageToClipboard, resolveExportFormat } from "../export";
+import { hasAnimatedPanel } from "../render/frames";
 import { showToast } from "./util";
 import {
   rows as rowsIcon,
@@ -343,26 +344,72 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     previewTop.addEventListener("click", () => opts.onPreview?.());
   }
 
-  const copyTop = root.querySelector<HTMLButtonElement>("[data-copy-top]")!;
-  root.querySelector<HTMLSpanElement>("[data-copy-top-ico]")!.appendChild(clipIcon());
-  copyTop.addEventListener("click", async () => {
+  // While a render runs, swap the button's icon for a live percentage and
+  // disable it. With a warm render cache this resolves instantly.
+  const runWithBtnProgress = async (
+    btn: HTMLButtonElement,
+    ico: HTMLElement,
+    run: (onProgress: (f: number) => void, onBusy: () => void) => Promise<void>,
+  ): Promise<void> => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.classList.add("topbar-icon-btn--rendering");
+    const saved = Array.from(ico.childNodes);
+    const pct = document.createElement("span");
+    pct.className = "topbar-pct";
+    pct.textContent = "0%";
+    ico.replaceChildren(pct);
+    // Switch to an indeterminate spinner for steps with no progress signal
+    // (e.g. the OS clipboard write).
+    const onBusy = () => {
+      const spinner = document.createElement("span");
+      spinner.className = "topbar-spinner";
+      ico.replaceChildren(spinner);
+    };
     try {
-      await copyImageToClipboard(store.get());
-      showToast("Copied to clipboard");
-    } catch (e) {
-      showToast(`Copy failed: ${(e as Error).message}`);
+      await run((f) => {
+        pct.textContent = `${Math.round(f * 100)}%`;
+      }, onBusy);
+    } finally {
+      ico.replaceChildren(...saved);
+      btn.classList.remove("topbar-icon-btn--rendering");
+      btn.disabled = false;
     }
-  });
+  };
+
+  const copyTop = root.querySelector<HTMLButtonElement>("[data-copy-top]")!;
+  const copyIco = root.querySelector<HTMLSpanElement>("[data-copy-top-ico]")!;
+  copyIco.appendChild(clipIcon());
+  const doCopy = () =>
+    runWithBtnProgress(copyTop, copyIco, async (p, onBusy) => {
+      await copyImageToClipboard(store.get(), p, onBusy);
+      showToast("Copied to clipboard");
+    }).catch((e) => showToast(`Copy failed: ${(e as Error).message}`));
+  copyTop.addEventListener("click", doCopy);
+
+  // Animated content can't go on the clipboard (browsers only accept a
+  // static image), so disable Copy and point users to Download. Re-checked
+  // on every store change so adding/removing a panel keeps it in sync.
+  const COPY_LABEL = "Copy to clipboard";
+  const COPY_OFF_LABEL = "Animated content can only be downloaded, not copied";
+  const syncCopyState = () => {
+    const animated = hasAnimatedPanel(store.get());
+    copyTop.disabled = animated;
+    copyTop.classList.toggle("topbar-icon-btn--off", animated);
+    copyTop.title = animated ? COPY_OFF_LABEL : COPY_LABEL;
+    copyTop.setAttribute("aria-label", copyTop.title);
+  };
+  syncCopyState();
+  store.subscribe(syncCopyState);
 
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
-  root.querySelector<HTMLSpanElement>("[data-dl-ico]")!.appendChild(dlIcon());
-  exportBtn.addEventListener("click", async () => {
-    try {
-      await exportImage(store.get());
-    } catch (e) {
-      showToast(`Export failed: ${(e as Error).message}`);
-    }
-  });
+  const dlIco = root.querySelector<HTMLSpanElement>("[data-dl-ico]")!;
+  dlIco.appendChild(dlIcon());
+  const doExport = () =>
+    runWithBtnProgress(exportBtn, dlIco, async (p) => {
+      await exportImage(store.get(), p);
+    }).catch((e) => showToast(`Export failed: ${(e as Error).message}`));
+  exportBtn.addEventListener("click", doExport);
 
   // Overflow ⋯ menu --------------------------------------------------
   const moreBtn = root.querySelector<HTMLButtonElement>("[data-more]")!;
@@ -413,16 +460,13 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
       tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable);
     if (e.key.toLowerCase() === "s") {
       e.preventDefault();
-      try { await exportImage(store.get()); } catch (err) {
-        showToast(`Export failed: ${(err as Error).message}`);
-      }
+      doExport();
     } else if (e.key.toLowerCase() === "c" && !inEditable && !window.getSelection()?.toString()) {
       e.preventDefault();
-      try {
-        await copyImageToClipboard(store.get());
-        showToast("Copied to clipboard");
-      } catch (err) {
-        showToast(`Copy failed: ${(err as Error).message}`);
+      if (hasAnimatedPanel(store.get())) {
+        showToast("Animated content can only be downloaded — press ⌘S");
+      } else {
+        doCopy();
       }
     }
   });

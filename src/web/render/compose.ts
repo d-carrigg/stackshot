@@ -48,34 +48,31 @@ const fillBg = (ctx: CanvasRenderingContext2D, w: number, h: number, bgHex: stri
   ctx.fillRect(0, 0, w, h);
 };
 
-export const composeCanvas = async (comp: Composition): Promise<HTMLCanvasElement> => {
-  if (comp.panels.length === 0) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 200;
-    canvas.height = 120;
-    const ctx = canvas.getContext("2d")!;
-    fillBg(ctx, canvas.width, canvas.height, comp.bgColor);
-    ctx.fillStyle = "#888";
-    ctx.font = `14px ${TITLE_FONT_FAMILY}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("Add a panel to begin", canvas.width / 2, canvas.height / 2);
-    return canvas;
-  }
-
-  const scale = comp.scale;
-  const theme = resolveTheme(comp.bgColor, comp.arrowColor);
-
-  const items = await Promise.all(
-    comp.panels.map((p) => renderPanel(p, scale, theme)),
-  );
-
-  return composeFromItems(items, comp, scale);
-};
-
 // True if this panel should get the padded inner-bg box. Code panels
 // always do; image panels follow their per-panel `innerBorder` flag.
 const hasInnerBg = (it: PanelImage): boolean => !it.isImage || it.innerBorder;
+
+// Per-panel measurements shared by all three layouts. Each layout then
+// does its own placement math; only this measurement step was duplicated.
+type PanelMetrics = {
+  titleFont: number;
+  panelRadius: number;
+  probe: CanvasRenderingContext2D;
+  pads: number[];
+  panelW: number[];
+  panelH: number[];
+};
+
+const measurePanels = (items: PanelImage[], scale: number): PanelMetrics => {
+  const basePanelPad = _s(24, scale);
+  const titleFont = titleFontPx(scale);
+  const panelRadius = _s(PANEL_RADIUS, scale);
+  const probe = document.createElement("canvas").getContext("2d")!;
+  const pads = items.map((it) => (hasInnerBg(it) ? basePanelPad : 0));
+  const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
+  const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
+  return { titleFont, panelRadius, probe, pads, panelW, panelH };
+};
 
 export const composeFromItems = (
   items: PanelImage[],
@@ -95,18 +92,12 @@ const composeGrid = (
   const margin = _s(40, scale);
   const gutter = _s(24, scale);
   const titleGap = _s(8, scale);
-  const basePanelPad = _s(24, scale);
-  const titleFont = titleFontPx(scale);
-  const panelRadius = _s(PANEL_RADIUS, scale);
   const rows = Math.max(1, comp.gridRows);
   const cols = Math.max(1, comp.gridCols);
   const theme = resolveTheme(comp.bgColor, comp.arrowColor);
   const titleColor = theme.title;
 
-  const probe = document.createElement("canvas").getContext("2d")!;
-  const pads = items.map((it) => (hasInnerBg(it) ? basePanelPad : 0));
-  const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
-  const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
+  const { titleFont, panelRadius, probe, pads, panelW, panelH } = measurePanels(items, scale);
   // When grid numbering is on, prefix each cell's title with its
   // reading-order number (left-to-right, top-to-bottom). Cells without a
   // title get a bare "N." so the count stays unbroken.
@@ -202,24 +193,17 @@ const composeHorizontal = (
   const margin = _s(40, scale);
   const titleGap = _s(12, scale);
   const arrowWidth = _s(90, scale);
-  const basePanelPad = _s(24, scale);
-  const titleFont = titleFontPx(scale);
-  const panelRadius = _s(PANEL_RADIUS, scale);
   const shaftHalf = _s(SHAFT_HALF, scale);
   const headLen = _s(HEAD_LEN, scale);
   const headHalf = _s(HEAD_HALF, scale);
   const theme = resolveTheme(comp.bgColor, comp.arrowColor);
   const titleColor = theme.title;
 
-  const probe = document.createElement("canvas").getContext("2d")!;
+  const { titleFont, panelRadius, probe, pads, panelW, panelH } = measurePanels(items, scale);
   const titleH = Math.max(
     0,
     ...items.map((it) => (it.title ? measureTitleHeight(probe, it.title, titleFont) : 0)),
   );
-
-  const pads = items.map((it) => (hasInnerBg(it) ? basePanelPad : 0));
-  const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
-  const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
   const maxPanelH = Math.max(...panelH);
 
   const topPad = margin + (titleH > 0 ? titleH + titleGap : 0);
@@ -284,19 +268,13 @@ const composeVertical = (
   const gutter = _s(16, scale);
   const titleGap = _s(10, scale);
   const arrowHeight = _s(56, scale);
-  const basePanelPad = _s(24, scale);
-  const titleFont = titleFontPx(scale);
-  const panelRadius = _s(PANEL_RADIUS, scale);
   const shaftHalf = _s(SHAFT_HALF, scale);
   const headLen = _s(HEAD_LEN, scale);
   const headHalf = _s(HEAD_HALF, scale);
   const theme = resolveTheme(comp.bgColor, comp.arrowColor);
   const titleColor = theme.title;
 
-  const probe = document.createElement("canvas").getContext("2d")!;
-  const pads = items.map((it) => (hasInnerBg(it) ? basePanelPad : 0));
-  const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
-  const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
+  const { titleFont, panelRadius, probe, pads, panelW, panelH } = measurePanels(items, scale);
   const maxPanelW = Math.max(...panelW);
 
   const titleHeights = items.map((it) =>
