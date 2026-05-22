@@ -10,8 +10,7 @@
 // a multi-frame animation.
 import type { Store } from "../state";
 import { renderForExport, exportImage, copyImageToClipboard } from "../export";
-import { composeCanvas } from "../render/compose";
-import { hasAnimatedPanel } from "../render/composeAnimated";
+import { composeStill, hasAnimatedPanel } from "../render/frames";
 import { showToast } from "./util";
 import { x as xIcon, download as dlIcon, clipboard as clipIcon } from "./icons";
 
@@ -116,7 +115,7 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
         } else {
           // Static → show the raw canvas. No PNG/WEBP encode, no
           // perceived blur from lossy compression.
-          const canvas = await composeCanvas(comp);
+          const canvas = await composeStill(comp);
           canvas.className = "preview-modal-img";
           // Hint the browser to use a quality-focused downscale when
           // CSS shrinks the canvas to fit the viewport.

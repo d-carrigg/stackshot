@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.0 — 2026-05-22
+
+### Changed
+- **Animated WEBP export is dramatically faster** (web) and no longer freezes
+  the UI. Encoding now uses the browser's native WebCodecs `VideoEncoder`
+  (VP8 keyframes muxed straight into the WEBP container) instead of a serial,
+  main-thread `canvas.toBlob` per frame. Output is the same animated WEBP.
+- **Unified rendering pipeline.** All exports now flow through one frame
+  generator (`renderFrames` — one frame for a still, N for animation) and a
+  single per-format encoder dispatch. PNG, WEBP, and GIF — static and
+  animated — all share the same path; "static vs animated" is just frame
+  count, not a separate code path.
+
 ## 0.10.4 — 2026-05-22
 
 ### Fixed

@@ -1,64 +1,25 @@
-import type { Composition, ExportFormat } from "./state";
-import { composeCanvas } from "./render/compose";
-import { composeAnimatedBlob, composeAnimatedFrames, hasAnimatedPanel } from "./render/composeAnimated";
-import { composeMetadata, injectPngText } from "./render/pngMetadata";
+import type { Composition } from "./state";
+import { renderFrames, composeStill } from "./render/frames";
+import { encodeFrames, type EncodeFormat, type EncodeResult } from "./render/encode";
 
-export type RenderedImage = {
-  blob: Blob;
-  mime: string;
-  ext: "png" | "webp" | "gif";
-};
-
-const canvasToBlob = (canvas: HTMLCanvasElement, type = "image/png", quality?: number): Promise<Blob> =>
-  new Promise((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob returned null"))), type, quality);
-  });
+export type RenderedImage = EncodeResult;
 
 // "auto" → WEBP. Smaller than PNG for the same fidelity, and the same
 // codec handles animated panels without a format switch.
-export const resolveExportFormat = (comp: Composition): Exclude<ExportFormat, "auto"> => {
-  if (comp.exportFormat === "auto") return "webp";
-  return comp.exportFormat;
-};
+export const resolveExportFormat = (comp: Composition): EncodeFormat =>
+  comp.exportFormat === "auto" ? "webp" : comp.exportFormat;
 
+// One pipeline: compose frames (1 for static, N for animated) → encode in
+// the chosen format. No static-vs-animated fork.
 export const renderForExport = async (comp: Composition): Promise<RenderedImage> => {
-  const format = resolveExportFormat(comp);
-  const animated = hasAnimatedPanel(comp);
-
-  if (format === "png") {
-    // First-frame PNG. Animated input loses its motion; that's the
-    // honest behaviour for a single-frame format. Embed the source
-    // composition as an iTXt chunk so the image round-trips.
-    const canvas = await composeCanvas(comp);
-    const raw = await canvasToBlob(canvas, "image/png");
-    const blob = await injectPngText(raw, "stackshot", composeMetadata(comp));
-    return { blob, mime: "image/png", ext: "png" };
-  }
-  if (format === "webp") {
-    if (animated) {
-      const blob = await composeAnimatedBlob(comp);
-      return { blob, mime: "image/webp", ext: "webp" };
-    }
-    const canvas = await composeCanvas(comp);
-    return {
-      blob: await canvasToBlob(canvas, "image/webp", 0.92),
-      mime: "image/webp",
-      ext: "webp",
-    };
-  }
-  // gif
-  const { encodeGif } = await import("./render/gifEncoder");
-  if (animated) {
-    const frames = await composeAnimatedFrames(comp);
-    const blob = await encodeGif(
-      frames.map((f) => ({ canvas: f.canvas, delayMs: f.durationMs })),
-    );
-    return { blob, mime: "image/gif", ext: "gif" };
-  }
-  const canvas = await composeCanvas(comp);
-  const blob = await encodeGif([{ canvas, delayMs: 1000 }]);
-  return { blob, mime: "image/gif", ext: "gif" };
+  const frames = await renderFrames(comp);
+  return encodeFrames(frames, resolveExportFormat(comp), { comp });
 };
+
+const canvasToPng = (canvas: HTMLCanvasElement): Promise<Blob> =>
+  new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob png returned null"))), "image/png"),
+  );
 
 const triggerDownload = (blob: Blob, filename: string): void => {
   const url = URL.createObjectURL(blob);
@@ -84,11 +45,10 @@ export const copyImageToClipboard = async (comp: Composition): Promise<void> => 
   try {
     await navigator.clipboard.write([new ClipboardItem({ [img.mime]: img.blob })]);
   } catch (err) {
-    // Some browsers refuse non-PNG types on the clipboard. Fall back
-    // to a first-frame PNG so users still get something usable.
+    // Some browsers refuse non-PNG types on the clipboard. Fall back to a
+    // first-frame PNG so users still get something usable.
     if (img.mime !== "image/png") {
-      const canvas = await composeCanvas(comp);
-      const png = await canvasToBlob(canvas, "image/png");
+      const png = await canvasToPng(await composeStill(comp));
       await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
       return;
     }
