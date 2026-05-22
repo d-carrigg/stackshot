@@ -307,7 +307,7 @@ html, body {
   top: calc(100% + 6px);
   right: 0;
   min-width: 220px;
-  background: var(--surface);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 6px;
@@ -991,8 +991,9 @@ html, body {
   padding: 4px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--surface-solid);
   color: var(--text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 .composition-arrow-pop .arrow-pop-styles {
   display: flex;
@@ -1303,7 +1304,7 @@ html, body {
 .app-dialog,
 .licenses-modal,
 .templates-modal {
-  background: var(--surface);
+  background: var(--surface-solid);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1332,6 +1333,23 @@ html, body {
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   flex-shrink: 0;
+}
+/* Bigger, reliable close-button tap target — on touch devices the 28px
+   default is easy to miss, so taps land outside and only the backdrop
+   closes the dialog. */
+.licenses-modal-header .icon-btn,
+.templates-modal-header .icon-btn,
+.about-modal-header .icon-btn {
+  width: 36px;
+  height: 36px;
+}
+@media (pointer: coarse) {
+  .licenses-modal-header .icon-btn,
+  .templates-modal-header .icon-btn,
+  .about-modal-header .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 .licenses-modal-header h2,
 .templates-modal-header h2,

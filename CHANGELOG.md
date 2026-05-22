@@ -20,6 +20,17 @@
   load → aggregate → fit → forecast data flow, with arrows linking each
   step.
 
+### Fixed
+- **Grid export now matches the editor** (web). Panels stretch to a
+  uniform column width and equal row heights instead of floating at their
+  natural size, and connectors center on the panel boxes.
+- **Dialogs and the overflow menu are opaque** (web). They used a
+  translucent surface token, so on the light/sunset/ocean themes the
+  canvas (and its arrows) bled through.
+- **Dialog close buttons are easier to tap** (web). The close control is
+  larger on touch devices so taps no longer miss and fall through to the
+  backdrop.
+
 ## 0.11.1 — 2026-05-22
 
 ### Added

@@ -149,24 +149,28 @@ const composeGrid = (
     label ? measureTitleHeight(probe, label, titleFont) + titleGap : 0,
   );
 
-  // Per-cell dimensions = max across the row/column for fairness.
+  // Mirror the editor's grid: columns share a uniform width (equal 1fr) and
+  // every panel stretches to fill its cell — a title band on top, then a
+  // panel box that fills the remaining row height. We track the per-column
+  // content width (to size the uniform column) and per-row title/panel
+  // heights separately so the boxes in a row line up.
   const colMaxW = new Array<number>(cols).fill(0);
-  const rowMaxH = new Array<number>(rows).fill(0);
+  const rowTitleH = new Array<number>(rows).fill(0);
+  const rowPanelH = new Array<number>(rows).fill(0);
   comp.panels.forEach((p, i) => {
     const r = p.gridRow ?? Math.floor(i / cols);
     const c = p.gridCol ?? i % cols;
     if (r < 0 || r >= rows || c < 0 || c >= cols) return;
     colMaxW[c] = Math.max(colMaxW[c]!, panelW[i]!);
-    rowMaxH[r] = Math.max(rowMaxH[r]!, panelH[i]! + titleHeights[i]!);
+    rowTitleH[r] = Math.max(rowTitleH[r]!, titleHeights[i]!);
+    rowPanelH[r] = Math.max(rowPanelH[r]!, panelH[i]!);
   });
+  const colW = Math.max(1, ...colMaxW);
+  const rowMaxH = rowTitleH.map((th, r) => th + rowPanelH[r]!);
 
   const colX = new Array<number>(cols).fill(0);
-  let xCursor = margin;
-  for (let c = 0; c < cols; c++) {
-    colX[c] = xCursor;
-    xCursor += colMaxW[c]! + (c < cols - 1 ? gutter : 0);
-  }
-  const totalW = xCursor + margin;
+  for (let c = 0; c < cols; c++) colX[c] = margin + c * (colW + gutter);
+  const totalW = margin * 2 + cols * colW + (cols - 1) * gutter;
 
   const rowY = new Array<number>(rows).fill(0);
   let yCursor = margin;
@@ -185,19 +189,14 @@ const composeGrid = (
   comp.panels.forEach((p, i) => {
     const it = items[i]!;
     const pad = pads[i]!;
-    const pw = panelW[i]!;
-    const ph = panelH[i]!;
-    const th = titleHeights[i]!;
     const r = p.gridRow ?? Math.floor(i / cols);
     const c = p.gridCol ?? i % cols;
     if (r < 0 || r >= rows || c < 0 || c >= cols) return;
     const cellX = colX[c]!;
     const cellY = rowY[r]!;
-    const cellW = colMaxW[c]!;
-    const cellH = rowMaxH[r]!;
-    const px = cellX + Math.floor((cellW - pw) / 2);
-    const titleY = cellY + Math.floor((cellH - (ph + th)) / 2);
-    const py = titleY + th;
+    const tH = rowTitleH[r]!;
+    const boxTop = cellY + tH;
+    const boxH = rowMaxH[r]! - tH;
 
     const label = labels[i]!;
     if (label) {
@@ -205,14 +204,18 @@ const composeGrid = (
       ctx.font = `600 ${titleFont}px ${TITLE_FONT_FAMILY}`;
       ctx.textBaseline = "top";
       ctx.textAlign = "left";
-      ctx.fillText(label, px + pad, titleY);
+      ctx.fillText(label, cellX + pad, cellY);
     }
+    // Panel box fills the full column width and the row's panel band.
     if (hasInnerBg(it)) {
       ctx.fillStyle = theme.panelBg;
-      roundedRectPath(ctx, px, py, pw, ph, panelRadius);
+      roundedRectPath(ctx, cellX, boxTop, colW, boxH, panelRadius);
       ctx.fill();
     }
-    ctx.drawImage(it.canvas, px + pad, py + pad);
+    // Code sits top-left (reading order); images center within the box.
+    const dx = it.isImage ? cellX + Math.floor((colW - it.width) / 2) : cellX + pad;
+    const dy = it.isImage ? boxTop + Math.floor((boxH - it.height) / 2) : boxTop + pad;
+    ctx.drawImage(it.canvas, dx, dy);
   });
 
   // Connectors between consecutive panels — only when the two land in
@@ -235,13 +238,16 @@ const composeGrid = (
       const fromId = comp.panels[i]!.id;
       const inset = Math.round(gutter * 0.18);
       if (a.r === b.r && b.c === a.c + 1) {
-        const crossY = rowY[a.r]! + Math.floor(rowMaxH[a.r]! / 2);
-        const x1 = colX[a.c]! + colMaxW[a.c]! + inset;
+        // Center on the panel box (below the title band) so the arrow lines
+        // up with the stretched panels, not the title row.
+        const boxTop = rowY[a.r]! + rowTitleH[a.r]!;
+        const crossY = boxTop + Math.floor((rowMaxH[a.r]! - rowTitleH[a.r]!) / 2);
+        const x1 = colX[a.c]! + colW + inset;
         const x2 = colX[b.c]! - inset;
         drawConnector(ctx, comp, fromId, "right", x1, x2, crossY,
           shaftHalf, headLen, headHalf, vsRadius);
       } else if (a.c === b.c && b.r === a.r + 1) {
-        const crossX = colX[a.c]! + Math.floor(colMaxW[a.c]! / 2);
+        const crossX = colX[a.c]! + Math.floor(colW / 2);
         const y1 = rowY[a.r]! + rowMaxH[a.r]! + inset;
         const y2 = rowY[b.r]! - inset;
         drawConnector(ctx, comp, fromId, "down", y1, y2, crossX,
