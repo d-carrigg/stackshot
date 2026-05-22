@@ -20,6 +20,13 @@
   render until something output-affecting changes (content, titles, styling,
   scale, layout, or format) — so copying after a preview is instant.
 
+### Changed
+- **Copy is disabled when the composition is animated.** Browsers only put a
+  static image on the clipboard, so for animated content the Copy button (and
+  ⌘C) are disabled with a tooltip pointing to Download, which gives the real
+  webp/gif. The state stays in sync as panels are added or removed; a still
+  image leaves Copy enabled.
+
 ### Fixed
 - **Copy to clipboard no longer fails on the first click.** The write is now
   issued synchronously within the click (with a promised blob), so a slow

@@ -119,7 +119,8 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
       dlg.showModal();
       try {
         const comp = store.get();
-        if (hasAnimatedPanel(comp)) {
+        const animated = hasAnimatedPanel(comp);
+        if (animated) {
           // Animated → go through the export encoder so the modal can
           // actually play the result. Slightly lossy but matches what
           // the user will download.
@@ -144,7 +145,12 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
           canvasSlot = canvas;
         }
         loading.hidden = true;
-        setBusy(false);
+        dlBtn.disabled = false;
+        // Animated content can't be copied (clipboard only holds a still) —
+        // leave Copy disabled and point users to Download.
+        copyBtn.disabled = animated;
+        copyBtn.title = animated ? "Animated content can only be downloaded, not copied" : "Copy to clipboard";
+        copyBtn.setAttribute("aria-label", copyBtn.title);
       } catch (e) {
         loading.textContent = `Render failed: ${(e as Error).message}`;
       }

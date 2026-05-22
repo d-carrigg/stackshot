@@ -7,6 +7,7 @@
 import type { Store, Layout, ExportFormat, ScalePreset } from "../state";
 import { SCALE_VALUES, resolveScalePreset, GRID_MAX_PANELS } from "../state";
 import { exportImage, copyImageToClipboard, resolveExportFormat } from "../export";
+import { hasAnimatedPanel } from "../render/frames";
 import { showToast } from "./util";
 import {
   rows as rowsIcon,
@@ -352,6 +353,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
   ): Promise<void> => {
     if (btn.disabled) return;
     btn.disabled = true;
+    btn.classList.add("topbar-icon-btn--rendering");
     const saved = Array.from(ico.childNodes);
     const pct = document.createElement("span");
     pct.className = "topbar-pct";
@@ -370,6 +372,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
       }, onBusy);
     } finally {
       ico.replaceChildren(...saved);
+      btn.classList.remove("topbar-icon-btn--rendering");
       btn.disabled = false;
     }
   };
@@ -383,6 +386,21 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
       showToast("Copied to clipboard");
     }).catch((e) => showToast(`Copy failed: ${(e as Error).message}`));
   copyTop.addEventListener("click", doCopy);
+
+  // Animated content can't go on the clipboard (browsers only accept a
+  // static image), so disable Copy and point users to Download. Re-checked
+  // on every store change so adding/removing a panel keeps it in sync.
+  const COPY_LABEL = "Copy to clipboard";
+  const COPY_OFF_LABEL = "Animated content can only be downloaded, not copied";
+  const syncCopyState = () => {
+    const animated = hasAnimatedPanel(store.get());
+    copyTop.disabled = animated;
+    copyTop.classList.toggle("topbar-icon-btn--off", animated);
+    copyTop.title = animated ? COPY_OFF_LABEL : COPY_LABEL;
+    copyTop.setAttribute("aria-label", copyTop.title);
+  };
+  syncCopyState();
+  store.subscribe(syncCopyState);
 
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
   const dlIco = root.querySelector<HTMLSpanElement>("[data-dl-ico]")!;
@@ -445,7 +463,11 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
       doExport();
     } else if (e.key.toLowerCase() === "c" && !inEditable && !window.getSelection()?.toString()) {
       e.preventDefault();
-      doCopy();
+      if (hasAnimatedPanel(store.get())) {
+        showToast("Animated content can only be downloaded — press ⌘S");
+      } else {
+        doCopy();
+      }
     }
   });
 
