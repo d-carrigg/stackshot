@@ -16,6 +16,9 @@
   between orthogonally-adjacent cells (in reading order).
 - **"This vs That" template** (web). A two-image comparison starter with a
   VS badge between the panels.
+- **"Numbered pipeline" template** (web). A numbered 2×2 grid walking a
+  load → aggregate → fit → forecast data flow, with arrows linking each
+  step.
 
 ## 0.11.1 — 2026-05-22
 
