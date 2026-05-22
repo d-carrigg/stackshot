@@ -12,6 +12,13 @@
   single per-format encoder dispatch. PNG, WEBP, and GIF — static and
   animated — all share the same path; "static vs animated" is just frame
   count, not a separate code path.
+- **Render progress is shown as a percentage.** The preview modal shows
+  "Rendering… NN%", and the copy/download buttons show a live percentage in
+  place of their icon while encoding. Copy/Download are disabled until the
+  render is ready.
+- **Renders are cached.** Repeated preview/copy/download reuse the last
+  render until something output-affecting changes (content, titles, styling,
+  scale, layout, or format) — so copying after a preview is instant.
 
 ## 0.10.4 — 2026-05-22
 
