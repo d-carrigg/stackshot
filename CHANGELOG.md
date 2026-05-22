@@ -23,9 +23,12 @@
 ### Fixed
 - **Copy to clipboard no longer fails on the first click.** The write is now
   issued synchronously within the click (with a promised blob), so a slow
-  first render can't outlive the browser's user-activation window. Copy
-  writes a PNG still (the clipboard holds a static image), and the button
-  shows a spinner while the OS clipboard write completes.
+  first render can't outlive the browser's user-activation window. Copy uses
+  the selected format where the browser supports it on the clipboard; since
+  browsers only accept PNG images on the clipboard in practice (webp/gif are
+  rejected), it falls back to a PNG still — download still produces the true
+  webp/gif file. The button shows a spinner while the OS clipboard write
+  completes.
 
 ## 0.10.4 — 2026-05-22
 
