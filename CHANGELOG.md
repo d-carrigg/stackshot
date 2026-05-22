@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.10.3 — 2026-05-22
+
+### Fixed
+- **Add/Reset/Clear row stays centered on screen** (web). In horizontal
+  layout the button row no longer drifts right as panels are added — it
+  is pinned to the viewport center and stays put while scrolling. In
+  grid layout the row is now centered like vertical instead of
+  left-aligned. The empty-state message ("No panels yet.") is also
+  centered in horizontal layout instead of sitting off to the side.
+
+## 0.10.2 — 2026-05-22
+
+### Changed
+- **"Clear all" is now just "Clear"** (web), and clearing the canvas
+  keeps your current layout, theme, and scale instead of snapping back
+  to the vertical default — it only removes the panels.
+
+## 0.10.1 — 2026-05-22
+
+### Changed
+- **Grid layout is now always two columns** (web). 3, 5, and 6 panels
+  previously spread across three columns; they now wrap into rows of two
+  (3/4 → 2×2, 5/6 → 3×2) for a more consistent, readable grid.
+
+## 0.10.0 — 2026-05-22
+
+### Added
+- **Grid-mode card numbering** (web). A `#` "numbers" toggle appears in
+  the top bar (and overflow menu) when grid layout is active. When on,
+  each cell's title is prefixed with its reading-order number
+  (left-to-right, top-to-bottom); cells without a title get a bare
+  number. Shown in both the live editor and the exported image.
+
 ## 0.9.0 — 2026-05-21
 
 ### Added

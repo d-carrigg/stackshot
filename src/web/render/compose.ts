@@ -107,8 +107,21 @@ const composeGrid = (
   const pads = items.map((it) => (hasInnerBg(it) ? basePanelPad : 0));
   const panelW = items.map((it, i) => it.width + 2 * pads[i]!);
   const panelH = items.map((it, i) => it.height + 2 * pads[i]!);
-  const titleHeights = items.map((it) =>
-    it.title ? measureTitleHeight(probe, it.title, titleFont) + titleGap : 0,
+  // When grid numbering is on, prefix each cell's title with its
+  // reading-order number (left-to-right, top-to-bottom). Cells without a
+  // title get a bare "N." so the count stays unbroken.
+  const labelFor = (i: number): string => {
+    const p = comp.panels[i]!;
+    const base = items[i]!.title ?? "";
+    if (!comp.gridNumbers) return base;
+    const r = p.gridRow ?? Math.floor(i / cols);
+    const col = p.gridCol ?? i % cols;
+    const num = r * cols + col + 1;
+    return base ? `${num}. ${base}` : `${num}.`;
+  };
+  const labels = items.map((_, i) => labelFor(i));
+  const titleHeights = labels.map((label) =>
+    label ? measureTitleHeight(probe, label, titleFont) + titleGap : 0,
   );
 
   // Per-cell dimensions = max across the row/column for fairness.
@@ -161,12 +174,13 @@ const composeGrid = (
     const titleY = cellY + Math.floor((cellH - (ph + th)) / 2);
     const py = titleY + th;
 
-    if (it.title) {
+    const label = labels[i]!;
+    if (label) {
       ctx.fillStyle = titleColor;
       ctx.font = `600 ${titleFont}px ${TITLE_FONT_FAMILY}`;
       ctx.textBaseline = "top";
       ctx.textAlign = "left";
-      ctx.fillText(it.title, px + pad, titleY);
+      ctx.fillText(label, px + pad, titleY);
     }
     if (hasInnerBg(it)) {
       ctx.fillStyle = theme.panelBg;

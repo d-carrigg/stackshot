@@ -2,7 +2,7 @@
 // row or vertical stack), with SVG arrows between them and an "add panel"
 // affordance at the end.
 import type { Store } from "../state";
-import { emptyComposition, makeCodePanel, defaultComposition, GRID_MAX_PANELS } from "../state";
+import { makeCodePanel, defaultComposition, GRID_MAX_PANELS } from "../state";
 import { clearPersisted } from "../persist";
 import { createPanelCard } from "./PanelCard";
 import { trash as trashIcon, refresh as refreshIcon } from "./icons";
@@ -10,6 +10,20 @@ import { resolveTheme, applyThemeVars } from "../themes";
 import { showToast } from "./util";
 
 export type CompositionViewOptions = {};
+
+// Reading-order number for a panel's editor card, or null when grid
+// numbering is off / not in grid mode. Mirrors composeGrid's labelFor.
+const numberFor = (
+  c: import("../state").Composition,
+  p: import("../state").Panel,
+  i: number,
+): number | null => {
+  if (c.layout !== "grid" || !c.gridNumbers) return null;
+  const cols = Math.max(1, c.gridCols);
+  const r = p.gridRow ?? Math.floor(i / cols);
+  const col = p.gridCol ?? i % cols;
+  return r * cols + col + 1;
+};
 
 export const mountCompositionView = (
   root: HTMLElement,
@@ -69,6 +83,8 @@ export const mountCompositionView = (
         update?.(panel);
         const setTheme = (cardEl as any)._setTheme;
         setTheme?.(theme);
+        const setNumber = (cardEl as any)._setNumber;
+        setNumber?.(numberFor(c, panel, i));
       });
       return;
     }
@@ -92,10 +108,12 @@ export const mountCompositionView = (
       empty.innerHTML = `<p>No panels yet.</p><p class="hint">Paste code/images, drag files here, or use the buttons below.</p>`;
       panelsRow.appendChild(empty);
     } else if (c.layout === "grid") {
-      c.panels.forEach((p) => {
+      c.panels.forEach((p, i) => {
         const handle = createPanelCard(store, p, theme);
         (handle.root as any)._update = handle.update;
         (handle.root as any)._setTheme = handle.setTheme;
+        (handle.root as any)._setNumber = handle.setNumber;
+        handle.setNumber(numberFor(c, p, i));
         if (p.gridRow !== undefined && p.gridCol !== undefined) {
           handle.root.style.gridRow = String(p.gridRow + 1);
           handle.root.style.gridColumn = String(p.gridCol + 1);
@@ -109,6 +127,7 @@ export const mountCompositionView = (
         const handle = createPanelCard(store, p, theme);
         (handle.root as any)._update = handle.update;
         (handle.root as any)._setTheme = handle.setTheme;
+        (handle.root as any)._setNumber = handle.setNumber;
         attachSeqDragHandlers(handle.root, p.id, store, seqLayout);
         panelsRow.appendChild(handle.root);
         if (i < c.panels.length - 1) {
@@ -283,7 +302,7 @@ const buildAddRow = (store: Store): HTMLElement => {
       <span class="ico"></span><span>Reset</span>
     </button>
     <button type="button" class="composition-clear" data-clear>
-      <span class="ico"></span><span>Clear all</span>
+      <span class="ico"></span><span>Clear</span>
     </button>
     <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/*" multiple hidden />
   `;
@@ -292,7 +311,8 @@ const buildAddRow = (store: Store): HTMLElement => {
   clearBtn.addEventListener("click", () => {
     if (store.get().panels.length > 0 && !confirm("Remove all panels?")) return;
     clearPersisted();
-    store.set(() => emptyComposition());
+    // Empty the panels but keep the current layout, theme, scale, etc.
+    store.set((c) => ({ ...c, panels: [], selectedId: null }));
   });
   const resetBtn = wrap.querySelector<HTMLButtonElement>("[data-reset]")!;
   resetBtn.querySelector(".ico")!.appendChild(refreshIcon());

@@ -49,13 +49,13 @@ Numbers in parens map back to the original list.
 ### Panels & content
 - [ ] Per-panel color customization (25)
 - [ ] Import code from a GitHub URL — file path + line selector/preview (38)
-- [ ] Better default example that shows a true input → output (12)
+- [x] Better default example that shows a true input → output (12)
 
 ### Editing & UX
 - [ ] Undo / redo (32)
-- [ ] Dialog icons — drop backgrounds, move to the right, polish (13)
+- [x] Dialog icons — drop backgrounds, move to the right, polish (13)
 - [ ] Integrate title into the panel (currently it's a separate text element above the panel) (40)
-- [ ] Grid mode card numbering option (41)
+- [x] Grid mode card numbering option (41)
 - [ ] Save/load compositions (42)
 
 ## Dropped

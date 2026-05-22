@@ -127,6 +127,27 @@ html, body {
   align-items: center;
   gap: 2px;
 }
+.topbar-gridnums { display: inline-flex; align-items: center; }
+.topbar-gridnums[hidden],
+.menu-gridnums[hidden],
+.menu-section[hidden] { display: none; }
+/* Mirror the layout segment buttons so the numbering toggle reads as a
+   sibling icon control, not a text pill. */
+.topbar-icon-toggle {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 16px;
+}
+.topbar-icon-toggle:hover { color: var(--text); background: var(--surface-2); }
+.topbar-icon-toggle.active { background: var(--surface-2); color: var(--accent); }
 .topbar-pill {
   background: transparent;
   color: var(--muted);
@@ -441,6 +462,9 @@ html, body {
   height: 100%;
   overflow: auto;
   background: var(--bg);
+  /* Container context so the add-row can size to the visible viewport
+     width (100cqw) rather than the horizontally-scrolled stage width. */
+  container-type: inline-size;
 }
 
 .composition {
@@ -456,6 +480,11 @@ html, body {
 .composition[data-layout="horizontal"] {
   align-items: flex-start;
   width: max-content;
+  /* Drop horizontal padding from the stage so the viewport-width add-row
+     can span edge-to-edge without forcing extra horizontal scroll; the
+     panel row carries the inset instead (see below). */
+  padding-left: 0;
+  padding-right: 0;
 }
 .composition[data-layout="vertical"] {
   align-items: stretch;
@@ -471,6 +500,7 @@ html, body {
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
+  padding: 0 32px;
 }
 .composition[data-layout="vertical"] .composition-panels {
   flex-direction: column;
@@ -532,6 +562,14 @@ html, body {
   color: var(--muted);
 }
 .composition-empty .hint { font-size: 12px; margin-top: 4px; }
+/* Horizontal stage hugs its content to the left; when there are no
+   panels, span the viewport and center the empty-state message so it
+   doesn't sit off to the side. */
+.composition[data-layout="horizontal"] .composition-panels:has(.composition-empty) {
+  width: 100cqw;
+  padding: 0;
+  justify-content: center;
+}
 
 /* Panel cards --------------------------------------------------------- */
 .panel-card {
@@ -564,6 +602,15 @@ html, body {
 .panel-card-title:hover { border-color: var(--border); }
 .panel-card-title:focus { outline: none; border-color: var(--accent); background: var(--surface); }
 .panel-card-title::placeholder { color: var(--muted); font-weight: 500; font-style: italic; }
+.panel-card-number {
+  flex: none;
+  color: var(--accent);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 18px;
+  padding-left: 4px;
+}
+.panel-card-number[hidden] { display: none; }
 
 .panel-card-controls {
   display: flex;
@@ -840,13 +887,16 @@ html, body {
   flex-direction: row;
 }
 .composition[data-layout="horizontal"] .composition-add-row {
-  /* Stretch across the full panel-row width and center the buttons, so
-     they sit under the whole composition rather than bunched under the
-     first card. */
-  align-self: stretch;
+  /* Pin to the visible viewport and center, so the buttons stay centered
+     on screen as the panel row scrolls horizontally rather than drifting
+     right under the growing content. */
+  position: sticky;
+  left: 0;
+  width: 100cqw;
   justify-content: center;
 }
-.composition[data-layout="vertical"] .composition-add-row {
+.composition[data-layout="vertical"] .composition-add-row,
+.composition[data-layout="grid"] .composition-add-row {
   justify-content: center;
 }
 .composition-add-row button {
