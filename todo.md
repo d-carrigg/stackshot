@@ -63,6 +63,9 @@ Numbers in parens map back to the original list.
 - [x] Tempaltes button should be somewhere else, not in the overflow menu
 - [x] There is a horizontal rule/seperator at the top of the overflow menu, it shouldn't be there
 - [ ] Sometimes have to hard refresh to see new features after new release
+- [ ] Descriptions/captions in addition to the title
+- [ ] Abotu dialog does not close on x, closes when you click outside
+- [ ] Transparency is an issue for some dialogs (e.g templates dialog has arrows from canvas drawn on it). Also on mobile the overflow menu is partialy transparent and things like arrows are drawn on top
 
 ### Remndering
 - [x] Display status indicator when rendering, for animated stuff where it may take a while
