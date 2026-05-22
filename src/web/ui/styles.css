@@ -128,6 +128,7 @@ html, body {
   gap: 2px;
 }
 .topbar-gridnums { display: inline-flex; align-items: center; }
+.topbar-arrows { display: inline-flex; align-items: center; }
 .topbar-gridnums[hidden],
 .menu-gridnums[hidden],
 .menu-section[hidden] { display: none; }
@@ -306,7 +307,7 @@ html, body {
   top: calc(100% + 6px);
   right: 0;
   min-width: 220px;
-  background: var(--surface);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 6px;
@@ -524,6 +525,7 @@ html, body {
 .composition-panels {
   display: flex;
   gap: 16px;
+  position: relative;
 }
 .composition[data-layout="horizontal"] .composition-panels {
   flex-direction: row;
@@ -539,6 +541,10 @@ html, body {
   display: grid;
   gap: 16px;
   align-items: stretch;
+}
+/* Give the connector room to sit between cells instead of overlapping them. */
+.composition[data-layout="grid"][data-arrows="1"] .composition-panels {
+  gap: 56px;
 }
 .composition[data-layout="grid"] .panel-card {
   min-width: 0;
@@ -889,6 +895,12 @@ html, body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
+}
+.composition-arrow-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .composition[data-layout="horizontal"] .composition-arrow {
   width: 90px;
@@ -901,10 +913,154 @@ html, body {
 .composition[data-layout="vertical"] .composition-arrow {
   height: 56px;
   min-height: 56px;
+  /* Don't stretch full-width (parent uses align-items: stretch) so the edit
+     button sits next to the centered arrow, not at the far edge. */
+  align-self: center;
 }
 .composition[data-layout="vertical"] .composition-arrow svg {
   width: 22px;
   height: 56px;
+}
+
+/* "VS" comparison badge */
+.composition-vs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  font: 700 13px/1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.5px;
+}
+
+/* Hover-revealed per-arrow edit button */
+.composition-arrow-edit {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.composition-arrow:hover .composition-arrow-edit,
+.composition-arrow-edit:focus-visible {
+  opacity: 1;
+}
+.composition-arrow-edit:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+/* Grid-mode arrow overlay (absolute, between adjacent cells) */
+.composition-grid-arrows {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.composition-grid-arrow {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+.composition-grid-arrow[data-orient="horizontal"] svg { width: 44px; height: 14px; }
+.composition-grid-arrow[data-orient="vertical"] svg { width: 14px; height: 44px; }
+
+/* Per-arrow editor — a flat inline control strip, not a floating dialog.
+   Reads as a slim toolbar that belongs to the canvas. */
+.composition-arrow-pop[hidden] { display: none; }
+.composition-arrow-pop {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-solid);
+  color: var(--text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.composition-arrow-pop .arrow-pop-styles {
+  display: flex;
+  gap: 2px;
+}
+.composition-arrow-pop .arrow-pop-styles button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.composition-arrow-pop .arrow-pop-styles button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.composition-arrow-pop .arrow-pop-styles button.active {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+.composition-arrow-pop .arrow-pop-styles svg {
+  width: 22px;
+  height: 12px;
+}
+.composition-arrow-pop .arrow-pop-vs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font: 700 8px/1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.3px;
+}
+/* Thin divider between the style group and the rest. */
+.composition-arrow-pop .arrow-pop-color {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.composition-arrow-pop .arrow-pop-color::-webkit-color-swatch-wrapper { padding: 2px; }
+.composition-arrow-pop .arrow-pop-color::-webkit-color-swatch { border: none; border-radius: 4px; }
+.composition-arrow-pop .arrow-pop-apply {
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.composition-arrow-pop .arrow-pop-apply:hover {
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 /* Add panel row ------------------------------------------------------- */
@@ -1148,7 +1304,7 @@ html, body {
 .app-dialog,
 .licenses-modal,
 .templates-modal {
-  background: var(--surface);
+  background: var(--surface-solid);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1177,6 +1333,23 @@ html, body {
   border-bottom: 1px solid var(--border);
   background: var(--bg);
   flex-shrink: 0;
+}
+/* Bigger, reliable close-button tap target — on touch devices the 28px
+   default is easy to miss, so taps land outside and only the backdrop
+   closes the dialog. */
+.licenses-modal-header .icon-btn,
+.templates-modal-header .icon-btn,
+.about-modal-header .icon-btn {
+  width: 36px;
+  height: 36px;
+}
+@media (pointer: coarse) {
+  .licenses-modal-header .icon-btn,
+  .templates-modal-header .icon-btn,
+  .about-modal-header .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 .licenses-modal-header h2,
 .templates-modal-header h2,

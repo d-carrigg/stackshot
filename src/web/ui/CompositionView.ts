@@ -1,11 +1,11 @@
 // Center pane: cards arranged matching the composition layout (horizontal
 // row or vertical stack), with SVG arrows between them and an "add panel"
 // affordance at the end.
-import type { Store } from "../state";
-import { makeCodePanel, defaultComposition, GRID_MAX_PANELS } from "../state";
+import type { Store, ArrowStyle, ResolvedArrow } from "../state";
+import { makeCodePanel, defaultComposition, GRID_MAX_PANELS, resolveArrow } from "../state";
 import { clearPersisted } from "../persist";
 import { createPanelCard } from "./PanelCard";
-import { trash as trashIcon, refresh as refreshIcon } from "./icons";
+import { trash as trashIcon, refresh as refreshIcon, pencil as pencilIcon } from "./icons";
 import { resolveTheme, applyThemeVars } from "../themes";
 import { showToast } from "./util";
 
@@ -41,10 +41,85 @@ export const mountCompositionView = (
   const stage = root.querySelector<HTMLDivElement>(".composition")!;
   const panelsRow = stage.querySelector<HTMLDivElement>(".composition-panels")!;
 
+  // Grid arrows live in an absolutely-positioned overlay (the CSS grid has no
+  // slots between cells). We keep references to recolor them in-place and to
+  // reposition on resize.
+  let gridArrowEls: { el: HTMLElement; fromId: string }[] = [];
+
+  // Recolor/restyle existing arrow elements without a full rebuild.
+  const updateArrowVisuals = (c: import("../state").Composition) => {
+    if (!c.showArrows) return;
+    if (c.layout === "grid") {
+      for (const a of gridArrowEls) (a.el as any)._updateArrow?.(resolveArrow(c, a.fromId));
+    } else {
+      const arrows = panelsRow.querySelectorAll<HTMLElement>(".composition-arrow");
+      arrows.forEach((el, i) => {
+        const p = c.panels[i];
+        if (p) (el as any)._updateArrow?.(resolveArrow(c, p.id));
+      });
+    }
+  };
+
+  // Place the grid overlay arrows between orthogonally-adjacent consecutive
+  // cells, measured from the laid-out card rects. Runs after layout (rAF) and
+  // on resize.
+  const layoutGridArrows = (c: import("../state").Composition, overlay: HTMLElement) => {
+    if (c.layout !== "grid" || !c.showArrows) return;
+    const cont = panelsRow.getBoundingClientRect();
+    const cards = Array.from(panelsRow.querySelectorAll<HTMLElement>(".panel-card"));
+    overlay.innerHTML = "";
+    gridArrowEls = [];
+    const cellOf = (i: number) => {
+      const p = c.panels[i]!;
+      const cols = Math.max(1, c.gridCols);
+      return { r: p.gridRow ?? Math.floor(i / cols), c: p.gridCol ?? i % cols };
+    };
+    for (let i = 0; i < c.panels.length - 1; i++) {
+      const a = cellOf(i);
+      const b = cellOf(i + 1);
+      const cardA = cards[i];
+      const cardB = cards[i + 1];
+      if (!cardA || !cardB) continue;
+      const ra = cardA.getBoundingClientRect();
+      const rb = cardB.getBoundingClientRect();
+      const fromId = c.panels[i]!.id;
+      let orient: ArrowOrient | null = null;
+      let cx = 0;
+      let cy = 0;
+      if (a.r === b.r && b.c === a.c + 1) {
+        orient = "horizontal";
+        cx = (ra.right + rb.left) / 2 - cont.left;
+        cy = (ra.top + ra.bottom) / 2 - cont.top;
+      } else if (a.c === b.c && b.r === a.r + 1) {
+        orient = "vertical";
+        cx = (ra.left + ra.right) / 2 - cont.left;
+        cy = (ra.bottom + rb.top) / 2 - cont.top;
+      }
+      if (!orient) continue;
+      const el = buildArrow(orient, store, fromId, resolveArrow(c, fromId));
+      el.classList.add("composition-grid-arrow");
+      el.style.left = `${cx}px`;
+      el.style.top = `${cy}px`;
+      overlay.appendChild(el);
+      gridArrowEls.push({ el, fromId });
+    }
+  };
+
+  let resizeRaf = 0;
+  window.addEventListener("resize", () => {
+    const c = store.get();
+    if (c.layout !== "grid" || !c.showArrows) return;
+    const overlay = panelsRow.querySelector<HTMLElement>(".composition-grid-arrows");
+    if (!overlay) return;
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(() => layoutGridArrows(c, overlay));
+  });
+
   const render = () => {
     const c = store.get();
     const theme = resolveTheme(c.bgColor, c.arrowColor);
     stage.dataset.layout = c.layout;
+    stage.dataset.arrows = c.showArrows ? "1" : "0";
     document.documentElement.dataset.theme = theme.id;
     // Apply every theme token as a CSS var on the document root. The
     // whole page (topbar, right rail, composition, dialogs) reads these
@@ -72,8 +147,13 @@ export const mountCompositionView = (
     // forces a full rebuild — the panel id stays the same, so an id-only
     // signature would skip the rebuild and PanelCard.update() bails on a
     // kind change, leaving the stale editor on screen.
+    // showArrows toggles arrow DOM existence (structural) → in the signature.
+    // Per-arrow style/color is applied in-place below, so it stays out of the
+    // signature to avoid a full rebuild (which would drop editor focus) on
+    // every color-picker tick.
     const desired =
-      c.layout + ":" + c.panels.map((p) => `${p.id}:${p.kind}`).join("|") + gridSig;
+      c.layout + ":" + c.panels.map((p) => `${p.id}:${p.kind}`).join("|") + gridSig +
+      `:a${c.showArrows ? 1 : 0}`;
     if (stage.dataset.signature === desired) {
       const cards = panelsRow.querySelectorAll<HTMLElement>(".panel-card");
       cards.forEach((cardEl, i) => {
@@ -86,6 +166,7 @@ export const mountCompositionView = (
         const setNumber = (cardEl as any)._setNumber;
         setNumber?.(numberFor(c, panel, i));
       });
+      updateArrowVisuals(c);
       return;
     }
     stage.dataset.signature = desired;
@@ -121,6 +202,13 @@ export const mountCompositionView = (
         attachGridDragHandlers(handle.root, p.id, store);
         panelsRow.appendChild(handle.root);
       });
+      gridArrowEls = [];
+      if (c.showArrows && c.panels.length > 1) {
+        const overlay = document.createElement("div");
+        overlay.className = "composition-grid-arrows";
+        panelsRow.appendChild(overlay);
+        requestAnimationFrame(() => layoutGridArrows(store.get(), overlay));
+      }
     } else {
       const seqLayout = c.layout as "horizontal" | "vertical";
       c.panels.forEach((p, i) => {
@@ -130,8 +218,8 @@ export const mountCompositionView = (
         (handle.root as any)._setNumber = handle.setNumber;
         attachSeqDragHandlers(handle.root, p.id, store, seqLayout);
         panelsRow.appendChild(handle.root);
-        if (i < c.panels.length - 1) {
-          panelsRow.appendChild(buildArrow(seqLayout));
+        if (c.showArrows && i < c.panels.length - 1) {
+          panelsRow.appendChild(buildArrow(seqLayout, store, p.id, resolveArrow(c, p.id)));
         }
       });
     }
@@ -269,27 +357,154 @@ const attachSeqDragHandlers = (
   });
 };
 
-const buildArrow = (layout: "horizontal" | "vertical"): HTMLElement => {
+type ArrowOrient = "horizontal" | "vertical";
+
+// SVG markup for a solid/dashed arrow in the given orientation, colored
+// directly (per-arrow color must win over the theme's --arrow).
+const arrowSvg = (orient: ArrowOrient, resolved: ResolvedArrow): string => {
+  const dash = resolved.style === "dashed" ? ` stroke-dasharray="6 5"` : "";
+  const c = resolved.color;
+  if (orient === "horizontal") {
+    return `
+      <svg viewBox="0 0 90 22" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <path d="M0 11 H72" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"${dash} />
+        <path d="M62 4 L80 11 L62 18 Z" fill="${c}" stroke="${c}" stroke-width="2" stroke-linejoin="round" />
+      </svg>`;
+  }
+  return `
+    <svg viewBox="0 0 22 56" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <path d="M11 0 V42" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"${dash} />
+      <path d="M4 32 L11 50 L18 32 Z" fill="${c}" stroke="${c}" stroke-width="2" stroke-linejoin="round" />
+    </svg>`;
+};
+
+// Paint the swappable visual part of an arrow element from a resolved spec.
+const renderArrowVisual = (el: HTMLElement, orient: ArrowOrient, resolved: ResolvedArrow): void => {
+  const visual = el.querySelector<HTMLElement>(".composition-arrow-visual")!;
+  if (resolved.style === "vs") {
+    visual.innerHTML = `<div class="composition-vs">VS</div>`;
+    visual.querySelector<HTMLElement>(".composition-vs")!.style.color = resolved.color;
+  } else {
+    visual.innerHTML = arrowSvg(orient, resolved);
+  }
+};
+
+// Build an interactive connector element. Carries a hover edit button that
+// opens the per-arrow editor popover; exposes `_updateArrow` so the
+// lightweight render path can recolor/restyle it without a full rebuild.
+const buildArrow = (
+  orient: ArrowOrient,
+  store: Store,
+  fromId: string,
+  resolved: ResolvedArrow,
+): HTMLElement => {
   const wrap = document.createElement("div");
   wrap.className = "composition-arrow";
-  if (layout === "horizontal") {
-    wrap.innerHTML = `
-      <svg viewBox="0 0 90 22" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        <path d="M0 11 H72 M62 4 L80 11 L62 18 Z"
-              fill="var(--arrow)" stroke="var(--arrow)" stroke-width="2"
-              stroke-linejoin="round" stroke-linecap="round" />
-      </svg>
-    `;
-  } else {
-    wrap.innerHTML = `
-      <svg viewBox="0 0 22 56" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        <path d="M11 0 V42 M4 32 L11 50 L18 32 Z"
-              fill="var(--arrow)" stroke="var(--arrow)" stroke-width="2"
-              stroke-linejoin="round" stroke-linecap="round" />
-      </svg>
-    `;
-  }
+  wrap.dataset.orient = orient;
+  const visual = document.createElement("div");
+  visual.className = "composition-arrow-visual";
+  wrap.appendChild(visual);
+  renderArrowVisual(wrap, orient, resolved);
+
+  const edit = document.createElement("button");
+  edit.type = "button";
+  edit.className = "composition-arrow-edit";
+  edit.title = "Edit arrow";
+  edit.setAttribute("aria-label", "Edit arrow");
+  edit.appendChild(pencilIcon());
+  edit.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openArrowEditor(store, fromId, wrap);
+  });
+  wrap.appendChild(edit);
+
+  (wrap as any)._updateArrow = (r: ResolvedArrow) => renderArrowVisual(wrap, orient, r);
+  (wrap as any)._fromId = fromId;
   return wrap;
+};
+
+// ---- Per-arrow editor popover (singleton, body-mounted) ----------------
+// Lives outside the composition subtree so it survives the rebuilds that
+// arrow edits trigger; positioned next to the clicked arrow's edit button.
+let arrowPop: HTMLDivElement | null = null;
+let arrowPopFromId: string | null = null;
+
+const closeArrowEditor = (): void => {
+  if (arrowPop) arrowPop.hidden = true;
+  arrowPopFromId = null;
+};
+
+const openArrowEditor = (store: Store, fromId: string, anchor: HTMLElement): void => {
+  if (!arrowPop) {
+    arrowPop = document.createElement("div");
+    arrowPop.className = "composition-arrow-pop";
+    arrowPop.hidden = true;
+    // Each style option previews the connector it sets (a solid arrow, a
+    // dashed arrow, a VS badge) instead of a text label.
+    const miniArrow = (dash: boolean) =>
+      `<svg viewBox="0 0 30 14" aria-hidden="true">` +
+      `<path d="M2 7 H19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"${dash ? ' stroke-dasharray="3 3"' : ""}/>` +
+      `<path d="M16 3 L26 7 L16 11 Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`;
+    arrowPop.innerHTML = `
+      <div class="arrow-pop-styles" role="group" aria-label="Arrow style">
+        <button type="button" data-style="solid" title="Solid arrow" aria-label="Solid arrow">${miniArrow(false)}</button>
+        <button type="button" data-style="dashed" title="Dashed arrow" aria-label="Dashed arrow">${miniArrow(true)}</button>
+        <button type="button" data-style="vs" title="VS badge" aria-label="VS badge"><span class="arrow-pop-vs">VS</span></button>
+      </div>
+      <input type="color" class="arrow-pop-color" data-arrow-color title="Arrow color" aria-label="Arrow color" />
+      <button type="button" class="arrow-pop-apply" data-apply title="Apply this style to every arrow">Apply to all</button>
+    `;
+    document.body.appendChild(arrowPop);
+    document.addEventListener("click", (e) => {
+      if (!arrowPop || arrowPop.hidden) return;
+      const t = e.target as Node;
+      if (arrowPop.contains(t)) return;
+      if ((t as HTMLElement).closest?.(".composition-arrow-edit")) return;
+      closeArrowEditor();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeArrowEditor();
+    });
+  }
+  arrowPopFromId = fromId;
+  const pop = arrowPop;
+
+  const sync = () => {
+    const resolved = resolveArrow(store.get(), fromId);
+    pop.querySelectorAll<HTMLButtonElement>("[data-style]").forEach((b) =>
+      b.classList.toggle("active", b.dataset.style === resolved.style),
+    );
+    pop.querySelector<HTMLInputElement>("[data-arrow-color]")!.value = resolved.color;
+  };
+
+  // (Re)wire handlers against the current fromId.
+  pop.querySelectorAll<HTMLButtonElement>("[data-style]").forEach((b) => {
+    b.onclick = () => {
+      store.setArrow(arrowPopFromId!, { style: b.dataset.style as ArrowStyle });
+      sync();
+    };
+  });
+  const colorInput = pop.querySelector<HTMLInputElement>("[data-arrow-color]")!;
+  colorInput.oninput = () => store.setArrow(arrowPopFromId!, { color: colorInput.value });
+  pop.querySelector<HTMLButtonElement>("[data-apply]")!.onclick = () => {
+    const r = resolveArrow(store.get(), arrowPopFromId!);
+    store.applyArrowToAll({ style: r.style, color: r.color });
+    closeArrowEditor();
+  };
+
+  sync();
+  pop.hidden = false;
+  // Center horizontally on the arrow and drop clearly below it so the strip
+  // never covers the connector. Flip above if there's no room below.
+  const rect = anchor.getBoundingClientRect();
+  const pw = pop.offsetWidth;
+  const ph = pop.offsetHeight;
+  const gap = 10;
+  const left = Math.max(8, Math.min(rect.left + rect.width / 2 - pw / 2, window.innerWidth - pw - 8));
+  let top = rect.bottom + gap;
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, rect.top - gap - ph);
+  arrowPop.style.left = `${left}px`;
+  arrowPop.style.top = `${top}px`;
 };
 
 const buildAddRow = (store: Store): HTMLElement => {

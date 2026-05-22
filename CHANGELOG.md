@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.12.0 — 2026-05-22
+
+### Added
+- **Arrow styles** (web). Connectors between panels can now be **solid**
+  (the classic filled arrow), **dashed**, or a **VS badge** for
+  comparisons.
+- **Per-arrow editing** (web). Hover any connector in the editor to reveal
+  an edit button; pick its style and color, or "Apply to all" to push one
+  arrow's look onto every connector. Picking a theme or custom arrow color
+  resets per-arrow color overrides (it acts as an apply-to-all).
+- **Show-arrows toggle** (web). A new topbar toggle shows/hides connectors
+  in every layout.
+- **Arrows in grid layout** (web). Grid compositions now draw connectors
+  between orthogonally-adjacent cells (in reading order).
+- **"This vs That" template** (web). A two-image comparison starter with a
+  VS badge between the panels.
+- **"Numbered pipeline" template** (web). A numbered 2×2 grid walking a
+  load → aggregate → fit → forecast data flow, with arrows linking each
+  step.
+
+### Fixed
+- **Grid export now matches the editor** (web). Panels stretch to a
+  uniform column width and equal row heights instead of floating at their
+  natural size, and connectors center on the panel boxes.
+- **Dialogs and the overflow menu are opaque** (web). They used a
+  translucent surface token, so on the light/sunset/ocean themes the
+  canvas (and its arrows) bled through.
+- **Dialog close buttons are easier to tap** (web). The close control is
+  larger on touch devices so taps no longer miss and fall through to the
+  backdrop.
+
 ## 0.11.1 — 2026-05-22
 
 ### Added

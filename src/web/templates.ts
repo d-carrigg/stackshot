@@ -12,7 +12,12 @@ import {
 } from "./state";
 import { nextBlobId, putBlob, resolveBlobUrl } from "./storage/blobStore";
 
-export type TemplateId = "code-to-code" | "code-to-image" | "code-to-gif";
+export type TemplateId =
+  | "code-to-code"
+  | "code-to-image"
+  | "code-to-gif"
+  | "image-vs-image"
+  | "grid-pipeline";
 
 export type Template = {
   id: TemplateId;
@@ -35,6 +40,16 @@ export const TEMPLATES: Template[] = [
     id: "code-to-gif",
     label: "Code → GIF",
     description: "Show motion — an animated GIF next to the code that produced it.",
+  },
+  {
+    id: "image-vs-image",
+    label: "This vs That",
+    description: "Compare two images side by side with a VS badge between them. Drop your own screenshots in.",
+  },
+  {
+    id: "grid-pipeline",
+    label: "Numbered pipeline",
+    description: "A numbered 2×2 grid that walks a load → aggregate → fit → forecast flow, with arrows linking each step.",
   },
 ];
 
@@ -152,6 +167,75 @@ export const buildTemplate = async (id: TemplateId): Promise<Composition> => {
     return {
       ...emptyComposition(),
       panels: [code, image],
+    };
+  }
+  if (id === "grid-pipeline") {
+    const cell = (
+      title: string,
+      code: string,
+      gridRow: number,
+      gridCol: number,
+    ): Composition["panels"][number] => ({
+      ...makeCodePanel({ title, code, language: "python" }),
+      gridRow,
+      gridCol,
+    });
+    const load = cell(
+      "Load",
+      'import pandas as pd\n\n' +
+        'df = pd.read_csv("sales.csv")\n' +
+        'df = df.dropna(subset=["date", "revenue"])\n',
+      0,
+      0,
+    );
+    const aggregate = cell(
+      "Aggregate",
+      'df["month"] = pd.to_datetime(\n' +
+        '    df["date"]\n' +
+        ').dt.to_period("M")\n\n' +
+        'monthly = df.groupby("month")["revenue"].sum()\n',
+      0,
+      1,
+    );
+    const fit = cell(
+      "Fit",
+      "from sklearn.linear_model import LinearRegression\n\n" +
+        "X = [[i] for i in range(len(monthly))]\n" +
+        "model = LinearRegression().fit(X, monthly.values)\n",
+      1,
+      0,
+    );
+    const forecast = cell(
+      "Forecast",
+      "next_month = [[len(monthly)]]\n" +
+        "pred = model.predict(next_month)[0]\n" +
+        'print(f"Next month: ${pred:,.0f}")\n',
+      1,
+      1,
+    );
+    return {
+      ...emptyComposition(),
+      panels: [load, aggregate, fit, forecast],
+      layout: "grid",
+      gridRows: 2,
+      gridCols: 2,
+      gridNumbers: true,
+      showArrows: true,
+      arrowColor: "#a6e3a1",
+      arrows: {},
+    };
+  }
+  if (id === "image-vs-image") {
+    const before = await buildPlaceholderImagePanel();
+    before.title = "Before";
+    const after = await buildPlaceholderImagePanel();
+    after.title = "After";
+    return {
+      ...emptyComposition(),
+      panels: [before, after],
+      layout: "horizontal",
+      showArrows: true,
+      arrows: { [before.id]: { style: "vs" } },
     };
   }
   // code-to-gif

@@ -78,3 +78,64 @@ export const drawArrowSupersampled = (
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(layer, 0, 0, layer.width, layer.height, xMin, yMin, w, h);
 };
+
+type Dir = "right" | "down";
+
+// Just the filled triangular head, sharing the supersampled fill path so AA
+// matches the solid arrow.
+const headTriangle = (dir: Dir, a2: number, cross: number, headLen: number, headHalf: number): Point[] => {
+  const base = a2 - headLen;
+  return dir === "right"
+    ? [[base, cross - headHalf], [a2, cross], [base, cross + headHalf]]
+    : [[cross - headHalf, base], [cross, a2], [cross + headHalf, base]];
+};
+
+// Dashed shaft (stroked) + filled head. `a1`/`a2` are the start/tip along the
+// arrow axis; `cross` is the fixed cross-axis coordinate.
+export const drawDashedArrow = (
+  ctx: CanvasRenderingContext2D,
+  dir: Dir,
+  a1: number, a2: number, cross: number,
+  shaftHalf: number, headLen: number, headHalf: number,
+  color: string,
+): void => {
+  const headBase = a2 - headLen;
+  const dash = Math.max(2, shaftHalf * 3);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1, shaftHalf * 2);
+  ctx.lineCap = "butt";
+  ctx.setLineDash([dash, dash]);
+  ctx.beginPath();
+  if (dir === "right") {
+    ctx.moveTo(a1, cross);
+    ctx.lineTo(headBase, cross);
+  } else {
+    ctx.moveTo(cross, a1);
+    ctx.lineTo(cross, headBase);
+  }
+  ctx.stroke();
+  ctx.restore();
+  drawArrowSupersampled(ctx, headTriangle(dir, a2, cross, headLen, headHalf), color);
+};
+
+// "VS" comparison badge: a stroked circle with centered bold "VS" text.
+export const drawVsBadge = (
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number,
+  radius: number,
+  color: string,
+): void => {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1, Math.round(radius * 0.12));
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.font = `700 ${Math.max(8, Math.round(radius * 0.95))}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("VS", cx, cy + Math.round(radius * 0.06));
+  ctx.restore();
+};

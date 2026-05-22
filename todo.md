@@ -42,9 +42,9 @@ Numbers in parens map back to the original list.
 - [ ] Horizontal mode: "after" panel gets cut off when zoomed (~130% on 1440p) — proper crop/scale (16)
 
 ### Arrows
-- [ ] Multiple arrow styles/shapes (28)
-- [ ] Show arrows only in grid layout; drop them in vertical/horizontal (29)
-- [ ] Inline arrow editing on canvas — hover edit button, per-arrow color, "apply to all" (30)
+- [x] Multiple arrow styles/shapes (28) — solid / dashed / VS badge
+- [x] Global show/hide arrows toggle in the topbar, working in all layouts incl. grid (29)
+- [x] Inline arrow editing on canvas — hover edit button, per-arrow style + color, "apply to all" (30)
 
 ### Panels & content
 - [ ] Per-panel color customization (25)
@@ -62,6 +62,11 @@ Numbers in parens map back to the original list.
 - [ ] Save/load compositions (42)
 - [x] Tempaltes button should be somewhere else, not in the overflow menu
 - [x] There is a horizontal rule/seperator at the top of the overflow menu, it shouldn't be there
+- [ ] Sometimes have to hard refresh to see new features after new release
+- [ ] Descriptions/captions in addition to the title
+- [ ] On mobile, About dialog does not close on x, closes when you click outside. Haven't checked other dialogs but may be an issue there.
+- [ ] Transparency is an issue for some dialogs (e.g templates dialog has arrows from canvas drawn on it). Also on mobile the overflow menu is partialy transparent and things like arrows are drawn on top
+- [ ] Arrows don't properly stretch/align in grid mode. Panels don't either 
 
 ### Remndering
 - [x] Display status indicator when rendering, for animated stuff where it may take a while
