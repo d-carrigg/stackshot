@@ -48,8 +48,11 @@ Numbers in parens map back to the original list.
 
 ### Panels & content
 - [ ] Per-panel color customization (25)
-- [ ] Import code from a GitHub URL — file path + line selector/preview (38)
+- [ ] Import code from a GitHub URL — file path + line selector/preview (38), could be
+      and generic add web link option, screenshots the site, with a special hook for github urls to point to prompt and select lines
 - [x] Better default example that shows a true input → output (12)
+- [ ] Run/generate for supported langs, like run the code and then auto-generate the output (43)
+- [ ] Maybe some query param to pass in a site or something automatically, inspiration is those sites where you just replace github.com with the domain to get details about the repo
 
 ### Editing & UX
 - [ ] Undo / redo (32)
@@ -57,6 +60,12 @@ Numbers in parens map back to the original list.
 - [ ] Integrate title into the panel (currently it's a separate text element above the panel) (40)
 - [x] Grid mode card numbering option (41)
 - [ ] Save/load compositions (42)
+- [x] Tempaltes button should be somewhere else, not in the overflow menu
+- [x] There is a horizontal rule/seperator at the top of the overflow menu, it shouldn't be there
+
+### Remndering
+- [x] Display status indicator when rendering, for animated stuff where it may take a while
+- [x] Why did the site ask permission to see content on my clipboard?
 
 ## Dropped
 - ~~Move preview button into the right pane (23)~~ — the right rail was removed; preview now lives in the top bar.

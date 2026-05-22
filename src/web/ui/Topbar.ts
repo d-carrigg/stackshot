@@ -18,6 +18,7 @@ import {
   eye as eyeIcon,
   github as ghIcon,
   listOrdered as listOrderedIcon,
+  layoutTemplate as templatesIcon,
 } from "./icons";
 import { THEMES, resolveTheme } from "../themes";
 
@@ -25,6 +26,7 @@ export type TopbarOptions = {
   onPreview?: () => void;
   onTemplates?: () => void;
   onLicenses?: () => void;
+  onAbout?: () => void;
 };
 
 type Variant = "topbar" | "menu";
@@ -276,6 +278,10 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
 
       <span class="spacer"></span>
 
+      <button type="button" class="topbar-icon-btn" data-templates-top
+              title="Browse templates" aria-label="Browse templates">
+        <span class="ico" data-templates-top-ico></span>
+      </button>
       <button type="button" class="topbar-icon-btn" data-preview-top
               title="Preview" aria-label="Preview" hidden>
         <span class="ico" data-preview-top-ico></span>
@@ -300,7 +306,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
           <div class="menu-overflow" data-overflow="scale"></div>
           <div class="menu-overflow" data-overflow="format"></div>
           <div class="topbar-more-sep menu-always-sep"></div>
-          <button type="button" role="menuitem" data-templates>Browse templates…</button>
+          <button type="button" role="menuitem" data-about>About</button>
           <button type="button" role="menuitem" data-licenses>Open-source licenses</button>
           <div class="topbar-more-sep"></div>
           <a href="https://github.com/d-carrigg/stackshot/releases" target="_blank" rel="noreferrer" role="menuitem">
@@ -337,6 +343,10 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
   over("format").appendChild(wrapMenuSection("Format", buildFormatGroup(store, "menu")));
 
   // Preview / Copy / Download — icon-only with tooltips ---------------
+  const templatesTop = root.querySelector<HTMLButtonElement>("[data-templates-top]")!;
+  root.querySelector<HTMLSpanElement>("[data-templates-top-ico]")!.appendChild(templatesIcon());
+  templatesTop.addEventListener("click", () => opts.onTemplates?.());
+
   const previewTop = root.querySelector<HTMLButtonElement>("[data-preview-top]")!;
   root.querySelector<HTMLSpanElement>("[data-preview-top-ico]")!.appendChild(eyeIcon());
   if (opts.onPreview) {
@@ -438,10 +448,10 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     if (e.key === "Escape" && !moreMenu.hidden) closeMenu();
   });
 
-  const templatesBtn = moreMenu.querySelector<HTMLButtonElement>("[data-templates]")!;
-  templatesBtn.addEventListener("click", () => {
+  const aboutBtn = moreMenu.querySelector<HTMLButtonElement>("[data-about]")!;
+  aboutBtn.addEventListener("click", () => {
     closeMenu();
-    opts.onTemplates?.();
+    opts.onAbout?.();
   });
   const licensesBtn = moreMenu.querySelector<HTMLButtonElement>("[data-licenses]")!;
   licensesBtn.addEventListener("click", () => {
