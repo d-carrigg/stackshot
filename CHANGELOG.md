@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.1 — 2026-05-22
+
+### Fixed
+- **Dialogs now actually close** (web). The chrome dialogs (Templates,
+  About, Open-source licenses) set `display: flex`, an author rule that
+  overrode the UA `dialog:not([open]) { display: none }`. Clicking close
+  removed the backdrop but left the dialog card on screen; closed dialogs
+  are now hidden again.
+
 ## 0.12.0 — 2026-05-22
 
 ### Added

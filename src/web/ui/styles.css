@@ -1316,6 +1316,14 @@ html, body {
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
+/* `display: flex` above is an author rule, which beats the UA
+   `dialog:not([open]) { display: none }` — so a closed dialog would stay
+   visible (backdrop gone, card lingering). Re-assert hidden when closed. */
+.app-dialog:not([open]),
+.licenses-modal:not([open]),
+.templates-modal:not([open]) {
+  display: none;
+}
 .app-dialog::backdrop,
 .licenses-modal::backdrop,
 .templates-modal::backdrop {
