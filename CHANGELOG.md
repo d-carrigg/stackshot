@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.11.1 — 2026-05-22
+
+### Added
+- **About dialog** (web). A new "About" item in the ⋯ overflow menu (above
+  "Open-source licenses") opens a small dialog describing stackshot with
+  links to the repo and releases.
+
+### Changed
+- **Browse templates is now a topbar button** (web) instead of an item
+  buried in the ⋯ overflow menu, sitting alongside Preview / Copy /
+  Download.
+
+### Fixed
+- **No more stray divider at the top of the ⋯ overflow menu** (web). The
+  separator above the licenses / CLI links now only appears once a
+  control has actually folded into the menu at narrow widths.
+
 ## 0.11.0 — 2026-05-22
 
 ### Changed

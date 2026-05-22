@@ -422,17 +422,11 @@ html, body {
   width: 64px;
   margin-left: 6px;
 }
-/* Separator above the always-on items (inner border, reset, github).
-   Hidden by default; shows only when at least one overflow section
-   above it is visible. */
+/* Separator above the always-on items (licenses, get CLI, github).
+   Hidden by default; the first fold-in breakpoint reveals it, so it
+   only shows once at least one control has actually folded into the
+   menu (otherwise it'd float at the top with nothing above it). */
 .menu-always-sep { display: none; }
-.topbar-more-menu:has(.menu-overflow[data-overflow]:not(:empty):not([data-hidden-by-mq])) .menu-always-sep {
-  display: block;
-}
-/* :has() with media-query state isn't straightforward, so just always
-   show the divider when any menu-overflow is rendered (the rules below
-   make sure it's only rendered when a breakpoint folds something in). */
-.menu-overflow:not(:empty) ~ .menu-always-sep { display: block; }
 
 /* Responsive fold-into-⋯ breakpoints. Each breakpoint hides one
    topbar slot and reveals its overflow counterpart in the menu.
@@ -441,6 +435,7 @@ html, body {
   .topbar-slot[data-slot="format"] { display: none; }
   .topbar-sep[data-sep-after="scale"] { display: none; }
   .menu-overflow[data-overflow="format"] { display: block; }
+  .menu-always-sep { display: block; }
 }
 @media (max-width: 740px) {
   .topbar-slot[data-slot="scale"] { display: none; }
@@ -1172,7 +1167,8 @@ html, body {
   backdrop-filter: blur(3px);
 }
 .licenses-modal-header,
-.templates-modal-header {
+.templates-modal-header,
+.about-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1183,7 +1179,8 @@ html, body {
   flex-shrink: 0;
 }
 .licenses-modal-header h2,
-.templates-modal-header h2 {
+.templates-modal-header h2,
+.about-modal-header h2 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
@@ -1220,6 +1217,35 @@ html, body {
   padding: 16px 20px 24px;
   flex: 1;
 }
+
+/* About — a small, fixed-size dialog (overrides the shared 720px width). */
+.about-modal { width: min(420px, 92vw); }
+.about-modal-body {
+  overflow: auto;
+  padding: 22px 24px 24px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.about-modal-logo {
+  font-size: 32px;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 4px;
+}
+.about-modal-body p { margin: 0 0 12px; color: var(--muted); }
+.about-modal-tagline { color: var(--text) !important; font-size: 14px; }
+.about-modal-links {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.about-modal-links a { color: var(--accent); text-decoration: none; }
+.about-modal-links a:hover { text-decoration: underline; }
+.about-modal-license { font-size: 12px; margin-bottom: 0 !important; }
 
 /* Rendered-markdown chrome — scoped to bodies tagged .markdown-body so
    the styles don't leak into other modals. */
