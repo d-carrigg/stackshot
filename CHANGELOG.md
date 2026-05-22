@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.4 — 2026-05-22
+
+### Fixed
+- **Export/preview/copy works again for compositions with a GIF** (web).
+  Animated panels failed with "ImageDecoder constructor: 'data' member of
+  ImageDecoderInit could not be converted…" because the decoder was handed
+  a `Blob`, which it no longer accepts. We now read the blob into an
+  `ArrayBuffer` before decoding.
+
 ## 0.10.3 — 2026-05-22
 
 ### Fixed
