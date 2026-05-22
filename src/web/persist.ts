@@ -92,6 +92,7 @@ const migrateV1 = async (parsed: any): Promise<Composition> => {
     scale: parsed.scale ?? 2.0,
     gridRows: parsed.gridRows ?? 2,
     gridCols: parsed.gridCols ?? 2,
+    gridNumbers: parsed.gridNumbers ?? false,
     exportFormat: parsed.exportFormat ?? "auto",
     selectedId: panels[0]?.id ?? null,
   };
@@ -115,6 +116,7 @@ export const load = async (): Promise<Composition | null> => {
         panels,
         gridRows: parsed.gridRows ?? 2,
         gridCols: parsed.gridCols ?? 2,
+        gridNumbers: parsed.gridNumbers ?? false,
         exportFormat: parsed.exportFormat ?? "auto",
         selectedId: panels[0]?.id ?? null,
       };

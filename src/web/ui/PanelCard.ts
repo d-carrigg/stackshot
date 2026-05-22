@@ -9,6 +9,7 @@ export type PanelCardHandle = {
   root: HTMLElement;
   update: (p: Panel) => void;
   setTheme: (t: Theme) => void;
+  setNumber: (n: number | null) => void;
 };
 
 export const createPanelCard = (store: Store, panel: Panel, theme: Theme): PanelCardHandle => {
@@ -17,6 +18,13 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
 
   const header = document.createElement("div");
   header.className = "panel-card-header";
+  // Reading-order number shown only in grid mode when numbering is on;
+  // CompositionView drives it via setNumber(). Mirrors the "N." prefix
+  // baked into the exported title.
+  const numberBadge = document.createElement("span");
+  numberBadge.className = "panel-card-number";
+  numberBadge.hidden = true;
+  header.appendChild(numberBadge);
   const titleInput = document.createElement("input");
   titleInput.type = "text";
   titleInput.placeholder = "Title (optional)";
@@ -174,6 +182,15 @@ export const createPanelCard = (store: Store, panel: Panel, theme: Theme): Panel
     },
     setTheme(t) {
       editor?.setTheme(t);
+    },
+    setNumber(n) {
+      if (n === null) {
+        numberBadge.hidden = true;
+        numberBadge.textContent = "";
+      } else {
+        numberBadge.hidden = false;
+        numberBadge.textContent = `${n}.`;
+      }
     },
   };
 };

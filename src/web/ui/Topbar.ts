@@ -16,6 +16,7 @@ import {
   clipboard as clipIcon,
   eye as eyeIcon,
   github as ghIcon,
+  listOrdered as listOrderedIcon,
 } from "./icons";
 import { THEMES, resolveTheme } from "../themes";
 
@@ -54,6 +55,32 @@ const buildLayoutGroup = (store: Store, variant: Variant): HTMLElement => {
   const render = () => {
     const c = store.get();
     for (const b of btns) b.classList.toggle("active", b.dataset.layoutVal === c.layout);
+  };
+  render();
+  store.subscribe(render);
+  return wrap;
+};
+
+// Grid-only toggle: prefix each cell's title with its reading-order
+// number. Hides itself (and its menu section) outside grid mode.
+const buildGridNumbersToggle = (store: Store, variant: Variant): HTMLElement => {
+  const wrap = document.createElement("div");
+  wrap.className = variant === "topbar" ? "topbar-gridnums" : "menu-gridnums";
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "topbar-icon-toggle";
+  btn.title = "Number the grid cells";
+  btn.setAttribute("aria-label", "Number the grid cells");
+  btn.appendChild(listOrderedIcon());
+  btn.addEventListener("click", () => store.patch({ gridNumbers: !store.get().gridNumbers }));
+  wrap.appendChild(btn);
+
+  const render = () => {
+    const c = store.get();
+    btn.classList.toggle("active", c.gridNumbers);
+    btn.setAttribute("aria-pressed", String(c.gridNumbers));
+    const host = (wrap.closest(".menu-section") as HTMLElement | null) ?? wrap;
+    host.hidden = c.layout !== "grid";
   };
   render();
   store.subscribe(render);
@@ -235,6 +262,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
       <span class="brand">stackshot</span>
 
       <div class="topbar-slot" data-slot="layout"></div>
+      <div class="topbar-slot" data-slot="gridnums"></div>
       <span class="topbar-sep" data-sep-after="layout" aria-hidden="true"></span>
 
       <div class="topbar-slot" data-slot="themes"></div>
@@ -266,6 +294,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
         </button>
         <div class="topbar-more-menu" data-more-menu hidden role="menu">
           <div class="menu-overflow" data-overflow="layout"></div>
+          <div class="menu-overflow" data-overflow="gridnums"></div>
           <div class="menu-overflow" data-overflow="themes"></div>
           <div class="menu-overflow" data-overflow="scale"></div>
           <div class="menu-overflow" data-overflow="format"></div>
@@ -293,6 +322,9 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
 
   slot("layout").appendChild(buildLayoutGroup(store, "topbar"));
   over("layout").appendChild(wrapMenuSection("Layout", buildLayoutGroup(store, "menu")));
+
+  slot("gridnums").appendChild(buildGridNumbersToggle(store, "topbar"));
+  over("gridnums").appendChild(wrapMenuSection("Numbering", buildGridNumbersToggle(store, "menu")));
 
   slot("themes").appendChild(buildThemeGroup(store, "topbar"));
   over("themes").appendChild(wrapMenuSection("Theme", buildThemeGroup(store, "menu")));

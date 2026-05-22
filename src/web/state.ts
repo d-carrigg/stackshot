@@ -15,10 +15,8 @@ export const GRID_MAX_PANELS = 6;
 export const gridDimsFor = (panelCount: number): { rows: number; cols: number } => {
   const n = Math.max(1, Math.min(panelCount, GRID_MAX_PANELS));
   if (n === 1) return { rows: 1, cols: 1 };
-  if (n === 2) return { rows: 1, cols: 2 };
-  if (n === 3) return { rows: 1, cols: 3 };
-  if (n === 4) return { rows: 2, cols: 2 };
-  return { rows: 2, cols: 3 }; // 5, 6
+  // Always two columns; rows grow to fit. 2→1×2, 3/4→2×2, 5/6→3×2.
+  return { rows: Math.ceil(n / 2), cols: 2 };
 };
 
 // Scale presets — the topbar exposes these as low/med/high pills with a
@@ -79,6 +77,7 @@ export type Composition = {
   scale: number;       // 1.0 - 8.0 (presets: low=3, med=4, high=5)
   gridRows: number;    // only used when layout === "grid"
   gridCols: number;    // only used when layout === "grid"
+  gridNumbers: boolean; // grid mode: prefix each cell's title with its reading-order number
   exportFormat: ExportFormat; // "auto" → webp
   selectedId: string | null;
 };
@@ -118,6 +117,7 @@ export const emptyComposition = (): Composition => ({
   scale: DEFAULT_SCALE,
   gridRows: 2,
   gridCols: 2,
+  gridNumbers: false,
   exportFormat: "auto",
   selectedId: null,
 });
@@ -144,6 +144,7 @@ export const defaultComposition = (): Composition => {
     scale: DEFAULT_SCALE,
     gridRows: 2,
     gridCols: 2,
+    gridNumbers: false,
     exportFormat: "auto",
     selectedId: first.id,
   };
