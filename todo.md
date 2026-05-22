@@ -64,8 +64,9 @@ Numbers in parens map back to the original list.
 - [x] There is a horizontal rule/seperator at the top of the overflow menu, it shouldn't be there
 - [ ] Sometimes have to hard refresh to see new features after new release
 - [ ] Descriptions/captions in addition to the title
-- [ ] Abotu dialog does not close on x, closes when you click outside
+- [ ] On mobile, About dialog does not close on x, closes when you click outside. Haven't checked other dialogs but may be an issue there.
 - [ ] Transparency is an issue for some dialogs (e.g templates dialog has arrows from canvas drawn on it). Also on mobile the overflow menu is partialy transparent and things like arrows are drawn on top
+- [ ] Arrows don't properly stretch/align in grid mode. Panels don't either 
 
 ### Remndering
 - [x] Display status indicator when rendering, for animated stuff where it may take a while
