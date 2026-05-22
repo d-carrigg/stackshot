@@ -24,23 +24,30 @@ type AnimSlot = {
   radius: number;
 };
 
+// Render a single animated frame at the target panel dimensions (the
+// same size the static renderPanel produced) so motion panels match the
+// code panel's scale instead of drawing at the GIF's tiny native size.
 const renderFrameToCanvas = (
   frame: Frame,
   rounded: boolean,
   radius: number,
+  width: number,
+  height: number,
 ): HTMLCanvasElement => {
   const c = document.createElement("canvas");
-  c.width = frame.bitmap.width;
-  c.height = frame.bitmap.height;
+  c.width = width;
+  c.height = height;
   const ctx = c.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   if (rounded && radius > 0) {
     ctx.save();
-    roundedRectPath(ctx, 0, 0, c.width, c.height, Math.min(radius, Math.min(c.width, c.height) / 2));
+    roundedRectPath(ctx, 0, 0, width, height, Math.min(radius, Math.min(width, height) / 2));
     ctx.clip();
-    ctx.drawImage(frame.bitmap, 0, 0);
+    ctx.drawImage(frame.bitmap, 0, 0, width, height);
     ctx.restore();
   } else {
-    ctx.drawImage(frame.bitmap, 0, 0);
+    ctx.drawImage(frame.bitmap, 0, 0, width, height);
   }
   return c;
 };
@@ -101,14 +108,15 @@ export const composeAnimatedFrames = async (
     const t = i * FRAME_MS;
     for (const slot of slots) {
       const f = frameAtTime(slot, t);
-      const swapped = renderFrameToCanvas(f, slot.rounded, slot.radius);
       const existing = items[slot.panelIndex]!;
-      items[slot.panelIndex] = {
-        ...existing,
-        canvas: swapped,
-        width: swapped.width,
-        height: swapped.height,
-      };
+      const swapped = renderFrameToCanvas(
+        f,
+        slot.rounded,
+        slot.radius,
+        existing.width,
+        existing.height,
+      );
+      items[slot.panelIndex] = { ...existing, canvas: swapped };
     }
     const canvas = composeFromItems(items, comp, scale);
     output.push({ canvas, durationMs: FRAME_MS });

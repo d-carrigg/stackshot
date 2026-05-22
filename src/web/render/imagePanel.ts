@@ -27,26 +27,48 @@ export type ImagePanelCanvas = {
   height: number;
 };
 
+// Per-panel content cap (logical px, pre-scale) — mirrors the CLI's
+// DEFAULT_MAX_WIDTH/HEIGHT so an oversized screenshot doesn't dominate.
+export const MAX_CONTENT = 1200;
+
+// Target raster dimensions for an image of (w, h) natural px at `scale`.
+// Mirrors the CLI's fit_image(upscale=True): grow the image by `scale`
+// so it matches code panels (which rasterize at scale natively), but
+// first cap its logical size to MAX_CONTENT so huge inputs stay sane.
+export const imageTargetSize = (
+  w: number,
+  h: number,
+  scale: number,
+): { width: number; height: number } => {
+  const fit = Math.min(1, MAX_CONTENT / Math.max(w, h));
+  return {
+    width: Math.max(1, Math.round(w * fit * scale)),
+    height: Math.max(1, Math.round(h * fit * scale)),
+  };
+};
+
 export const renderImagePanel = async (
   src: string,
   rounded: boolean,
   radius: number,
+  scale: number,
 ): Promise<ImagePanelCanvas> => {
   const img = await loadImage(src);
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
+  const { width: w, height: h } = imageTargetSize(img.naturalWidth, img.naturalHeight, scale);
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   if (rounded && radius > 0) {
     ctx.save();
     roundedRectPath(ctx, 0, 0, w, h, Math.min(radius, Math.min(w, h) / 2));
     ctx.clip();
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, w, h);
     ctx.restore();
   } else {
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, w, h);
   }
   return { canvas, width: w, height: h };
 };

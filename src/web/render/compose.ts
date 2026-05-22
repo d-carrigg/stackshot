@@ -31,7 +31,7 @@ export const renderPanel = async (
   const innerBorder = !!p.innerBorder;
   const rounded = !innerBorder;
   const radius = _s(PANEL_RADIUS, scale);
-  const img = await renderImagePanel(p.src, rounded, radius);
+  const img = await renderImagePanel(p.src, rounded, radius, scale);
   return { canvas: img.canvas, width: img.width, height: img.height, title: p.title, isImage: true, innerBorder };
 };
 
