@@ -239,6 +239,14 @@ html, body {
 }
 .topbar-icon-btn[hidden] { display: none; }
 .topbar-icon-btn .ico { display: inline-flex; line-height: 1; }
+.topbar-icon-btn:disabled { cursor: progress; }
+/* Live render percentage shown in place of the icon (≤32px button). */
+.topbar-pct {
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
 .topbar-icon-btn-primary {
   background: var(--accent);
   color: var(--accent-text);

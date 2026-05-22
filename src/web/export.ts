@@ -14,16 +14,42 @@ export const resolveExportFormat = (comp: Composition): EncodeFormat =>
 // encode dominates, so compose is a small slice.
 const COMPOSE_SHARE: Record<EncodeFormat, number> = { webp: 0.85, png: 0.95, gif: 0.3 };
 
+// Content-addressed render cache: render once, then reuse for repeated
+// preview/copy/download until something output-affecting changes. The key
+// is the composition minus selectedId (selection doesn't change the image)
+// plus the resolved format. Keyed by content rather than a manual dirty
+// flag so it can never serve a stale render or be invalidated by a missed
+// mutation hook.
+let renderCache: { sig: string; result: RenderedImage } | null = null;
+
+const renderSignature = (comp: Composition): string =>
+  `${resolveExportFormat(comp)}|${JSON.stringify({ ...comp, selectedId: null })}`;
+
+// A render done before web fonts finished loading would use fallback
+// metrics; drop that cached render once fonts are ready.
+if (typeof document !== "undefined" && document.fonts?.ready) {
+  document.fonts.ready.then(() => {
+    renderCache = null;
+  });
+}
+
 // One pipeline: compose frames (1 for static, N for animated) → encode in
-// the chosen format. No static-vs-animated fork.
+// the chosen format. No static-vs-animated fork. Cached by content.
 export const renderForExport = async (
   comp: Composition,
   onProgress?: ProgressFn,
 ): Promise<RenderedImage> => {
+  const sig = renderSignature(comp);
+  if (renderCache && renderCache.sig === sig) {
+    onProgress?.(1);
+    return renderCache.result;
+  }
   const format = resolveExportFormat(comp);
   const share = COMPOSE_SHARE[format];
   const frames = await renderFrames(comp, (f) => onProgress?.(f * share));
-  return encodeFrames(frames, format, { comp }, (f) => onProgress?.(share + f * (1 - share)));
+  const result = await encodeFrames(frames, format, { comp }, (f) => onProgress?.(share + f * (1 - share)));
+  renderCache = { sig, result };
+  return result;
 };
 
 const canvasToPng = (canvas: HTMLCanvasElement): Promise<Blob> =>
@@ -47,13 +73,13 @@ const triggerDownload = (blob: Blob, filename: string): void => {
 export const saveBlob = (blob: Blob, ext: string): void =>
   triggerDownload(blob, `stackshot-${Date.now()}.${ext}`);
 
-export const exportImage = async (comp: Composition): Promise<void> => {
-  const img = await renderForExport(comp);
+export const exportImage = async (comp: Composition, onProgress?: ProgressFn): Promise<void> => {
+  const img = await renderForExport(comp, onProgress);
   triggerDownload(img.blob, `stackshot-${Date.now()}.${img.ext}`);
 };
 
-export const copyImageToClipboard = async (comp: Composition): Promise<void> => {
-  const img = await renderForExport(comp);
+export const copyImageToClipboard = async (comp: Composition, onProgress?: ProgressFn): Promise<void> => {
+  const img = await renderForExport(comp, onProgress);
   if (!("clipboard" in navigator) || !("write" in navigator.clipboard)) {
     throw new Error("Clipboard API unavailable in this browser");
   }

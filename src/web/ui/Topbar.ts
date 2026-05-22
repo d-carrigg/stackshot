@@ -343,26 +343,48 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     previewTop.addEventListener("click", () => opts.onPreview?.());
   }
 
-  const copyTop = root.querySelector<HTMLButtonElement>("[data-copy-top]")!;
-  root.querySelector<HTMLSpanElement>("[data-copy-top-ico]")!.appendChild(clipIcon());
-  copyTop.addEventListener("click", async () => {
+  // While a render runs, swap the button's icon for a live percentage and
+  // disable it. With a warm render cache this resolves instantly.
+  const runWithBtnProgress = async (
+    btn: HTMLButtonElement,
+    ico: HTMLElement,
+    run: (onProgress: (f: number) => void) => Promise<void>,
+  ): Promise<void> => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const saved = Array.from(ico.childNodes);
+    const pct = document.createElement("span");
+    pct.className = "topbar-pct";
+    pct.textContent = "0%";
+    ico.replaceChildren(pct);
     try {
-      await copyImageToClipboard(store.get());
-      showToast("Copied to clipboard");
-    } catch (e) {
-      showToast(`Copy failed: ${(e as Error).message}`);
+      await run((f) => {
+        pct.textContent = `${Math.round(f * 100)}%`;
+      });
+    } finally {
+      ico.replaceChildren(...saved);
+      btn.disabled = false;
     }
-  });
+  };
+
+  const copyTop = root.querySelector<HTMLButtonElement>("[data-copy-top]")!;
+  const copyIco = root.querySelector<HTMLSpanElement>("[data-copy-top-ico]")!;
+  copyIco.appendChild(clipIcon());
+  const doCopy = () =>
+    runWithBtnProgress(copyTop, copyIco, async (p) => {
+      await copyImageToClipboard(store.get(), p);
+      showToast("Copied to clipboard");
+    }).catch((e) => showToast(`Copy failed: ${(e as Error).message}`));
+  copyTop.addEventListener("click", doCopy);
 
   const exportBtn = root.querySelector<HTMLButtonElement>("[data-export]")!;
-  root.querySelector<HTMLSpanElement>("[data-dl-ico]")!.appendChild(dlIcon());
-  exportBtn.addEventListener("click", async () => {
-    try {
-      await exportImage(store.get());
-    } catch (e) {
-      showToast(`Export failed: ${(e as Error).message}`);
-    }
-  });
+  const dlIco = root.querySelector<HTMLSpanElement>("[data-dl-ico]")!;
+  dlIco.appendChild(dlIcon());
+  const doExport = () =>
+    runWithBtnProgress(exportBtn, dlIco, async (p) => {
+      await exportImage(store.get(), p);
+    }).catch((e) => showToast(`Export failed: ${(e as Error).message}`));
+  exportBtn.addEventListener("click", doExport);
 
   // Overflow ⋯ menu --------------------------------------------------
   const moreBtn = root.querySelector<HTMLButtonElement>("[data-more]")!;
@@ -413,17 +435,10 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
       tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable);
     if (e.key.toLowerCase() === "s") {
       e.preventDefault();
-      try { await exportImage(store.get()); } catch (err) {
-        showToast(`Export failed: ${(err as Error).message}`);
-      }
+      doExport();
     } else if (e.key.toLowerCase() === "c" && !inEditable && !window.getSelection()?.toString()) {
       e.preventDefault();
-      try {
-        await copyImageToClipboard(store.get());
-        showToast("Copied to clipboard");
-      } catch (err) {
-        showToast(`Copy failed: ${(err as Error).message}`);
-      }
+      doCopy();
     }
   });
 
