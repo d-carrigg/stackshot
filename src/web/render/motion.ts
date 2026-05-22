@@ -8,7 +8,7 @@ export type Frame = {
   durationMs: number;
 };
 
-type ImageDecoderCtor = new (init: { data: ArrayBuffer | Blob; type: string }) => {
+type ImageDecoderCtor = new (init: { data: ArrayBuffer; type: string }) => {
   completed: Promise<void>;
   tracks: { selectedTrack: { frameCount: number; animated: boolean } | null } & {
     ready: Promise<void>;
@@ -29,7 +29,10 @@ export const probeAnimation = async (file: Blob): Promise<boolean> => {
   }
   try {
     const Ctor = (globalThis as any).ImageDecoder as ImageDecoderCtor;
-    const decoder = new Ctor({ data: file, type: file.type });
+    // ImageDecoderInit.data only accepts a BufferSource/ReadableStream, not a
+    // Blob — read the bytes first.
+    const data = await file.arrayBuffer();
+    const decoder = new Ctor({ data, type: file.type });
     await decoder.tracks.ready;
     const track = decoder.tracks.selectedTrack;
     const animated = !!track && (track.animated === true || track.frameCount > 1);
@@ -49,7 +52,8 @@ export const decodeFrames = async (file: Blob): Promise<Frame[]> => {
     return [{ bitmap, durationMs: 0 }];
   }
   const Ctor = (globalThis as any).ImageDecoder as ImageDecoderCtor;
-  const decoder = new Ctor({ data: file, type: file.type });
+  const data = await file.arrayBuffer();
+  const decoder = new Ctor({ data, type: file.type });
   await decoder.tracks.ready;
   const track = decoder.tracks.selectedTrack;
   const frameCount = track?.frameCount ?? 1;

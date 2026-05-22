@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.4 — 2026-05-22
+
+### Fixed
+- **Export/preview/copy works again for compositions with a GIF** (web).
+  Animated panels failed with "ImageDecoder constructor: 'data' member of
+  ImageDecoderInit could not be converted…" because the decoder was handed
+  a `Blob`, which it no longer accepts. We now read the blob into an
+  `ArrayBuffer` before decoding.
+- **Image and GIF panels now render at the composition scale** (web),
+  instead of their tiny native pixel size next to scale-rasterized code
+  panels. Images are upscaled by the active scale (capped at 1200 logical
+  px), matching the CLI's behavior, so a small screenshot or GIF sits at a
+  consistent size in both the preview and the export.
+
 ## 0.10.3 — 2026-05-22
 
 ### Fixed
