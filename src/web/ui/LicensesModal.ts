@@ -24,10 +24,12 @@ const renderedCache = new Map<string, string>();
 export const mountLicensesModal = (): LicensesModalHandle => {
   const dlg = document.createElement("dialog");
   dlg.className = "licenses-modal";
+  dlg.setAttribute("aria-labelledby", "licenses-modal-title");
 
   const header = document.createElement("div");
   header.className = "licenses-modal-header";
   const title = document.createElement("h2");
+  title.id = "licenses-modal-title";
   title.textContent = "Open-source licenses";
 
   const tabsEl = document.createElement("div");
@@ -41,6 +43,8 @@ export const mountLicensesModal = (): LicensesModalHandle => {
     btn.dataset.tabId = tab.id;
     btn.textContent = tab.label;
     btn.setAttribute("role", "tab");
+    btn.id = `licenses-tab-${tab.id}`;
+    btn.setAttribute("aria-controls", "licenses-modal-panel");
     tabsEl.appendChild(btn);
     tabButtons.push(btn);
   }
@@ -56,6 +60,9 @@ export const mountLicensesModal = (): LicensesModalHandle => {
 
   const body = document.createElement("div");
   body.className = "licenses-modal-body markdown-body";
+  body.id = "licenses-modal-panel";
+  body.setAttribute("role", "tabpanel");
+  body.tabIndex = 0;
 
   const renderTab = (id: string) => {
     const tab = TABS.find((t) => t.id === id) ?? TABS[0]!;
@@ -66,6 +73,7 @@ export const mountLicensesModal = (): LicensesModalHandle => {
     }
     body.innerHTML = html;
     body.scrollTop = 0;
+    body.setAttribute("aria-labelledby", `licenses-tab-${tab.id}`);
     for (const b of tabButtons) {
       const active = b.dataset.tabId === tab.id;
       b.classList.toggle("active", active);

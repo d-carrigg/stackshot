@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.2 — 2026-05-23
+
+### Fixed
+- **Accessibility (web).** Added an `<h1>` page heading, labeled the code
+  editor textareas (`aria-label="Code"`) and the custom-scale input, gave
+  every modal an accessible name (`aria-label`/`aria-labelledby`), and
+  wired the licenses modal's tabs to their panel (`role="tabpanel"` +
+  `aria-controls`/`aria-labelledby`).
+
 ## 0.12.1 — 2026-05-22
 
 ### Fixed

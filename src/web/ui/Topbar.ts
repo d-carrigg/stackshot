@@ -209,7 +209,7 @@ const buildScaleGroup = (store: Store, variant: Variant): HTMLElement => {
     <button type="button" class="topbar-pill" data-scale-val="med">med</button>
     <button type="button" class="topbar-pill" data-scale-val="high">high</button>
     <button type="button" class="topbar-pill" data-scale-val="custom" data-scale-custom>custom</button>
-    <input type="number" class="topbar-scale-input" min="1" max="8" step="0.5" data-scale-input hidden />
+    <input type="number" class="topbar-scale-input" min="1" max="8" step="0.5" data-scale-input aria-label="Custom scale" hidden />
   `;
   const pills = wrap.querySelectorAll<HTMLButtonElement>("[data-scale-val]");
   const customPill = wrap.querySelector<HTMLButtonElement>("[data-scale-custom]")!;
@@ -293,7 +293,7 @@ const wrapMenuSection = (label: string, el: HTMLElement): HTMLElement => {
 export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions = {}): void => {
   root.innerHTML = `
     <header class="topbar">
-      <span class="brand">stackshot</span>
+      <h1 class="brand">stackshot</h1>
 
       <div class="topbar-slot" data-slot="layout"></div>
       <div class="topbar-slot" data-slot="gridnums"></div>

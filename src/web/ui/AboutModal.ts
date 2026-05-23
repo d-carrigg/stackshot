@@ -9,10 +9,12 @@ export type AboutModalHandle = {
 export const mountAboutModal = (): AboutModalHandle => {
   const dlg = document.createElement("dialog");
   dlg.className = "app-dialog about-modal";
+  dlg.setAttribute("aria-labelledby", "about-modal-title");
 
   const header = document.createElement("div");
   header.className = "about-modal-header";
   const title = document.createElement("h2");
+  title.id = "about-modal-title";
   title.textContent = "About stackshot";
 
   const closeBtn = document.createElement("button");
