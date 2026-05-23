@@ -36,7 +36,7 @@ export const createCodeEditor = (opts: {
   root.innerHTML = `
     <div class="ln-gutter" aria-hidden="true"></div>
     <pre class="hl" aria-hidden="true"><code></code></pre>
-    <textarea spellcheck="false" data-form-type="other" autocorrect="off" autocapitalize="off"></textarea>
+    <textarea spellcheck="false" data-form-type="other" autocorrect="off" autocapitalize="off" aria-label="Code"></textarea>
   `;
 
   const gutter = root.querySelector<HTMLDivElement>(".ln-gutter")!;

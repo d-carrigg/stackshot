@@ -34,11 +34,13 @@ const mkOverlayButton = (
 export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   const dlg = document.createElement("dialog");
   dlg.className = "preview-modal";
+  dlg.setAttribute("aria-label", "Composition preview");
   // The image is the dialog. A single icon toolbar sits at the top-right.
   const figure = document.createElement("div");
   figure.className = "preview-modal-figure";
   const loading = document.createElement("div");
   loading.className = "preview-modal-loading";
+  loading.setAttribute("role", "status");
   loading.textContent = "Rendering…";
   const img = document.createElement("img");
   img.className = "preview-modal-img";

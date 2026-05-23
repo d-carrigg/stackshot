@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.12.2 — 2026-05-23
+
+### Fixed
+- **Accessibility (web).** Added an `<h1>` page heading, labeled the code
+  editor textareas (`aria-label="Code"`) and the custom-scale input, gave
+  every modal an accessible name (`aria-label`/`aria-labelledby`), and
+  wired the licenses modal's tabs to their panel (`role="tabpanel"` +
+  `aria-controls`/`aria-labelledby`).
+- **More accessibility (web).** Toasts and "Rendering…" status now
+  announce via `role="status"`/`aria-live`. The language combobox exposes
+  its active option to screen readers (`aria-activedescendant`, option
+  ids, `aria-controls`, `aria-selected`). Per-arrow style buttons and the
+  custom-color popover trigger report state (`aria-pressed`,
+  `aria-haspopup`/`aria-expanded`). Image panels get a meaningful `alt`
+  and a labeled file input. The licenses tabs support arrow-key
+  navigation (roving tabindex); the overflow popover drops its misleading
+  `role="menu"` and now moves focus into/out of itself for keyboard users.
+
 ## 0.12.1 — 2026-05-22
 
 ### Fixed

@@ -37,10 +37,12 @@ const renderThumbnail = async (id: TemplateId): Promise<string> => {
 export const mountTemplatesModal = (store: Store): TemplatesModalHandle => {
   const dlg = document.createElement("dialog");
   dlg.className = "templates-modal";
+  dlg.setAttribute("aria-labelledby", "templates-modal-title");
 
   const header = document.createElement("div");
   header.className = "templates-modal-header";
   const title = document.createElement("h2");
+  title.id = "templates-modal-title";
   title.textContent = "Templates";
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
@@ -66,6 +68,7 @@ export const mountTemplatesModal = (store: Store): TemplatesModalHandle => {
     thumbWrap.className = "template-card-thumb";
     const spinner = document.createElement("span");
     spinner.className = "template-card-spinner";
+    spinner.setAttribute("role", "status");
     spinner.textContent = "Rendering…";
     const thumb = document.createElement("img");
     thumb.alt = `${tpl.label} preview`;
