@@ -152,6 +152,8 @@ const buildThemeGroup = (store: Store, variant: Variant): HTMLElement => {
   if (variant === "topbar") {
     const pop = document.createElement("div");
     pop.className = "topbar-color-pop";
+    pop.setAttribute("role", "group");
+    pop.setAttribute("aria-label", "Custom colors");
     pop.hidden = true;
     pop.innerHTML = `
       <label>BG <input type="color" data-bg /></label>
@@ -160,15 +162,21 @@ const buildThemeGroup = (store: Store, variant: Variant): HTMLElement => {
     wrap.appendChild(pop);
     bg = pop.querySelector<HTMLInputElement>("[data-bg]")!;
     arrow = pop.querySelector<HTMLInputElement>("[data-arrow]")!;
+    customBtn.setAttribute("aria-haspopup", "true");
+    customBtn.setAttribute("aria-expanded", "false");
+    const setPopOpen = (open: boolean) => {
+      pop.hidden = !open;
+      customBtn.setAttribute("aria-expanded", String(open));
+    };
     customBtn.addEventListener("click", () => {
-      pop.hidden = !pop.hidden;
+      setPopOpen(!!pop.hidden);
       if (!pop.hidden) bg.focus();
     });
     document.addEventListener("click", (e) => {
       if (pop.hidden) return;
       const t = e.target as Node;
       if (pop.contains(t) || customBtn.contains(t)) return;
-      pop.hidden = true;
+      setPopOpen(false);
     });
   } else {
     const row = document.createElement("div");
@@ -328,10 +336,10 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
       </button>
 
       <div class="topbar-more">
-        <button type="button" class="topbar-more-btn" data-more title="More" aria-label="More options" aria-haspopup="menu" aria-expanded="false">
+        <button type="button" class="topbar-more-btn" data-more title="More" aria-label="More options" aria-haspopup="true" aria-expanded="false">
           <span aria-hidden="true">⋯</span>
         </button>
-        <div class="topbar-more-menu" data-more-menu hidden role="menu">
+        <div class="topbar-more-menu" data-more-menu hidden role="group" aria-label="More options">
           <div class="menu-overflow" data-overflow="layout"></div>
           <div class="menu-overflow" data-overflow="gridnums"></div>
           <div class="menu-overflow" data-overflow="arrows"></div>
@@ -339,13 +347,13 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
           <div class="menu-overflow" data-overflow="scale"></div>
           <div class="menu-overflow" data-overflow="format"></div>
           <div class="topbar-more-sep menu-always-sep"></div>
-          <button type="button" role="menuitem" data-about>About</button>
-          <button type="button" role="menuitem" data-licenses>Open-source licenses</button>
+          <button type="button" data-about>About</button>
+          <button type="button" data-licenses>Open-source licenses</button>
           <div class="topbar-more-sep"></div>
-          <a href="https://github.com/d-carrigg/stackshot/releases" target="_blank" rel="noreferrer" role="menuitem">
+          <a href="https://github.com/d-carrigg/stackshot/releases" target="_blank" rel="noreferrer">
             <span class="topbar-more-dl"></span><span>Get the CLI</span>
           </a>
-          <a href="https://github.com/d-carrigg/stackshot" target="_blank" rel="noreferrer" role="menuitem">
+          <a href="https://github.com/d-carrigg/stackshot" target="_blank" rel="noreferrer">
             <span class="topbar-more-gh"></span><span>View on GitHub</span>
           </a>
         </div>
@@ -462,13 +470,19 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
   const moreMenu = root.querySelector<HTMLDivElement>("[data-more-menu]")!;
   moreMenu.querySelector<HTMLSpanElement>(".topbar-more-gh")!.appendChild(ghIcon());
   moreMenu.querySelector<HTMLSpanElement>(".topbar-more-dl")!.appendChild(dlIcon());
-  const closeMenu = () => {
+  const closeMenu = (restoreFocus = false) => {
     moreMenu.hidden = true;
     moreBtn.setAttribute("aria-expanded", "false");
+    if (restoreFocus) moreBtn.focus();
   };
   const openMenu = () => {
     moreMenu.hidden = false;
     moreBtn.setAttribute("aria-expanded", "true");
+    // Move focus into the popover so keyboard users land on the controls
+    // (then Tab/Shift+Tab cycles through them natively).
+    moreMenu
+      .querySelector<HTMLElement>("button, a, input, [tabindex]")
+      ?.focus();
   };
   moreBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -481,7 +495,7 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
     closeMenu();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !moreMenu.hidden) closeMenu();
+    if (e.key === "Escape" && !moreMenu.hidden) closeMenu(true);
   });
 
   const aboutBtn = moreMenu.querySelector<HTMLButtonElement>("[data-about]")!;

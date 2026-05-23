@@ -78,11 +78,23 @@ export const mountLicensesModal = (): LicensesModalHandle => {
       const active = b.dataset.tabId === tab.id;
       b.classList.toggle("active", active);
       b.setAttribute("aria-selected", active ? "true" : "false");
+      // Roving tabindex: only the selected tab is in the tab order; arrow
+      // keys move between tabs (APG tablist pattern).
+      b.tabIndex = active ? 0 : -1;
     }
   };
   for (const b of tabButtons) {
     b.addEventListener("click", () => renderTab(b.dataset.tabId!));
   }
+  tabsEl.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault();
+    const idx = tabButtons.findIndex((b) => b.getAttribute("aria-selected") === "true");
+    const next = (idx + (e.key === "ArrowRight" ? 1 : -1) + tabButtons.length) % tabButtons.length;
+    const btn = tabButtons[next]!;
+    renderTab(btn.dataset.tabId!);
+    btn.focus();
+  });
 
   dlg.append(header, body);
   closeBtn.addEventListener("click", () => dlg.close());

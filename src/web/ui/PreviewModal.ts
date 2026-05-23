@@ -40,6 +40,7 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   figure.className = "preview-modal-figure";
   const loading = document.createElement("div");
   loading.className = "preview-modal-loading";
+  loading.setAttribute("role", "status");
   loading.textContent = "Rendering…";
   const img = document.createElement("img");
   img.className = "preview-modal-img";

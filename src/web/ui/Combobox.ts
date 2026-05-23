@@ -20,7 +20,10 @@ export type ComboboxOptions = {
   onChange: (value: string) => void;
 };
 
+let comboboxSeq = 0;
+
 export const createCombobox = (opts: ComboboxOptions): ComboboxHandle => {
+  const baseId = `combobox-${++comboboxSeq}`;
   const root = document.createElement("div");
   root.className = "combobox";
 
@@ -30,6 +33,7 @@ export const createCombobox = (opts: ComboboxOptions): ComboboxHandle => {
   input.setAttribute("role", "combobox");
   input.setAttribute("aria-autocomplete", "list");
   input.setAttribute("aria-expanded", "false");
+  input.setAttribute("aria-controls", `${baseId}-list`);
   input.setAttribute("autocomplete", "off");
   input.setAttribute("data-form-type", "other");
   input.setAttribute("data-1p-ignore", "true");
@@ -46,6 +50,7 @@ export const createCombobox = (opts: ComboboxOptions): ComboboxHandle => {
 
   const list = document.createElement("ul");
   list.className = "combobox-list";
+  list.id = `${baseId}-list`;
   list.setAttribute("role", "listbox");
   list.hidden = true;
 
@@ -71,9 +76,11 @@ export const createCombobox = (opts: ComboboxOptions): ComboboxHandle => {
     visible.forEach((opt, i) => {
       const li = document.createElement("li");
       li.className = "combobox-option";
+      li.id = `${baseId}-opt-${i}`;
       li.setAttribute("role", "option");
       li.dataset.value = opt;
       li.textContent = opt;
+      li.setAttribute("aria-selected", String(opt === committed));
       if (opt === committed) li.classList.add("selected");
       li.addEventListener("mousedown", (e) => {
         // mousedown (not click) so we commit before the input blurs and
@@ -94,7 +101,12 @@ export const createCombobox = (opts: ComboboxOptions): ComboboxHandle => {
     const lis = list.querySelectorAll<HTMLLIElement>(".combobox-option");
     lis.forEach((el, idx) => el.classList.toggle("active", idx === highlightIdx));
     const cur = lis[highlightIdx];
-    if (cur) cur.scrollIntoView({ block: "nearest" });
+    if (cur) {
+      cur.scrollIntoView({ block: "nearest" });
+      input.setAttribute("aria-activedescendant", cur.id);
+    } else {
+      input.removeAttribute("aria-activedescendant");
+    }
   };
 
   const open = (): void => {
@@ -107,6 +119,7 @@ export const createCombobox = (opts: ComboboxOptions): ComboboxHandle => {
     if (list.hidden) return;
     list.hidden = true;
     input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
     if (revert) input.value = committed;
   };
 

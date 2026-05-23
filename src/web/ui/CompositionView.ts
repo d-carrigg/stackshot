@@ -471,9 +471,11 @@ const openArrowEditor = (store: Store, fromId: string, anchor: HTMLElement): voi
 
   const sync = () => {
     const resolved = resolveArrow(store.get(), fromId);
-    pop.querySelectorAll<HTMLButtonElement>("[data-style]").forEach((b) =>
-      b.classList.toggle("active", b.dataset.style === resolved.style),
-    );
+    pop.querySelectorAll<HTMLButtonElement>("[data-style]").forEach((b) => {
+      const active = b.dataset.style === resolved.style;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
+    });
     pop.querySelector<HTMLInputElement>("[data-arrow-color]")!.value = resolved.color;
   };
 

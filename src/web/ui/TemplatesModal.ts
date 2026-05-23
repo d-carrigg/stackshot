@@ -68,6 +68,7 @@ export const mountTemplatesModal = (store: Store): TemplatesModalHandle => {
     thumbWrap.className = "template-card-thumb";
     const spinner = document.createElement("span");
     spinner.className = "template-card-spinner";
+    spinner.setAttribute("role", "status");
     spinner.textContent = "Rendering…";
     const thumb = document.createElement("img");
     thumb.alt = `${tpl.label} preview`;
