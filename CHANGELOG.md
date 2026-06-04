@@ -16,6 +16,14 @@
   toggle only appears in grid mode, the arrows button no longer shifts
   position when the numbering toggle shows or hides.
 
+### Fixed
+- **Editor caret in light themes (web).** The code editor's caret color
+  now derives from the panel background instead of the theme title, so it
+  stays visible on dark panels under light themes (e.g. Sunset).
+- **Animated render memory (web).** Decoded source-frame `ImageBitmap`s
+  are now closed after compositing instead of waiting on GC, so rendering
+  animated panels no longer leaves GPU-backed memory lying around.
+
 ## 0.12.2 — 2026-05-23
 
 ### Fixed

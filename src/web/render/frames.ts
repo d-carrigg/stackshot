@@ -124,7 +124,11 @@ export const renderFrames = async (
     const blob = await getBlob(p.blobId);
     if (!blob) continue;
     const frames = await decodeFrames(blob);
-    if (frames.length < 2) continue;
+    if (frames.length < 2) {
+      // Not actually animated — drop the decoded bitmaps now.
+      for (const f of frames) f.bitmap.close();
+      continue;
+    }
     const totalMs = frames.reduce((a, f) => a + Math.max(20, f.durationMs), 0);
     // rounded → image is drawn without the padded panel bg (inner border).
     slots.push({ panelIndex: i, frames, totalMs, rounded: !p.innerBorder, radius });
@@ -156,6 +160,9 @@ export const renderFrames = async (
       await nextPaint();
     }
   }
+  // Source frames are now baked into the output canvases; free the
+  // GPU-backed bitmaps instead of waiting on GC finalization.
+  for (const slot of slots) for (const f of slot.frames) f.bitmap.close();
   return output;
 };
 
