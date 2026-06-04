@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.3 — 2026-06-04
+
+### Changed
+- **Topbar button order (web).** The arrows toggle now comes before the
+  grid-numbering toggle. Since arrows is always visible and the numbering
+  toggle only appears in grid mode, the arrows button no longer shifts
+  position when the numbering toggle shows or hides.
+
 ## 0.12.2 — 2026-05-23
 
 ### Fixed
