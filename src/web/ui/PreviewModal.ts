@@ -41,7 +41,15 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   const loading = document.createElement("div");
   loading.className = "preview-modal-loading";
   loading.setAttribute("role", "status");
-  loading.textContent = "Rendering…";
+  const progress = document.createElement("div");
+  progress.className = "preview-modal-progress";
+  const progressBar = document.createElement("div");
+  progressBar.className = "preview-modal-progress-bar";
+  progress.appendChild(progressBar);
+  const loadingText = document.createElement("span");
+  loadingText.className = "preview-modal-loading-text";
+  loadingText.textContent = "Rendering…";
+  loading.append(progress, loadingText);
   const img = document.createElement("img");
   img.className = "preview-modal-img";
   img.alt = "composition preview";
@@ -68,6 +76,25 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   const setBusy = (busy: boolean) => {
     copyBtn.disabled = busy;
     dlBtn.disabled = busy;
+  };
+
+  const setProgress = (fraction: number) => {
+    const pct = Math.round(fraction * 100);
+    progressBar.style.width = `${pct}%`;
+    loadingText.textContent = `Rendering… ${pct}%`;
+  };
+
+  // Float the progress readout over the first frame (YouTube-style),
+  // versus the standalone card shown before any frame is ready.
+  const setLoadingOverlay = (overlay: boolean) => {
+    loading.classList.toggle("preview-modal-loading--overlay", overlay);
+  };
+
+  const resetLoading = () => {
+    setLoadingOverlay(false);
+    progressBar.style.width = "0%";
+    loadingText.textContent = "Rendering…";
+    loading.hidden = false;
   };
 
   closeBtn.addEventListener("click", () => dlg.close());
@@ -104,16 +131,14 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
       canvasSlot = null;
     }
     renderedBlob = null;
-    loading.textContent = "Rendering…";
-    loading.hidden = false;
+    resetLoading();
   });
 
   document.body.appendChild(dlg);
 
   return {
     async open() {
-      loading.textContent = "Rendering…";
-      loading.hidden = false;
+      resetLoading();
       img.hidden = true;
       renderedBlob = null;
       setBusy(true);
@@ -125,16 +150,29 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
         if (animated) {
           // Animated → go through the export encoder so the modal can
           // actually play the result. Slightly lossy but matches what
-          // the user will download.
-          const rendered = await renderForExport(comp, (f) => {
-            loading.textContent = `Rendering… ${Math.round(f * 100)}%`;
-          });
+          // the user will download. While it encodes, show the first
+          // frame behind the progress readout so something's on screen
+          // immediately (YouTube-style render page).
+          try {
+            const still = await composeStill(comp);
+            still.className = "preview-modal-img";
+            still.style.imageRendering = "auto";
+            figure.insertBefore(still, toolbar);
+            canvasSlot = still;
+            setLoadingOverlay(true);
+          } catch {
+            // First frame failed to compose — fall back to the plain
+            // progress card; the full render below still drives things.
+          }
+          const rendered = await renderForExport(comp, setProgress);
           renderedBlob = rendered.blob;
           renderedExt = rendered.ext;
           if (currentUrl) URL.revokeObjectURL(currentUrl);
           currentUrl = URL.createObjectURL(rendered.blob);
           img.src = currentUrl;
           img.hidden = false;
+          // Swap the first-frame backdrop for the encoded (animated) result.
+          if (canvasSlot) { canvasSlot.remove(); canvasSlot = null; }
         } else {
           // Static → show the raw canvas. No PNG/WEBP encode, no
           // perceived blur from lossy compression.
@@ -154,7 +192,8 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
         copyBtn.title = animated ? "Animated content can only be downloaded, not copied" : "Copy to clipboard";
         copyBtn.setAttribute("aria-label", copyBtn.title);
       } catch (e) {
-        loading.textContent = `Render failed: ${(e as Error).message}`;
+        loadingText.textContent = `Render failed: ${(e as Error).message}`;
+        loading.hidden = false;
       }
     },
   };

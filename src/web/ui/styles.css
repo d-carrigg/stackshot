@@ -1260,6 +1260,47 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+/* display:flex above would override the UA `[hidden] { display:none }`,
+   so the readout never disappears on completion — pin it explicitly. */
+.preview-modal-loading[hidden] { display: none; }
+/* The progress bar only makes sense once the first frame is on screen
+   (overlay mode); in the standalone card it's just a stray sliver. */
+.preview-modal-progress { display: none; }
+.preview-modal-loading--overlay .preview-modal-progress {
+  display: block;
+  width: 200px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.preview-modal-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #ffffff;
+  border-radius: inherit;
+  transition: width 0.15s ease;
+}
+/* A solid, centered chip — a translucent full-screen scrim vanishes over
+   dark compositions, leaving white text/bar floating illegibly. The chip
+   carries its own contrast regardless of what's behind it. */
+.preview-modal-loading--overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 18px 24px;
+  background: rgba(18, 18, 26, 0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  color: #ffffff;
 }
 .preview-modal-toolbar {
   position: absolute;

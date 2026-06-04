@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.12.3 — 2026-06-04
+## 0.13.0 — 2026-06-04
+
+### Added
+- **First-frame render preview (web).** When previewing an animated
+  composition, the modal now shows the first frame immediately behind a
+  dimmed progress readout (bar + percent) while the animation encodes —
+  YouTube-style — instead of a blank "Rendering…" card. Swaps to the
+  encoded result when it's ready.
 
 ### Changed
 - **Topbar button order (web).** The arrows toggle now comes before the
