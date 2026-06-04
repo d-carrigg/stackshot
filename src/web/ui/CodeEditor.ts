@@ -5,7 +5,7 @@
 // We re-tokenize on input (debounced to next animation frame) and keep
 // scroll positions in sync.
 import { tokenize } from "../render/highlight";
-import type { Theme } from "../themes";
+import { readableOn, type Theme } from "../themes";
 
 const FONT = '14px "DejaVu Sans Mono", "SFMono-Regular", Menlo, Consolas, monospace';
 const LINE_HEIGHT = "1.5";
@@ -51,7 +51,7 @@ export const createCodeEditor = (opts: {
   let theme = opts.theme;
   const applyThemeStyles = () => {
     pre.style.cssText = `${shared} margin: 0; color: ${theme.title}; background: ${theme.panelBg}; border-radius: 12px; overflow: auto; pointer-events: none;`;
-    ta.style.cssText = `${shared} position: absolute; inset: 0; margin: 0; background: transparent; color: transparent; caret-color: ${theme.title}; border: 0; outline: none; resize: none; overflow: auto; white-space: pre; -webkit-text-fill-color: transparent;`;
+    ta.style.cssText = `${shared} position: absolute; inset: 0; margin: 0; background: transparent; color: transparent; caret-color: ${readableOn(theme.panelBg)}; border: 0; outline: none; resize: none; overflow: auto; white-space: pre; -webkit-text-fill-color: transparent;`;
     // Gutter shares the vertical metrics; it sits in the left padding band
     // and right-aligns its numbers against the code column.
     gutter.style.cssText =

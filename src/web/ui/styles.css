@@ -1260,7 +1260,71 @@ html, body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
+/* display:flex above would override the UA `[hidden] { display:none }`,
+   so the readout never disappears on completion — pin it explicitly. */
+.preview-modal-loading[hidden] { display: none; }
+/* The progress bar only makes sense once the first frame is on screen
+   (overlay mode); in the standalone card it's just a stray sliver. */
+.preview-modal-progress { display: none; }
+.preview-modal-loading--overlay .preview-modal-progress {
+  display: block;
+  width: 180px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.preview-modal-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #ffffff;
+  border-radius: inherit;
+  transition: width 0.18s ease;
+}
+/* An opaque dark pill with white text — fixed colors, not theme vars, so
+   it stays legible over any composition/theme (the modal inherits theme
+   variables, which flip the text dark on light themes like sunset). Fully
+   opaque so the busy composition behind it never bleeds through. */
+.preview-modal-loading--overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 15px 20px;
+  gap: 11px;
+  background: #1c1c26;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+/* tabular-nums keeps the pill from twitching as the percent counts up. */
+.preview-modal-loading--overlay .preview-modal-loading-text {
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+/* Output size readout — top-left of the preview, opposite the toolbar.
+   mix-blend-mode: difference (same as the toolbar) keeps it legible on
+   any composition without a background. */
+.preview-modal-size {
+  position: absolute;
+  top: 18px;
+  left: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  mix-blend-mode: difference;
+  pointer-events: none;
+}
+.preview-modal-size[hidden] { display: none; }
 .preview-modal-toolbar {
   position: absolute;
   top: 10px;

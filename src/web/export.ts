@@ -1,5 +1,5 @@
 import type { Composition } from "./state";
-import { renderFrames, composeStill, type ProgressFn } from "./render/frames";
+import { renderFrames, composeStill, type ProgressFn, type FrameFn } from "./render/frames";
 import { encodeFrames, type EncodeFormat, type EncodeResult } from "./render/encode";
 
 export type RenderedImage = EncodeResult;
@@ -38,6 +38,7 @@ if (typeof document !== "undefined" && document.fonts?.ready) {
 export const renderForExport = async (
   comp: Composition,
   onProgress?: ProgressFn,
+  onFrame?: FrameFn,
 ): Promise<RenderedImage> => {
   const sig = renderSignature(comp);
   if (renderCache && renderCache.sig === sig) {
@@ -46,7 +47,7 @@ export const renderForExport = async (
   }
   const format = resolveExportFormat(comp);
   const share = COMPOSE_SHARE[format];
-  const frames = await renderFrames(comp, (f) => onProgress?.(f * share));
+  const frames = await renderFrames(comp, (f) => onProgress?.(f * share), onFrame);
   const result = await encodeFrames(frames, format, { comp }, (f) => onProgress?.(share + f * (1 - share)));
   renderCache = { sig, result };
   return result;

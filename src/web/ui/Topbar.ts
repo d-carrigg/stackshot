@@ -304,8 +304,8 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
       <h1 class="brand">stackshot</h1>
 
       <div class="topbar-slot" data-slot="layout"></div>
-      <div class="topbar-slot" data-slot="gridnums"></div>
       <div class="topbar-slot" data-slot="arrows"></div>
+      <div class="topbar-slot" data-slot="gridnums"></div>
       <span class="topbar-sep" data-sep-after="layout" aria-hidden="true"></span>
 
       <div class="topbar-slot" data-slot="themes"></div>
@@ -341,8 +341,8 @@ export const mountTopbar = (root: HTMLElement, store: Store, opts: TopbarOptions
         </button>
         <div class="topbar-more-menu" data-more-menu hidden role="group" aria-label="More options">
           <div class="menu-overflow" data-overflow="layout"></div>
-          <div class="menu-overflow" data-overflow="gridnums"></div>
           <div class="menu-overflow" data-overflow="arrows"></div>
+          <div class="menu-overflow" data-overflow="gridnums"></div>
           <div class="menu-overflow" data-overflow="themes"></div>
           <div class="menu-overflow" data-overflow="scale"></div>
           <div class="menu-overflow" data-overflow="format"></div>

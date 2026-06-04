@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.13.0 — 2026-06-04
+
+### Added
+- **Live render preview (web).** When previewing an animated composition,
+  the modal now streams each frame onto a backdrop canvas as it's
+  composed — you watch the render happen in real time — with a progress
+  readout (bar + percent) floated on top in a contrasting chip, instead
+  of a blank "Rendering…" card. Swaps to the encoded result when ready.
+  Download/copy keep their fast, non-streaming render path.
+
+### Changed
+- **Topbar button order (web).** The arrows toggle now comes before the
+  grid-numbering toggle. Since arrows is always visible and the numbering
+  toggle only appears in grid mode, the arrows button no longer shifts
+  position when the numbering toggle shows or hides.
+
+### Fixed
+- **Editor caret in light themes (web).** The code editor's caret color
+  now derives from the panel background instead of the theme title, so it
+  stays visible on dark panels under light themes (e.g. Sunset).
+- **Animated render memory (web).** Decoded source-frame `ImageBitmap`s
+  are now closed after compositing instead of waiting on GC, so rendering
+  animated panels no longer leaves GPU-backed memory lying around.
+
 ## 0.12.2 — 2026-05-23
 
 ### Fixed
