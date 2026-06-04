@@ -92,10 +92,19 @@ export const hasAnimatedPanel = (comp: Composition): boolean =>
 
 // Reports compose progress as a 0→1 fraction (per output frame).
 export type ProgressFn = (fraction: number) => void;
+// Receives each composed frame as it's produced — lets a live preview
+// stream the render. Providing it also makes renderFrames yield to the
+// browser between frames so the paints are actually visible; omit it
+// (download/copy) for a fast, tight synchronous loop.
+export type FrameFn = (canvas: HTMLCanvasElement) => void;
+
+const nextPaint = (): Promise<void> =>
+  new Promise((resolve) => requestAnimationFrame(() => resolve()));
 
 export const renderFrames = async (
   comp: Composition,
   onProgress?: ProgressFn,
+  onFrame?: FrameFn,
 ): Promise<Frame[]> => {
   if (comp.panels.length === 0) {
     onProgress?.(1);
@@ -138,8 +147,14 @@ export const renderFrames = async (
       const swapped = renderFrameToCanvas(f, slot.rounded, slot.radius, existing.width, existing.height);
       items[slot.panelIndex] = { ...existing, canvas: swapped };
     }
-    output.push({ canvas: composeFromItems(items, comp, scale), durationMs: FRAME_MS });
+    const frame = composeFromItems(items, comp, scale);
+    output.push({ canvas: frame, durationMs: FRAME_MS });
     onProgress?.((i + 1) / totalFrames);
+    if (onFrame) {
+      onFrame(frame);
+      // Hand the frame to the browser to paint before composing the next.
+      await nextPaint();
+    }
   }
   return output;
 };

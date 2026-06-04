@@ -150,21 +150,32 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
         if (animated) {
           // Animated → go through the export encoder so the modal can
           // actually play the result. Slightly lossy but matches what
-          // the user will download. While it encodes, show the first
-          // frame behind the progress readout so something's on screen
-          // immediately (YouTube-style render page).
+          // the user will download. While it renders, stream each
+          // composed frame onto a backdrop canvas so the user watches
+          // the render happen live, with the progress readout floated
+          // on top (YouTube-style render page).
+          let display: HTMLCanvasElement | null = null;
+          let dctx: CanvasRenderingContext2D | null = null;
           try {
-            const still = await composeStill(comp);
-            still.className = "preview-modal-img";
-            still.style.imageRendering = "auto";
-            figure.insertBefore(still, toolbar);
-            canvasSlot = still;
+            display = await composeStill(comp);
+            display.className = "preview-modal-img";
+            display.style.imageRendering = "auto";
+            dctx = display.getContext("2d");
+            figure.insertBefore(display, toolbar);
+            canvasSlot = display;
             setLoadingOverlay(true);
           } catch {
             // First frame failed to compose — fall back to the plain
             // progress card; the full render below still drives things.
           }
-          const rendered = await renderForExport(comp, setProgress);
+          // composeStill and the streamed frames share comp + scale, so
+          // every frame matches the backdrop's dimensions exactly.
+          const onFrame = (frame: HTMLCanvasElement) => {
+            if (dctx && display && frame.width === display.width && frame.height === display.height) {
+              dctx.drawImage(frame, 0, 0);
+            }
+          };
+          const rendered = await renderForExport(comp, setProgress, onFrame);
           renderedBlob = rendered.blob;
           renderedExt = rendered.ext;
           if (currentUrl) URL.revokeObjectURL(currentUrl);

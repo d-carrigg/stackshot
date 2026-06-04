@@ -3,11 +3,12 @@
 ## 0.13.0 — 2026-06-04
 
 ### Added
-- **First-frame render preview (web).** When previewing an animated
-  composition, the modal now shows the first frame immediately behind a
-  dimmed progress readout (bar + percent) while the animation encodes —
-  YouTube-style — instead of a blank "Rendering…" card. Swaps to the
-  encoded result when it's ready.
+- **Live render preview (web).** When previewing an animated composition,
+  the modal now streams each frame onto a backdrop canvas as it's
+  composed — you watch the render happen in real time — with a progress
+  readout (bar + percent) floated on top in a contrasting chip, instead
+  of a blank "Rendering…" card. Swaps to the encoded result when ready.
+  Download/copy keep their fast, non-streaming render path.
 
 ### Changed
 - **Topbar button order (web).** The arrows toggle now comes before the
