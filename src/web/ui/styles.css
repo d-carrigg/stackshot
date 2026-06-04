@@ -1273,9 +1273,9 @@ html, body {
 .preview-modal-progress { display: none; }
 .preview-modal-loading--overlay .preview-modal-progress {
   display: block;
-  width: 200px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.2);
+  width: 180px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1284,23 +1284,31 @@ html, body {
   width: 0%;
   background: #ffffff;
   border-radius: inherit;
-  transition: width 0.15s ease;
+  transition: width 0.18s ease;
 }
-/* A solid, centered chip — a translucent full-screen scrim vanishes over
-   dark compositions, leaving white text/bar floating illegibly. The chip
-   carries its own contrast regardless of what's behind it. */
+/* An opaque dark pill with white text — fixed colors, not theme vars, so
+   it stays legible over any composition/theme (the modal inherits theme
+   variables, which flip the text dark on light themes like sunset). Fully
+   opaque so the busy composition behind it never bleeds through. */
 .preview-modal-loading--overlay {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  padding: 18px 24px;
-  background: rgba(18, 18, 26, 0.85);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 15px 20px;
+  gap: 11px;
+  background: #1c1c26;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+/* tabular-nums keeps the pill from twitching as the percent counts up. */
+.preview-modal-loading--overlay .preview-modal-loading-text {
   color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
 }
 .preview-modal-toolbar {
   position: absolute;

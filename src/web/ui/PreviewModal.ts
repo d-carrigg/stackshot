@@ -49,7 +49,9 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   const loadingText = document.createElement("span");
   loadingText.className = "preview-modal-loading-text";
   loadingText.textContent = "Rendering…";
-  loading.append(progress, loadingText);
+  // Label above the bar (download-toast style). The bar is hidden in the
+  // plain card state, so order only matters in the overlay.
+  loading.append(loadingText, progress);
   const img = document.createElement("img");
   img.className = "preview-modal-img";
   img.alt = "composition preview";
