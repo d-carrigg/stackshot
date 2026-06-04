@@ -100,6 +100,10 @@ const luminance = (hex: string): number => {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 };
 
+// A high-contrast colour (dark or white) that stays visible on `bg`.
+export const readableOn = (bg: string): string =>
+  luminance(bg) > 0.6 ? "#1e1e2e" : "#ffffff";
+
 const eqHex = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 // Resolve a (bg, arrow) pair to a full theme. Matches against the presets
