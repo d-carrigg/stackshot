@@ -1310,6 +1310,21 @@ html, body {
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
 }
+/* Output size readout — top-left of the preview, opposite the toolbar.
+   mix-blend-mode: difference (same as the toolbar) keeps it legible on
+   any composition without a background. */
+.preview-modal-size {
+  position: absolute;
+  top: 18px;
+  left: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  mix-blend-mode: difference;
+  pointer-events: none;
+}
+.preview-modal-size[hidden] { display: none; }
 .preview-modal-toolbar {
   position: absolute;
   top: 10px;

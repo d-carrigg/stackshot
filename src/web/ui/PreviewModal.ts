@@ -65,19 +65,32 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
   const dlBtn = mkOverlayButton("Download", dlIcon());
   const closeBtn = mkOverlayButton("Close", xIcon());
   toolbar.append(copyBtn, dlBtn, closeBtn);
-  figure.append(loading, img, toolbar);
+  // Output file size, shown once the render is ready.
+  const sizeBadge = document.createElement("div");
+  sizeBadge.className = "preview-modal-size";
+  sizeBadge.hidden = true;
+  figure.append(loading, img, toolbar, sizeBadge);
   dlg.appendChild(figure);
 
   let currentUrl: string | null = null;
-  // The blob produced for the current preview (animated path), reused by
-  // Download so we don't encode a second time. null for static previews
-  // (which show the raw canvas) — those re-encode on download.
+  // The encoded blob for the current preview, reused by Download so we
+  // don't encode a second time. Set for both paths (static still shows
+  // the raw canvas for crispness, but encodes once to report its size).
   let renderedBlob: Blob | null = null;
   let renderedExt = "png";
 
   const setBusy = (busy: boolean) => {
     copyBtn.disabled = busy;
     dlBtn.disabled = busy;
+  };
+
+  const setSize = (bytes: number | null) => {
+    if (bytes == null) {
+      sizeBadge.hidden = true;
+      return;
+    }
+    sizeBadge.textContent = `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    sizeBadge.hidden = false;
   };
 
   const setProgress = (fraction: number) => {
@@ -133,6 +146,7 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
       canvasSlot = null;
     }
     renderedBlob = null;
+    setSize(null);
     resetLoading();
   });
 
@@ -143,6 +157,7 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
       resetLoading();
       img.hidden = true;
       renderedBlob = null;
+      setSize(null);
       setBusy(true);
       if (canvasSlot) { canvasSlot.remove(); canvasSlot = null; }
       dlg.showModal();
@@ -180,6 +195,7 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
           const rendered = await renderForExport(comp, setProgress, onFrame);
           renderedBlob = rendered.blob;
           renderedExt = rendered.ext;
+          setSize(rendered.blob.size);
           if (currentUrl) URL.revokeObjectURL(currentUrl);
           currentUrl = URL.createObjectURL(rendered.blob);
           img.src = currentUrl;
@@ -196,6 +212,12 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
           canvas.style.imageRendering = "auto";
           figure.insertBefore(canvas, toolbar);
           canvasSlot = canvas;
+          // Encode (cached) to report the real output size and let Download
+          // reuse it instead of re-encoding.
+          const rendered = await renderForExport(comp);
+          renderedBlob = rendered.blob;
+          renderedExt = rendered.ext;
+          setSize(rendered.blob.size);
         }
         loading.hidden = true;
         dlBtn.disabled = false;
