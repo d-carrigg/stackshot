@@ -89,7 +89,9 @@ export const mountPreviewModal = (store: Store): PreviewModalHandle => {
       sizeBadge.hidden = true;
       return;
     }
-    sizeBadge.textContent = `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    const kb = bytes / 1024;
+    sizeBadge.textContent =
+      kb < 1024 ? `${kb.toFixed(1)} KB` : `${(kb / 1024).toFixed(1)} MB`;
     sizeBadge.hidden = false;
   };
 
