@@ -22,7 +22,7 @@ classifiers = [
   "Topic :: Software Development :: Documentation",
 ]
 dependencies = [
-  "pillow>=12.2.0",
+  "pillow>=12.3.0",
   "prompt-toolkit>=3.0.43",
   "pygments>=2.20.0",
 ]
