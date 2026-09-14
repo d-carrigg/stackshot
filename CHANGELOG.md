@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.3 — 2026-09-14
+
+### Changed
+- **Pygments 2.21.0.** Syntax highlighting refresh; README sample images
+  regenerated.
+- **prompt-toolkit 3.0.53** and **tkinterdnd2 0.6.3** (optional UI extra).
+- GitHub Actions `checkout` / `setup-node` v7 (Node 24 runtime).
+
 ## 0.13.2 — 2026-09-14
 
 ### Changed

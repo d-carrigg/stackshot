@@ -7,10 +7,10 @@ stackshot is distributed under the MIT License (see `LICENSE`). The standalone b
 | Package | Version | License | Project |
 | --- | --- | --- | --- |
 | Pillow | 12.3.0 | MIT-CMU (HPND-style) | [https://github.com/python-pillow/Pillow](https://github.com/python-pillow/Pillow) |
-| prompt_toolkit | 3.0.52 | BSD-3-Clause | [https://github.com/prompt-toolkit/python-prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) |
-| Pygments | 2.20.0 | BSD-2-Clause | [https://pygments.org/](https://pygments.org/) |
+| prompt_toolkit | 3.0.53 | BSD-3-Clause | [https://github.com/prompt-toolkit/python-prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) |
+| Pygments | 2.21.0 | BSD-2-Clause | [https://pygments.org/](https://pygments.org/) |
 | wcwidth | 0.7.0 | MIT | [https://github.com/jquast/wcwidth](https://github.com/jquast/wcwidth) |
-| tkinterdnd2 | 0.4.3 | MIT | [https://github.com/Eliav2/tkinterdnd2](https://github.com/Eliav2/tkinterdnd2) |
+| tkinterdnd2 | 0.6.3 | MIT | [https://github.com/Eliav2/tkinterdnd2](https://github.com/Eliav2/tkinterdnd2) |
 
 ## Pillow 12.3.0
 
@@ -1595,7 +1595,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## prompt_toolkit 3.0.52
+## prompt_toolkit 3.0.53
 
 - License: BSD-3-Clause
 - Project: https://github.com/prompt-toolkit/python-prompt-toolkit
@@ -1631,7 +1631,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## Pygments 2.20.0
+## Pygments 2.21.0
 
 - License: BSD-2-Clause
 - Project: https://pygments.org/
@@ -1701,7 +1701,7 @@ for any purpose and without fee is hereby granted. The author
 disclaims all warranties with regard to this software.
 ```
 
-## tkinterdnd2 0.4.3
+## tkinterdnd2 0.6.3
 
 - License: MIT
 - Project: https://github.com/Eliav2/tkinterdnd2
