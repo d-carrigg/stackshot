@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.0 — 2026-09-14
+
+### Added
+- **Video ingest (web).** Drop, paste, or pick an `mp4` / `webm` / `mov`
+  and stackshot converts it in-browser to an animated WebP, then treats
+  it as a normal image panel. Caps: first 12 seconds, 12 fps, long edge
+  960px. Longer clips toast and use the first 12 seconds; decode/encode
+  failures surface an error toast with a progress chip while converting.
+
 ## 0.14.0 — 2026-09-14
 
 ### Added

@@ -544,6 +544,20 @@ html, body {
   color: var(--muted);
   user-select: none;
 }
+.ingest-busy {
+  position: fixed;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 10px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  font-size: 13px;
+}
 
 .composition {
   box-sizing: border-box;

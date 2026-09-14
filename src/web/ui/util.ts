@@ -2,6 +2,7 @@ import type { ImagePanel } from "../state";
 import { makeImagePanel } from "../state";
 import { nextBlobId, putBlob, resolveBlobUrl } from "../storage/blobStore";
 import { probeAnimation } from "../render/motion";
+import { isVideoFile, videoFileToAnimatedWebp, VIDEO_MAX_DURATION_S } from "../render/videoIngest";
 
 export const fileToDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -11,7 +12,23 @@ export const fileToDataUrl = (file: File): Promise<string> =>
     r.readAsDataURL(file);
   });
 
-export const fileToImagePanel = async (file: File): Promise<ImagePanel | null> => {
+const setIngestBusy = (msg: string | null): void => {
+  let el = document.querySelector<HTMLDivElement>(".ingest-busy");
+  if (!msg) {
+    el?.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "ingest-busy";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+};
+
+const ingestImageFile = async (file: File): Promise<ImagePanel | null> => {
   if (!file.type.startsWith("image/")) return null;
   const blobId = nextBlobId();
   await putBlob(blobId, file);
@@ -23,6 +40,26 @@ export const fileToImagePanel = async (file: File): Promise<ImagePanel | null> =
     mime: file.type,
     animated,
   });
+};
+
+export const fileToImagePanel = async (file: File): Promise<ImagePanel | null> => {
+  if (isVideoFile(file)) {
+    try {
+      setIngestBusy("Converting video… 0%");
+      const result = await videoFileToAnimatedWebp(file, (f) => {
+        setIngestBusy(`Converting video… ${Math.round(f * 100)}%`);
+      });
+      if (result.truncated) showToast(`Using the first ${VIDEO_MAX_DURATION_S} seconds`);
+      const webp = new File([result.blob], "clip.webp", { type: "image/webp" });
+      return await ingestImageFile(webp);
+    } catch (e) {
+      showToast((e as Error).message || "Couldn't convert that video");
+      return null;
+    } finally {
+      setIngestBusy(null);
+    }
+  }
+  return ingestImageFile(file);
 };
 
 const loadDimensions = (src: string): Promise<{ w: number; h: number }> =>
