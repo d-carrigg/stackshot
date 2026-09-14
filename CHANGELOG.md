@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.2 — 2026-09-14
+
+### Fixed
+- **Video ingest on production (web).** CSP had no `media-src`, so
+  `blob:` URLs for dropped mp4/webm were blocked (`default-src 'self'`).
+  Local Vite has no CSP, which is why the same file worked in dev.
+  Also stop overwriting the conversion error toast with "Can't add…".
+
 ## 0.15.1 — 2026-09-14
 
 ### Fixed
