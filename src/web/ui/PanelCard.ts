@@ -217,8 +217,8 @@ const buildImageEditor = (store: Store, panel: Panel & { kind: "image" }): HTMLE
     <img />
     <div class="image-card-overlay">
       <button type="button" class="icon-btn">Replace</button>
-      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/*" aria-label="Replace image" hidden />
-      <div class="hint">drag & drop, paste, or click Replace<br/>png · jpeg · gif · webp · avif</div>
+      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" aria-label="Replace image" hidden />
+      <div class="hint">drag & drop, paste, or click Replace<br/>png · jpeg · gif · webp · avif · mp4 · webm · mov</div>
     </div>
   `;
   const img = wrap.querySelector<HTMLImageElement>("img")!;

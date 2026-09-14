@@ -274,7 +274,7 @@ export const mountCompositionView = (
     if (c.panels.length === 0) {
       const empty = document.createElement("div");
       empty.className = "composition-empty";
-      empty.innerHTML = `<p>No panels yet.</p><p class="hint">Paste code/images, drag files here, or use the buttons below.</p>`;
+      empty.innerHTML = `<p>No panels yet.</p><p class="hint">Paste code/images, drop a short video (mp4/webm/mov → WebP), or use the buttons below.</p>`;
       panelsRow.appendChild(empty);
     } else if (c.layout === "grid") {
       c.panels.forEach((p, i) => {
@@ -623,7 +623,7 @@ const buildAddRow = (store: Store): HTMLElement => {
     <button type="button" class="composition-clear" data-clear>
       <span class="ico"></span><span>Clear</span>
     </button>
-    <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/*" multiple hidden />
+    <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/avif,image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" multiple hidden />
   `;
   const clearBtn = wrap.querySelector<HTMLButtonElement>("[data-clear]")!;
   clearBtn.querySelector(".ico")!.appendChild(trashIcon());

@@ -4,6 +4,10 @@ Browser-based composer that mirrors the `stackshot` CLI. Vanilla TypeScript + Vi
 
 Live site: [https://image.carrigg.dev](https://image.carrigg.dev)
 
+Video ingest: drop or pick `mp4` / `webm` / `mov`. The clip is decoded in
+the browser and stored as an animated WebP (first 12 seconds, 12 fps,
+long edge ≤ 960px). The original file is discarded after conversion.
+
 ## Dev
 
 ```bash

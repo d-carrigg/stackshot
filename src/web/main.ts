@@ -10,6 +10,7 @@ import { mountLicensesModal } from "./ui/LicensesModal";
 import { mountTemplatesModal } from "./ui/TemplatesModal";
 import { mountAboutModal } from "./ui/AboutModal";
 import { fileToImagePanel, debounce, showToast } from "./ui/util";
+import { isVideoFile } from "./render/videoIngest";
 import { load as loadPersisted, save as savePersisted } from "./persist";
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
@@ -117,7 +118,7 @@ document.addEventListener("drop", async (e) => {
   // parity with the image-card replace flow, but converting kind.
   const codeCard = target?.closest<HTMLElement>(".panel-card-code");
   const codeCardId = codeCard?.dataset.panelId;
-  if (codeCardId && files.length === 1 && files[0]!.type.startsWith("image/")) {
+  if (codeCardId && files.length === 1 && (files[0]!.type.startsWith("image/") || isVideoFile(files[0]!))) {
     const panel = store.get().panels.find((p) => p.id === codeCardId);
     if (panel?.kind === "code") {
       const img = await fileToImagePanel(files[0]!);
@@ -132,7 +133,7 @@ document.addEventListener("drop", async (e) => {
     return added;
   };
   for (const f of files) {
-    if (f.type.startsWith("image/")) {
+    if (f.type.startsWith("image/") || isVideoFile(f)) {
       const panel = await fileToImagePanel(f);
       if (panel && !tryAdd(panel)) break;
     } else if (f.type.startsWith("text/") || /\.(py|js|ts|tsx|jsx|rs|go|java|c|cpp|h|hpp|sh|rb|php|swift|kt|scala|html|css|scss|json|yaml|yml|toml|xml|sql|md|markdown)$/i.test(f.name)) {
@@ -162,7 +163,7 @@ window.addEventListener("paste", async (e) => {
   const items = e.clipboardData?.items;
   if (!items) return;
   for (const item of Array.from(items)) {
-    if (item.type.startsWith("image/")) {
+    if (item.type.startsWith("image/") || item.type.startsWith("video/")) {
       const file = item.getAsFile();
       if (file) {
         const p = await fileToImagePanel(file);
