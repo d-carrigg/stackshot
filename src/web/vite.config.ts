@@ -10,7 +10,7 @@ export default defineConfig({
       manifest: {
         name: "stackshot",
         short_name: "stackshot",
-        description: "Quickly create multi-panel code screenshots in your browser.",
+        description: "Quickly create multi-panel code screenshots in your browser. Compositions stay on your device.",
         theme_color: "#16161e",
         background_color: "#16161e",
         display: "standalone",
