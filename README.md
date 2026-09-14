@@ -10,8 +10,9 @@ layouts with arrows between panels.
 There's also a **browser version** at [image.carrigg.dev](https://image.carrigg.dev)
 that runs entirely client-side — no upload, no signup — for quick one-off
 compositions. Panels stay in the browser; the page loads cookieless Umami
-analytics. See [`src/web/README.md`](src/web/README.md) for the local
-dev/deploy story.
+analytics. Drop a short **mp4 / webm / mov** and it is converted in-browser
+to an animated WebP (first 12 seconds, long edge capped at 960px). See
+[`src/web/README.md`](src/web/README.md) for the local dev/deploy story.
 
 ## Install
 
