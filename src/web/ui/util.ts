@@ -12,9 +12,11 @@ export const fileToDataUrl = (file: File): Promise<string> =>
     r.readAsDataURL(file);
   });
 
-const setIngestBusy = (msg: string | null): void => {
+type IngestBusy = { file: string; fraction: number };
+
+const setIngestBusy = (state: IngestBusy | null): void => {
   let el = document.querySelector<HTMLDivElement>(".ingest-busy");
-  if (!msg) {
+  if (!state) {
     el?.remove();
     return;
   }
@@ -23,9 +25,22 @@ const setIngestBusy = (msg: string | null): void => {
     el.className = "ingest-busy";
     el.setAttribute("role", "status");
     el.setAttribute("aria-live", "polite");
+    el.innerHTML = `
+      <div class="ingest-busy-card">
+        <div class="ingest-busy-title">Converting video</div>
+        <div class="ingest-busy-file" data-file></div>
+        <div class="ingest-busy-phase" data-phase></div>
+        <div class="ingest-busy-bar" aria-hidden="true"><div class="ingest-busy-bar-fill" data-bar></div></div>
+        <div class="ingest-busy-note">Stays in your browser — nothing is uploaded</div>
+      </div>
+    `;
     document.body.appendChild(el);
   }
-  el.textContent = msg;
+  const pct = Math.max(0, Math.min(100, Math.round(state.fraction * 100)));
+  const phase = state.fraction < 0.7 ? "Reading frames" : "Encoding WebP";
+  el.querySelector("[data-file]")!.textContent = state.file || "video";
+  el.querySelector("[data-phase]")!.textContent = `${phase}… ${pct}%`;
+  (el.querySelector("[data-bar]") as HTMLElement).style.width = `${pct}%`;
 };
 
 const ingestImageFile = async (file: File): Promise<ImagePanel | null> => {
@@ -45,9 +60,9 @@ const ingestImageFile = async (file: File): Promise<ImagePanel | null> => {
 export const fileToImagePanel = async (file: File): Promise<ImagePanel | null> => {
   if (await sniffVideoFile(file)) {
     try {
-      setIngestBusy("Converting video… 0%");
+      setIngestBusy({ file: file.name, fraction: 0 });
       const result = await videoFileToAnimatedWebp(file, (f) => {
-        setIngestBusy(`Converting video… ${Math.round(f * 100)}%`);
+        setIngestBusy({ file: file.name, fraction: f });
       });
       if (result.truncated) showToast(`Using the first ${VIDEO_MAX_DURATION_S} seconds`);
       const webp = new File([result.blob], "clip.webp", { type: "image/webp" });
