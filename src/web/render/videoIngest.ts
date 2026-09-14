@@ -11,6 +11,8 @@ import {
 
 export {
   isVideoFile,
+  looksLikeVideoBytes,
+  sniffVideoFile,
   sampleTimes,
   scaledSize,
   VIDEO_EXTS,

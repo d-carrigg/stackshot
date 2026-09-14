@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.1 — 2026-09-14
+
+### Fixed
+- **Video drop actually adds a panel (web).** Unrecognized MIME types
+  (empty, `application/mp4`) and empty `dataTransfer.files` on drop are
+  handled; sniff MP4/WebM magic bytes; toast if the file still can't be
+  added. The add button reads "+ image / video".
+- **Stale PWA after deploy (web).** Register the service worker from the
+  app with `immediate` auto-update so a new release reloads instead of
+  keeping the previous precache (hard-refresh was not enough).
+
 ## 0.15.0 — 2026-09-14
 
 ### Added

@@ -2,7 +2,7 @@ import type { ImagePanel } from "../state";
 import { makeImagePanel } from "../state";
 import { nextBlobId, putBlob, resolveBlobUrl } from "../storage/blobStore";
 import { probeAnimation } from "../render/motion";
-import { isVideoFile, videoFileToAnimatedWebp, VIDEO_MAX_DURATION_S } from "../render/videoIngest";
+import { sniffVideoFile, videoFileToAnimatedWebp, VIDEO_MAX_DURATION_S } from "../render/videoIngest";
 
 export const fileToDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -43,7 +43,7 @@ const ingestImageFile = async (file: File): Promise<ImagePanel | null> => {
 };
 
 export const fileToImagePanel = async (file: File): Promise<ImagePanel | null> => {
-  if (isVideoFile(file)) {
+  if (await sniffVideoFile(file)) {
     try {
       setIngestBusy("Converting video… 0%");
       const result = await videoFileToAnimatedWebp(file, (f) => {
