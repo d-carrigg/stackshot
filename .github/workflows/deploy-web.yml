@@ -13,7 +13,12 @@ name: deploy-web
 # the Actions tab without a code change.
 #
 # PR previews go up for every PR against main so reviewers can click
-# through the change.
+# through the change, except Dependabot PRs: those workflows do not
+# receive repo secrets, so the Azure action would fail with
+# "deployment_token was not provided". Skip the jobs when
+# github.actor is dependabot[bot]. SKIP_DEPLOY_ON_MISSING_SECRETS is
+# a documented env (not a with: input) so forks/missing tokens skip
+# the upload instead of failing the job.
 #
 # The deployment token lives in the AZURE_STATIC_WEB_APPS_API_TOKEN secret.
 # It's an Azure SWA "deployment token" — scoped to this single SWA resource;
@@ -38,17 +43,17 @@ permissions:
 
 jobs:
   build-and-deploy:
-    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    if: "github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.action != 'closed')"
     runs-on: ubuntu-latest
     name: Build and deploy
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: false
           lfs: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: src/web/package-lock.json
       - name: Install
@@ -60,6 +65,8 @@ jobs:
       - name: Deploy to Azure Static Web Apps
         id: deploy
         uses: Azure/static-web-apps-deploy@v1
+        env:
+          SKIP_DEPLOY_ON_MISSING_SECRETS: true
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -73,12 +80,14 @@ jobs:
           skip_api_build: true
 
   close-preview:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    if: "github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && github.event.action == 'closed'"
     runs-on: ubuntu-latest
     name: Close PR preview
     steps:
       - name: Close preview environment
         uses: Azure/static-web-apps-deploy@v1
+        env:
+          SKIP_DEPLOY_ON_MISSING_SECRETS: true
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: close
