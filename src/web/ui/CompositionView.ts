@@ -616,7 +616,7 @@ const buildAddRow = (store: Store): HTMLElement => {
   wrap.className = "composition-add-row";
   wrap.innerHTML = `
     <button type="button" data-add="code">+ code</button>
-    <button type="button" data-add="image">+ image</button>
+    <button type="button" data-add="image">+ image / video</button>
     <button type="button" class="composition-reset" data-reset>
       <span class="ico"></span><span>Reset</span>
     </button>

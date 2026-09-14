@@ -10,8 +10,12 @@ import { mountLicensesModal } from "./ui/LicensesModal";
 import { mountTemplatesModal } from "./ui/TemplatesModal";
 import { mountAboutModal } from "./ui/AboutModal";
 import { fileToImagePanel, debounce, showToast } from "./ui/util";
-import { isVideoFile } from "./render/videoIngest";
 import { load as loadPersisted, save as savePersisted } from "./persist";
+import { registerSW } from "virtual:pwa-register";
+
+// Auto-activate a new service worker so deploys aren't stuck behind a
+// stale precache (hard-refresh still served the previous index.html).
+registerSW({ immediate: true });
 
 const root = document.querySelector<HTMLDivElement>("#app")!;
 root.innerHTML = `
@@ -46,7 +50,7 @@ store.subscribe(debouncedSave);
 // before any child element gets the event.
 const dropOverlay = document.createElement("div");
 dropOverlay.className = "global-drop-overlay";
-dropOverlay.textContent = "Drop to add panel";
+dropOverlay.textContent = "Drop image, video, or code";
 dropOverlay.style.display = "none";
 document.body.appendChild(dropOverlay);
 
@@ -71,7 +75,7 @@ document.addEventListener("dragenter", (e) => {
   if (!isFileDrag(e)) return;
   e.preventDefault();
   dragDepth++;
-  dropOverlay.textContent = "Drop to add panel";
+  dropOverlay.textContent = "Drop image, video, or code";
   dropOverlay.style.display = "flex";
 }, true);
 
@@ -86,7 +90,7 @@ document.addEventListener("dragover", (e) => {
     clearHoverCard();
     over?.classList.add("file-drop-target");
     hoverCodeCard = over;
-    dropOverlay.textContent = over ? "Drop to replace" : "Drop to add panel";
+    dropOverlay.textContent = over ? "Drop to replace" : "Drop image, video, or code";
   }
 }, true);
 
@@ -99,8 +103,25 @@ document.addEventListener("dragleave", (e) => {
   }
 }, true);
 
+const collectDroppedFiles = (e: DragEvent): File[] => {
+  const dt = e.dataTransfer;
+  if (!dt) return [];
+  if (dt.files && dt.files.length > 0) return Array.from(dt.files);
+  const out: File[] = [];
+  for (const item of Array.from(dt.items ?? [])) {
+    if (item.kind !== "file") continue;
+    const f = item.getAsFile();
+    if (f) out.push(f);
+  }
+  return out;
+};
+
+const CODE_EXT =
+  /\.(py|js|ts|tsx|jsx|rs|go|java|c|cpp|h|hpp|sh|rb|php|swift|kt|scala|html|css|scss|json|yaml|yml|toml|xml|sql|md|markdown)$/i;
+
 document.addEventListener("drop", async (e) => {
-  if (!isFileDrag(e)) return;
+  const files = collectDroppedFiles(e);
+  if (files.length === 0 && !isFileDrag(e)) return;
   dragDepth = 0;
   dropOverlay.style.display = "none";
   clearHoverCard();
@@ -112,18 +133,23 @@ document.addEventListener("drop", async (e) => {
 
   e.preventDefault();
   e.stopPropagation();
-  const files = Array.from(e.dataTransfer?.files ?? []);
+  if (files.length === 0) {
+    showToast("Couldn't read that file");
+    return;
+  }
 
-  // A single image dropped onto a code panel replaces it in place —
+  // A single image/video dropped onto a code panel replaces it in place —
   // parity with the image-card replace flow, but converting kind.
   const codeCard = target?.closest<HTMLElement>(".panel-card-code");
   const codeCardId = codeCard?.dataset.panelId;
-  if (codeCardId && files.length === 1 && (files[0]!.type.startsWith("image/") || isVideoFile(files[0]!))) {
+  if (codeCardId && files.length === 1) {
     const panel = store.get().panels.find((p) => p.id === codeCardId);
     if (panel?.kind === "code") {
       const img = await fileToImagePanel(files[0]!);
-      if (img) store.replacePanel(codeCardId, img);
-      return;
+      if (img) {
+        store.replacePanel(codeCardId, img);
+        return;
+      }
     }
   }
 
@@ -133,10 +159,12 @@ document.addEventListener("drop", async (e) => {
     return added;
   };
   for (const f of files) {
-    if (f.type.startsWith("image/") || isVideoFile(f)) {
-      const panel = await fileToImagePanel(f);
-      if (panel && !tryAdd(panel)) break;
-    } else if (f.type.startsWith("text/") || /\.(py|js|ts|tsx|jsx|rs|go|java|c|cpp|h|hpp|sh|rb|php|swift|kt|scala|html|css|scss|json|yaml|yml|toml|xml|sql|md|markdown)$/i.test(f.name)) {
+    const media = await fileToImagePanel(f);
+    if (media) {
+      if (!tryAdd(media)) break;
+      continue;
+    }
+    if (f.type.startsWith("text/") || CODE_EXT.test(f.name)) {
       const text = await f.text();
       const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
       const langByExt: Record<string, string> = {
@@ -151,7 +179,9 @@ document.addEventListener("drop", async (e) => {
         language: langByExt[ext] ?? "auto",
         title: f.name,
       }))) break;
+      continue;
     }
+    showToast(`Can't add ${f.name || "that file"} — try an image, mp4/webm/mov, or a code file`);
   }
 }, true);
 
