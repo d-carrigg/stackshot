@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.13.2 — 2026-09-14
+
+### Changed
+- **Privacy copy (web).** Compositions still stay on-device, but the About
+  dialog and page description now mention cookieless Umami analytics
+  instead of saying data never leaves the machine.
+- **README.** Links the live web app at https://image.carrigg.dev and
+  documents GitHub Releases / source install (PyPI is not published yet).
+
+### Fixed
+- Stop tracking JetBrains `.idea/` files.
+
 ## 0.13.1 — 2026-09-14
 
 ### Fixed

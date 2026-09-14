@@ -7,18 +7,13 @@ layouts with arrows between panels.
 
 ![markdown demo](docs/img/markdown-demo.png)
 
-There's also a **browser version** that runs entirely client-side — no
-upload, no signup — for quick one-off compositions. See
-[`src/web/README.md`](src/web/README.md) for the dev/deploy story (Azure
-Static Web Apps free tier).
+There's also a **browser version** at [image.carrigg.dev](https://image.carrigg.dev)
+that runs entirely client-side — no upload, no signup — for quick one-off
+compositions. Panels stay in the browser; the page loads cookieless Umami
+analytics. See [`src/web/README.md`](src/web/README.md) for the local
+dev/deploy story.
 
 ## Install
-
-From PyPI (Python ≥ 3.10):
-
-```bash
-uv tool install stackshot     # or: pipx install stackshot
-```
 
 Standalone binary (no Python required) — download the asset for your
 platform from the [latest release](https://github.com/d-carrigg/stackshot/releases/latest):
@@ -29,7 +24,8 @@ platform from the [latest release](https://github.com/d-carrigg/stackshot/releas
 
 `chmod +x` and put it on your PATH (Linux/macOS).
 
-From a checkout of this repo:
+PyPI publishing is not enabled yet. Until it is, use a release binary
+or install from a checkout (Python ≥ 3.10):
 
 ```bash
 uv tool install .       # install globally from source

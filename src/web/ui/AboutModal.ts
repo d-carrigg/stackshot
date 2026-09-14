@@ -36,8 +36,9 @@ export const mountAboutModal = (): AboutModalHandle => {
     `
     <p class="about-modal-tagline">Compose code snippets, screenshots, and images into
     multi-panel illustrations — for READMEs, docs, blog posts, and tutorials.</p>
-    <p>stackshot runs entirely in your browser; nothing you compose is uploaded
-    anywhere. There's also a CLI for scripting and CI.</p>
+    <p>stackshot composes entirely in your browser; panels and images are not
+    uploaded. The page loads cookieless analytics from Umami. There's also a
+    CLI for scripting and CI.</p>
     <ul class="about-modal-links">
       <li><a href="https://github.com/d-carrigg/stackshot" target="_blank" rel="noreferrer">View on GitHub</a></li>
       <li><a href="https://github.com/d-carrigg/stackshot/releases" target="_blank" rel="noreferrer">Get the CLI / releases</a></li>
