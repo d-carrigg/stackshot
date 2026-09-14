@@ -10,6 +10,7 @@ import { mountLicensesModal } from "./ui/LicensesModal";
 import { mountTemplatesModal } from "./ui/TemplatesModal";
 import { mountAboutModal } from "./ui/AboutModal";
 import { fileToImagePanel, debounce, showToast } from "./ui/util";
+import { sniffVideoFile } from "./render/videoIngest";
 import { load as loadPersisted, save as savePersisted } from "./persist";
 import { registerSW } from "virtual:pwa-register";
 
@@ -159,11 +160,14 @@ document.addEventListener("drop", async (e) => {
     return added;
   };
   for (const f of files) {
+    const asVideo = await sniffVideoFile(f);
     const media = await fileToImagePanel(f);
     if (media) {
       if (!tryAdd(media)) break;
       continue;
     }
+    // Video ingest already toasted the real error; don't overwrite it.
+    if (asVideo) continue;
     if (f.type.startsWith("text/") || CODE_EXT.test(f.name)) {
       const text = await f.text();
       const ext = f.name.split(".").pop()?.toLowerCase() ?? "";

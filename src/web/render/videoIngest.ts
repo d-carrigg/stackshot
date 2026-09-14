@@ -31,6 +31,10 @@ export type VideoIngestResult = {
 
 const seekTo = (video: HTMLVideoElement, t: number): Promise<void> =>
   new Promise((resolve, reject) => {
+    if (Math.abs(video.currentTime - t) < 0.04) {
+      resolve();
+      return;
+    }
     const onSeeked = () => {
       cleanup();
       resolve();
@@ -39,7 +43,12 @@ const seekTo = (video: HTMLVideoElement, t: number): Promise<void> =>
       cleanup();
       reject(new Error("Video seek failed"));
     };
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Video seek timed out"));
+    }, 8000);
     const cleanup = () => {
+      window.clearTimeout(timer);
       video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("error", onError);
     };
