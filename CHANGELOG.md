@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.3 — 2026-09-14
+
+### Changed
+- **Video convert overlay (web).** Dropping an mp4/webm/mov now shows a
+  centered progress card (filename, Reading frames / Encoding WebP,
+  percent + bar) instead of a tiny bottom chip. Nothing is uploaded.
+
 ## 0.15.2 — 2026-09-14
 
 ### Fixed
