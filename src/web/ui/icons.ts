@@ -84,6 +84,26 @@ export const pencil = (): SVGSVGElement =>
   make(
     `<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>`,
   );
+export const zoomIn = (): SVGSVGElement =>
+  make(
+    `<circle cx="11" cy="11" r="8"/>` +
+      `<path d="m21 21-4.3-4.3"/>` +
+      `<path d="M11 8v6"/>` +
+      `<path d="M8 11h6"/>`,
+  );
+export const zoomOut = (): SVGSVGElement =>
+  make(
+    `<circle cx="11" cy="11" r="8"/>` +
+      `<path d="m21 21-4.3-4.3"/>` +
+      `<path d="M8 11h6"/>`,
+  );
+export const maximize = (): SVGSVGElement =>
+  make(
+    `<path d="M8 3H5a2 2 0 0 0-2 2v3"/>` +
+      `<path d="M21 8V5a2 2 0 0 0-2-2h-3"/>` +
+      `<path d="M3 16v3a2 2 0 0 0 2 2h3"/>` +
+      `<path d="M16 21h3a2 2 0 0 0 2-2v-3"/>`,
+  );
 export const github = (): SVGSVGElement =>
   make(
     `<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>`,
