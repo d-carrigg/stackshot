@@ -5,9 +5,10 @@ import type { Store, ArrowStyle, ResolvedArrow } from "../state";
 import { makeCodePanel, defaultComposition, GRID_MAX_PANELS, resolveArrow } from "../state";
 import { clearPersisted } from "../persist";
 import { createPanelCard } from "./PanelCard";
-import { trash as trashIcon, refresh as refreshIcon, pencil as pencilIcon } from "./icons";
+import { trash as trashIcon, refresh as refreshIcon, pencil as pencilIcon, zoomIn as zoomInIcon, zoomOut as zoomOutIcon, maximize as fitIcon } from "./icons";
 import { resolveTheme, applyThemeVars } from "../themes";
 import { showToast } from "./util";
+import { clampZoom, fitZoom, formatZoom, zoomIn, zoomOut, ZOOM_MAX, ZOOM_MIN } from "./editorZoom";
 
 export type CompositionViewOptions = {};
 
@@ -32,14 +33,101 @@ export const mountCompositionView = (
 ): void => {
   root.innerHTML = `
     <div class="composition-scroll">
-      <div class="composition" data-layout="horizontal">
-        <div class="composition-panels"></div>
+      <div class="composition-sizer">
+        <div class="composition-zoom">
+          <div class="composition" data-layout="horizontal">
+            <div class="composition-panels"></div>
+          </div>
+        </div>
       </div>
+    </div>
+    <div class="editor-zoom-hud" hidden>
+      <button type="button" data-zoom-out title="Zoom out" aria-label="Zoom out"></button>
+      <span class="editor-zoom-label" data-zoom-label>100%</span>
+      <button type="button" data-zoom-in title="Zoom in" aria-label="Zoom in"></button>
+      <button type="button" data-zoom-fit title="Fit to view" aria-label="Fit to view"></button>
     </div>
   `;
 
+  const scroll = root.querySelector<HTMLDivElement>(".composition-scroll")!;
+  const sizer = root.querySelector<HTMLDivElement>(".composition-sizer")!;
+  const zoomEl = root.querySelector<HTMLDivElement>(".composition-zoom")!;
   const stage = root.querySelector<HTMLDivElement>(".composition")!;
   const panelsRow = stage.querySelector<HTMLDivElement>(".composition-panels")!;
+  const hud = root.querySelector<HTMLDivElement>(".editor-zoom-hud")!;
+  const zoomOutBtn = hud.querySelector<HTMLButtonElement>("[data-zoom-out]")!;
+  const zoomInBtn = hud.querySelector<HTMLButtonElement>("[data-zoom-in]")!;
+  const zoomFitBtn = hud.querySelector<HTMLButtonElement>("[data-zoom-fit]")!;
+  const zoomLabel = hud.querySelector<HTMLSpanElement>("[data-zoom-label]")!;
+  zoomOutBtn.appendChild(zoomOutIcon());
+  zoomInBtn.appendChild(zoomInIcon());
+  zoomFitBtn.appendChild(fitIcon());
+
+  // Editor zoom is view-only (export still uses composition.scale). Fit
+  // mode shrinks overflowing horizontal/grid stacks to the viewport;
+  // +/- takes over until Fit is clicked again.
+  let viewZoom = 1;
+  let fitMode = true;
+  const applyViewZoom = () => {
+    zoomEl.style.transform = `scale(${viewZoom})`;
+    const w = stage.offsetWidth;
+    const h = stage.offsetHeight;
+    sizer.style.width = `${Math.max(1, Math.round(w * viewZoom))}px`;
+    sizer.style.height = `${Math.max(1, Math.round(h * viewZoom))}px`;
+    zoomLabel.textContent = formatZoom(viewZoom);
+    zoomOutBtn.disabled = viewZoom <= ZOOM_MIN + 0.001;
+    zoomInBtn.disabled = viewZoom >= ZOOM_MAX - 0.001;
+    hud.hidden = false;
+  };
+  const fitToView = () => {
+    fitMode = true;
+    viewZoom = fitZoom(stage.offsetWidth, stage.offsetHeight, scroll.clientWidth, scroll.clientHeight);
+    applyViewZoom();
+  };
+  const setManualZoom = (next: number) => {
+    fitMode = false;
+    viewZoom = clampZoom(next);
+    applyViewZoom();
+  };
+  zoomOutBtn.addEventListener("click", () => setManualZoom(zoomOut(viewZoom)));
+  zoomInBtn.addEventListener("click", () => setManualZoom(zoomIn(viewZoom)));
+  zoomFitBtn.addEventListener("click", () => fitToView());
+
+  scroll.addEventListener(
+    "wheel",
+    (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const rect = scroll.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      const contentX = (scroll.scrollLeft + offsetX) / viewZoom;
+      const contentY = (scroll.scrollTop + offsetY) / viewZoom;
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      setManualZoom(viewZoom * factor);
+      scroll.scrollLeft = contentX * viewZoom - offsetX;
+      scroll.scrollTop = contentY * viewZoom - offsetY;
+    },
+    { passive: false },
+  );
+  window.addEventListener("keydown", (e) => {
+    const tgt = e.target as HTMLElement | null;
+    if (tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable)) return;
+    const mod = e.metaKey || e.ctrlKey;
+    if (!mod) return;
+    if (e.key === "=" || e.key === "+") {
+      e.preventDefault();
+      setManualZoom(zoomIn(viewZoom));
+    } else if (e.key === "-" || e.key === "_") {
+      e.preventDefault();
+      setManualZoom(zoomOut(viewZoom));
+    } else if (e.key === "0") {
+      e.preventDefault();
+      fitToView();
+    }
+  });
+  const addRow = buildAddRow(store);
+  scroll.appendChild(addRow);
 
   // Grid arrows live in an absolutely-positioned overlay (the CSS grid has no
   // slots between cells). We keep references to recolor them in-place and to
@@ -224,11 +312,25 @@ export const mountCompositionView = (
       });
     }
 
-    stage.appendChild(buildAddRow(store));
   };
 
-  render();
-  store.subscribe(render);
+  const afterLayout = () => {
+    requestAnimationFrame(() => {
+      if (fitMode) fitToView();
+      else applyViewZoom();
+    });
+  };
+  const origRender = render;
+  const renderAndFit = () => {
+    origRender();
+    afterLayout();
+  };
+
+  renderAndFit();
+  store.subscribe(renderAndFit);
+  window.addEventListener("resize", () => {
+    if (fitMode) afterLayout();
+  });
 };
 
 // Source panel id of the active drag. The DataTransfer API only exposes

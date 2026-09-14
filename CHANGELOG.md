@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.0 — 2026-09-14
+
+### Added
+- **Editor zoom (web).** Wide horizontal (and grid) stacks can be zoomed
+  out to fit the viewport, then panned with scroll. A corner HUD has
+  zoom out / in / fit; ⌃/⌘ + wheel zooms toward the cursor, and
+  ⌃/⌘ + / − / 0 zoom in, out, and fit. Export scale is unchanged.
+
 ## 0.13.3 — 2026-09-14
 
 ### Changed

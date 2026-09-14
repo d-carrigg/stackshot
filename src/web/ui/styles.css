@@ -458,6 +458,7 @@ html, body {
   grid-area: center;
   background: var(--bg);
   overflow: hidden;
+  position: relative;
 }
 
 /* Status footer ----------------------------------------------------- */
@@ -495,6 +496,53 @@ html, body {
   /* Container context so the add-row can size to the visible viewport
      width (100cqw) rather than the horizontally-scrolled stage width. */
   container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+}
+.composition-sizer {
+  flex: 0 0 auto;
+}
+.composition-zoom {
+  transform-origin: top left;
+  width: max-content;
+}
+.editor-zoom-hud {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+.editor-zoom-hud[hidden] { display: none; }
+.editor-zoom-hud button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.editor-zoom-hud button:hover:not(:disabled) { background: var(--surface-2); }
+.editor-zoom-hud button:disabled { opacity: 0.35; cursor: default; }
+.editor-zoom-label {
+  min-width: 3.2em;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  user-select: none;
 }
 
 .composition {

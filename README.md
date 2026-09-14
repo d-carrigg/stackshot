@@ -82,7 +82,9 @@ between them. Plain (un-fenced) text becomes an auto-detected code panel.
 ### Vertical layout
 
 Pass `--vertical` (works in CLI and interactive mode) to stack panels
-top-to-bottom with a downward arrow between them.
+top-to-bottom with a downward arrow between them. In the web editor,
+wide horizontal stacks zoom out to fit and can be panned; use the
+corner zoom controls or ⌃/⌘-wheel.
 
 ![vertical](docs/img/vertical.png)
 
