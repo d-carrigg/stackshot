@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.1 — 2026-09-14
+
+### Fixed
+- **Pillow 12.3.0.** Bump the imaging runtime from 12.2.0 to 12.3.0 (heap
+  OOB / decompression-bomb fixes).
+- **Web lockfile patches.** Upgrade `sharp` to 0.35.4, `shiki` to 4.4.3,
+  and `vite` to 7.3.6 (still 7.x), and refresh transitives
+  (`browserslist`, `fast-uri`, `nanoid`, `brace-expansion`, `postcss`,
+  `baseline-browser-mapping`, `esbuild`). TypeScript stays on 6.x.
+
 ## 0.13.0 — 2026-06-04
 
 ### Added
