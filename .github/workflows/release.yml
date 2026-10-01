@@ -69,7 +69,7 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v7
   #       with: { ref: ${{ needs.tag-version.outputs.tag }} }
-  #     - uses: astral-sh/setup-uv@v10.1.0
+  #     - uses: astral-sh/setup-uv@v10.2.0
   #     - run: uv build
   #     - run: uv publish --trusted-publishing always
 
@@ -91,7 +91,7 @@ jobs:
           # version even if main has moved on by the time the matrix
           # finishes (e.g. a second merge while binaries are building).
           ref: ${{ needs.tag-version.outputs.tag }}
-      - uses: astral-sh/setup-uv@v10.1.0
+      - uses: astral-sh/setup-uv@v10.2.0
       - run: uv sync
       - run: uv pip install pyinstaller
       - name: Stage package for PyInstaller
