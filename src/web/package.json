@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test ui/editorZoom.test.ts render/videoIngest.test.ts"
+    "test": "node --experimental-strip-types --test ui/editorZoom.test.ts render/videoIngest.test.ts persistSafe.test.ts"
   },
   "dependencies": {
     "gif.js": "^0.2.0",
@@ -18,6 +18,6 @@
     "sharp": "^0.35.5",
     "typescript": "^6.0.3",
     "vite": "^7.3.6",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^2.0.0"
   }
 }

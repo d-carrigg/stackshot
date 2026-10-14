@@ -102,6 +102,19 @@ def test_cli_image_path_panel(tmp_path: Path, monkeypatch):
     assert out.exists() and out.stat().st_size > 0
 
 
+def test_cli_oversized_image_exits_cleanly(tmp_path: Path, monkeypatch):
+    """Pillow's decompression-bomb guard raises DecompressionBombError,
+    which isn't an OSError; it should still surface as a clean CLI error,
+    not a traceback."""
+    from PIL import Image
+    img_path = tmp_path / "big.png"
+    Image.new("RGB", (60, 40)).save(img_path)
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 100)
+    with pytest.raises(SystemExit) as exc:
+        _run_main(monkeypatch, [str(img_path), "--out", str(tmp_path / "o.png"), "--no-clip"])
+    assert "big.png" in str(exc.value)
+
+
 def test_cli_no_clip_suppresses_clipboard(tmp_path: Path, monkeypatch, capsys):
     out = tmp_path / "x.png"
     called = []
