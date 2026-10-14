@@ -31,6 +31,10 @@ const collectFromNpmLs = () => {
   const visit = (node) => {
     if (!node || !node.dependencies) return;
     for (const [name, child] of Object.entries(node.dependencies)) {
+      // Optional platform packages of dev deps (e.g. sharp's wasm build)
+      // can land in node_modules and show up as "extraneous" here even
+      // though nothing in the production tree requires them.
+      if (child.extraneous) continue;
       if (!out.has(name)) out.set(name, new Set());
       if (child.version) out.get(name).add(child.version);
       visit(child);
