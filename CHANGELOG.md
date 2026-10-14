@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.5 — 2026-10-14
+
+### Fixed
+- **Release binaries are built from the lockfile.** The release build
+  now runs `uv sync --locked` and uses a PyInstaller version pinned in
+  `uv.lock` (new `build` dependency group) instead of installing the
+  latest PyInstaller unpinned.
+- **Python runtime attribution.** `THIRD_PARTY_LICENSES.md` now includes
+  the CPython (PSF-2.0) license, since the standalone binaries embed the
+  interpreter.
+
 ## 0.15.4 — 2026-10-14
 
 ### Fixed

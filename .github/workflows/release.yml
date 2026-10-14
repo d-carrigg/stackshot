@@ -103,8 +103,9 @@ jobs:
           # its token from the job, not from git.
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-      - run: uv sync
-      - run: uv pip install pyinstaller
+      # --locked: build from uv.lock exactly (incl. the pinned pyinstaller
+      # in the `build` group) so shipped binaries are reproducible.
+      - run: uv sync --locked --group build
       - name: Stage package for PyInstaller
         shell: bash
         # The setuptools layout maps the `stackshot` package to `src/cli`
@@ -118,7 +119,7 @@ jobs:
       - name: Build binary
         shell: bash
         run: |
-          uv run pyinstaller --onefile --name stackshot \
+          uv run --locked --group build pyinstaller --onefile --name stackshot \
             --collect-all pygments --collect-all prompt_toolkit \
             stackshot/__main__.py
       - name: Rename for platform
