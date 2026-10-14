@@ -17,7 +17,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   tag-version:
@@ -33,28 +32,33 @@ jobs:
         id: version
         run: |
           version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$ ]] || { echo "Invalid version: $version"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
       - name: Check if tag already exists
         id: check
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          if git rev-parse "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag ${{ steps.version.outputs.tag }} already exists — skipping."
+            echo "Tag $TAG already exists — skipping."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Create and push tag
         if: steps.check.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
-          git push origin "${{ steps.version.outputs.tag }}"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
 
-  # PyPI publish is disabled until the repo is public and trusted publishing
-  # is configured on PyPI. To enable:
-  #   1. Make the repo public (or upgrade to a PyPI org plan that supports private).
+  # PyPI publish is disabled until trusted publishing is configured on
+  # PyPI. To enable:
+  #   1. Make sure the repo is public.
   #   2. Configure trusted publisher at https://pypi.org/manage/account/publishing/
   #      (owner=d-carrigg, project=stackshot, workflow=release.yml, environment=pypi).
   #   3. Create GitHub Environment named `pypi` (Settings → Environments).
@@ -66,6 +70,9 @@ jobs:
   #   if: needs.tag-version.outputs.new-tag == 'true'
   #   runs-on: ubuntu-latest
   #   environment: pypi
+  #   permissions:
+  #     contents: read
+  #     id-token: write
   #   steps:
   #     - uses: actions/checkout@v7
   #       with: { ref: ${{ needs.tag-version.outputs.tag }} }
@@ -91,6 +98,10 @@ jobs:
           # version even if main has moved on by the time the matrix
           # finishes (e.g. a second merge while binaries are building).
           ref: ${{ needs.tag-version.outputs.tag }}
+          # This job runs third-party build tooling; don't leave the
+          # write-scoped token in .git/config. The release action reads
+          # its token from the job, not from git.
+          persist-credentials: false
       - uses: astral-sh/setup-uv@v10.1.0
       - run: uv sync
       - run: uv pip install pyinstaller
