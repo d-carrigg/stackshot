@@ -25,7 +25,7 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       new-tag: ${{ steps.check.outputs.exists == 'false' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - name: Read version from pyproject.toml
@@ -74,9 +74,9 @@ jobs:
   #     contents: read
   #     id-token: write
   #   steps:
-  #     - uses: actions/checkout@v7
+  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
   #       with: { ref: ${{ needs.tag-version.outputs.tag }} }
-  #     - uses: astral-sh/setup-uv@v10.1.0
+  #     - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
   #     - run: uv build
   #     - run: uv publish --trusted-publishing always
 
@@ -92,7 +92,7 @@ jobs:
           - { os: windows-latest, asset: stackshot-windows-x86_64.exe, ext: ".exe" }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           # Pull the tagged commit so the binary reports the right
           # version even if main has moved on by the time the matrix
@@ -102,7 +102,7 @@ jobs:
           # write-scoped token in .git/config. The release action reads
           # its token from the job, not from git.
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v10.1.0
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: uv sync
       - run: uv pip install pyinstaller
       - name: Stage package for PyInstaller
@@ -124,14 +124,14 @@ jobs:
       - name: Rename for platform
         shell: bash
         run: mv "dist/stackshot${{ matrix.ext }}" "dist/${{ matrix.asset }}"
-      - uses: softprops/action-gh-release@v3
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ needs.tag-version.outputs.tag }}
           files: dist/${{ matrix.asset }}
           fail_on_unmatched_files: true
       - name: Attach license bundle to release
         if: matrix.os == 'ubuntu-latest'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ needs.tag-version.outputs.tag }}
           files: |

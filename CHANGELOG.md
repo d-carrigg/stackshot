@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.15.4 — 2026-10-14
+
+### Fixed
+- **Oversized images (CLI).** An image over Pillow's decompression-bomb
+  limit now exits with a clear "Failed to open image" error instead of a
+  traceback.
+- **v1 saved images dropped on load (web).** The one-time v1 → v2
+  migration decoded image data URLs with `fetch()`, which the CSP's
+  `connect-src` blocks in production, so those images were silently
+  dropped. They're decoded directly now.
+- **Saved colors are validated (web).** Background and arrow colors
+  restored from local storage must be hex colors; anything else falls
+  back to the default instead of being written into the page markup.
+
+### Changed
+- CI actions are pinned to commit SHAs; `vite-plugin-pwa` 2.0 and
+  `astral-sh/setup-uv` 10.2.0.
+
 ## 0.15.3 — 2026-09-14
 
 ### Changed

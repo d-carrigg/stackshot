@@ -8,6 +8,8 @@
 import LZString from "lz-string";
 import type { Composition, ImagePanel, Panel } from "./state";
 import { putBlob, resolveBlobUrl, nextBlobId, gcUnused } from "./storage/blobStore";
+import { DARK_THEME } from "./themes";
+import { dataUrlToBlob, safeHex, sanitizeArrows } from "./persistSafe";
 
 const KEY_V2 = "stackshot.composition.v2";
 const KEY_V1 = "stackshot.composition.v1";
@@ -56,17 +58,12 @@ const hydrateImagePanel = async (p: PersistedImagePanel): Promise<ImagePanel> =>
   return { ...(p as Omit<ImagePanel, "src">), src: url };
 };
 
-const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
-  const res = await fetch(dataUrl);
-  return res.blob();
-};
-
 const migrateV1 = async (parsed: any): Promise<Composition> => {
   const panels: Panel[] = [];
   for (const p of parsed.panels ?? []) {
     if (p.kind === "image" && typeof p.src === "string" && p.src.startsWith("data:")) {
       try {
-        const blob = await dataUrlToBlob(p.src);
+        const blob = dataUrlToBlob(p.src);
         const blobId = nextBlobId();
         await putBlob(blobId, blob);
         const url = (await resolveBlobUrl(blobId)) ?? "";
@@ -87,10 +84,10 @@ const migrateV1 = async (parsed: any): Promise<Composition> => {
   return {
     panels,
     layout: parsed.layout ?? "vertical",
-    bgColor: parsed.bgColor,
-    arrowColor: parsed.arrowColor,
+    bgColor: safeHex(parsed.bgColor, DARK_THEME.bg),
+    arrowColor: safeHex(parsed.arrowColor, DARK_THEME.arrow),
     showArrows: parsed.showArrows ?? true,
-    arrows: parsed.arrows ?? {},
+    arrows: sanitizeArrows(parsed.arrows),
     scale: parsed.scale ?? 2.0,
     gridRows: parsed.gridRows ?? 2,
     gridCols: parsed.gridCols ?? 2,
@@ -116,8 +113,10 @@ export const load = async (): Promise<Composition | null> => {
       return {
         ...parsed,
         panels,
+        bgColor: safeHex(parsed.bgColor, DARK_THEME.bg),
+        arrowColor: safeHex(parsed.arrowColor, DARK_THEME.arrow),
         showArrows: parsed.showArrows ?? true,
-        arrows: parsed.arrows ?? {},
+        arrows: sanitizeArrows(parsed.arrows),
         gridRows: parsed.gridRows ?? 2,
         gridCols: parsed.gridCols ?? 2,
         gridNumbers: parsed.gridNumbers ?? false,

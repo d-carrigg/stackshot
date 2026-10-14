@@ -50,11 +50,11 @@ jobs:
       pull-requests: write
     name: Build and deploy
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: false
           lfs: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
           cache: "npm"
@@ -67,7 +67,7 @@ jobs:
         run: npm run build
       - name: Deploy to Azure Static Web Apps
         id: deploy
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
         env:
           SKIP_DEPLOY_ON_MISSING_SECRETS: true
         with:
@@ -88,7 +88,7 @@ jobs:
     name: Close PR preview
     steps:
       - name: Close preview environment
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
         env:
           SKIP_DEPLOY_ON_MISSING_SECRETS: true
         with:

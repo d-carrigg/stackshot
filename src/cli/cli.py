@@ -113,7 +113,7 @@ def _resolve_all(specs: list[str]) -> list[ResolvedPanel]:
 def _open_image_or_die(path: str, label: str) -> Image.Image:
     try:
         return open_image(path)
-    except (FileNotFoundError, UnidentifiedImageError, OSError) as e:
+    except (FileNotFoundError, UnidentifiedImageError, OSError, Image.DecompressionBombError) as e:
         raise SystemExit(f"Failed to open {label} '{path}': {e}") from e
 
 
@@ -162,7 +162,7 @@ def _has_animated_image(resolved: list[ResolvedPanel]) -> bool:
             with Image.open(rp.image_path) as im:
                 if getattr(im, "is_animated", False) and getattr(im, "n_frames", 1) > 1:
                     return True
-        except (FileNotFoundError, UnidentifiedImageError, OSError):
+        except (FileNotFoundError, UnidentifiedImageError, OSError, Image.DecompressionBombError):
             continue
     return False
 
