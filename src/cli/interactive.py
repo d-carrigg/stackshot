@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 from typing import Optional
@@ -79,10 +80,24 @@ def _read_text_block_tty():
         return None
 
 
+# Temp files holding pasted clipboard images; removed when interactive
+# mode exits so pasted screenshots don't pile up in the temp dir.
+_clip_files: list[str] = []
+
+
 def _save_clipboard_image_as_panel(img: Image.Image, panels: list[Panel]) -> None:
-    tmp = tempfile.NamedTemporaryFile(prefix="stackshot-clip-", suffix=".png", delete=False)
-    img.convert("RGBA").save(tmp.name, format="PNG")
+    with tempfile.NamedTemporaryFile(prefix="stackshot-clip-", suffix=".png", delete=False) as tmp:
+        img.convert("RGBA").save(tmp, format="PNG")
+    _clip_files.append(tmp.name)
     panels.append(Panel(code="", is_image=True, image_path=tmp.name))
+
+
+def _remove_clip_files() -> None:
+    while _clip_files:
+        try:
+            os.unlink(_clip_files.pop())
+        except OSError:
+            pass
 
 
 def _read_block_or_image_tty(panels: list[Panel]) -> tuple[str, str]:
@@ -148,6 +163,13 @@ def _panel_summary(panels: list[Panel]) -> None:
 
 
 def interactive_compose(args) -> None:
+    try:
+        _interactive_compose(args)
+    finally:
+        _remove_clip_files()
+
+
+def _interactive_compose(args) -> None:
     print("Codeimg interactive mode")
     print("Paste code or markdown — ```lang fences set syntax, the line above is the title.")
     print("End a text block with two blank lines (or Ctrl+D).")
