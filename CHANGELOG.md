@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.15.6 — 2026-10-15
+
+### Fixed
+- **No GPL readline in the Linux binary.** The release build excludes
+  Python's optional `readline` module, which on the Linux runner links
+  GNU readline (GPL-3.0) into the MIT-licensed binary. Nothing in
+  stackshot uses it.
+- **Pasted images are cleaned up.** Clipboard images pasted in
+  interactive mode were saved to temp files that were never deleted;
+  they're now removed when interactive mode exits.
+- **Complete binary attribution.** `THIRD_PARTY_LICENSES.md` now also
+  covers the native libraries bundled with the Python runtime (OpenSSL,
+  libffi, expat, zlib, libmpdec and others, via CPython's own
+  acknowledgements), Tcl/Tk, and the PyInstaller bootloader.
+
 ## 0.15.5 — 2026-10-14
 
 ### Fixed

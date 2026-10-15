@@ -118,9 +118,13 @@ jobs:
           python -c "import shutil; shutil.rmtree('stackshot', ignore_errors=True); shutil.copytree('src/cli', 'stackshot')"
       - name: Build binary
         shell: bash
+        # readline is only an optional import (pdb/cmd/code); on Linux the
+        # system Python links it against GNU readline (GPL-3.0), which must
+        # not end up in the MIT-licensed binary.
         run: |
           uv run --locked --group build pyinstaller --onefile --name stackshot \
             --collect-all pygments --collect-all prompt_toolkit \
+            --exclude-module readline \
             stackshot/__main__.py
       - name: Rename for platform
         shell: bash

@@ -133,3 +133,25 @@ def test_try_get_clipboard_image_swallows_platform_errors(monkeypatch):
         raise NotImplementedError("no clipboard backend")
     _patch_grabclipboard(monkeypatch, _raise)
     assert io_utils.try_get_clipboard_image() is None
+
+
+def test_pasted_image_temp_file_removed_on_exit(tmp_path: Path, monkeypatch):
+    """A pasted clipboard image is staged in a temp file for rendering;
+    that file must not outlive the interactive session."""
+    img = Image.new("RGB", (40, 30), (200, 100, 50))
+    staged: list[str] = []
+    blocks = iter(["image", "text"])
+
+    def fake_read(panels):
+        if next(blocks) == "image":
+            interactive_mod._save_clipboard_image_as_panel(img, panels)
+            staged.append(panels[-1].image_path)
+            assert Path(staged[0]).exists()
+            return "image", staged[0]
+        return "text", "print('hi')\n"
+
+    monkeypatch.setattr(interactive_mod, "_read_block_or_image", fake_read)
+    out = tmp_path / "x.png"
+    _run(monkeypatch, ["--out", str(out), "--no-clip"], "d\n")
+    assert out.exists() and out.stat().st_size > 0
+    assert staged and not Path(staged[0]).exists()
