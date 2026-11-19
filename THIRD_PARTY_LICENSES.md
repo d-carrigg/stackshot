@@ -6,7 +6,7 @@ stackshot is distributed under the MIT License (see `LICENSE`). The standalone b
 
 | Package | Version | License | Project |
 | --- | --- | --- | --- |
-| Pillow | 12.3.0 | MIT-CMU (HPND-style) | [https://github.com/python-pillow/Pillow](https://github.com/python-pillow/Pillow) |
+| Pillow | 13.0.0 | MIT-CMU (HPND-style) | [https://github.com/python-pillow/Pillow](https://github.com/python-pillow/Pillow) |
 | prompt_toolkit | 3.0.53 | BSD-3-Clause | [https://github.com/prompt-toolkit/python-prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) |
 | Pygments | 2.21.0 | BSD-2-Clause | [https://pygments.org/](https://pygments.org/) |
 | wcwidth | 0.7.0 | MIT | [https://github.com/jquast/wcwidth](https://github.com/jquast/wcwidth) |
@@ -15,7 +15,7 @@ stackshot is distributed under the MIT License (see `LICENSE`). The standalone b
 | Tcl/Tk (runtime, where bundled) | 8.6 / 9.0 | TCL | [https://www.tcl-lang.org/](https://www.tcl-lang.org/) |
 | PyInstaller bootloader | 6.22.3 | GPL-2.0-or-later WITH Bootloader-exception | [https://pyinstaller.org/](https://pyinstaller.org/) |
 
-## Pillow 12.3.0
+## Pillow 13.0.0
 
 - License: MIT-CMU (HPND-style)
 - Project: https://github.com/python-pillow/Pillow

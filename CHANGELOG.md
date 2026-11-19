@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.7 — 2026-11-19
+
+### Fixed
+- **Pillow 13.0.0.** Upgraded from 12.3.0, which has 40+ published
+  vulnerabilities (buffer overflows and decompression-bomb bypasses in
+  TIFF, JPEG, GIF, BMP, PDF and other decoders). The standalone binaries
+  and Python 3.11+ installs get 13.0.0. Pillow 13 dropped Python 3.10,
+  so 3.10 installs stay on 12.3.0.
+
 ## 0.15.6 — 2026-10-15
 
 ### Fixed

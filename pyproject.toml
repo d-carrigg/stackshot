@@ -1,6 +1,6 @@
 [project]
 name = "stackshot"
-version = "0.15.6"
+version = "0.15.7"
 description = "Compose code snippets, screenshots, and images into multi-panel illustrations — for READMEs, docs, blog posts, and tutorials"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -22,7 +22,9 @@ classifiers = [
   "Topic :: Software Development :: Documentation",
 ]
 dependencies = [
-  "pillow>=12.3.0",
+  # Pillow 13 (security fixes) needs Python 3.11+; 3.10 stays on 12.3.
+  "pillow>=13.0.0; python_version >= '3.11'",
+  "pillow>=12.3.0; python_version < '3.11'",
   "prompt-toolkit>=3.0.43",
   "pygments>=2.20.0",
 ]
