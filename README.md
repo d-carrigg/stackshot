@@ -26,7 +26,7 @@ platform from the [latest release](https://github.com/d-carrigg/stackshot/releas
 `chmod +x` and put it on your PATH (Linux/macOS).
 
 PyPI publishing is not enabled yet. Until it is, use a release binary
-or install from a checkout (Python ≥ 3.10):
+or install from a checkout (Python ≥ 3.11):
 
 ```bash
 uv tool install .       # install globally from source
