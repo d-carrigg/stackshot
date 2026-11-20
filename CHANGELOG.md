@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.1 — 2026-11-20
+
+### Fixed
+- **Plugin skill no longer asks for permission on every render.** The
+  skill's `allowed-tools` pattern didn't quote `${CLAUDE_PLUGIN_ROOT}`,
+  but the command it tells Claude to run does, so the pattern never
+  matched. Renders prompted for approval, and failed outright under
+  `claude -p`.
+
 ## 0.17.0 — 2026-11-20
 
 ### Added

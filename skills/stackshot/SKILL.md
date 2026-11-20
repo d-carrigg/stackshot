@@ -2,7 +2,7 @@
 name: stackshot
 description: Render code snippets, source-file line ranges, screenshots, and images into a single multi-panel PNG/WebP/GIF with titles and arrows between panels. Use when the user wants a picture of code, a before/after or code-to-output illustration, or an image for a README, doc, PR, blog post, or tutorial.
 argument-hint: "[what to illustrate]"
-allowed-tools: Bash(uv run --project ${CLAUDE_PLUGIN_ROOT} *), Bash(stackshot *)
+allowed-tools: Bash(uv run --project "${CLAUDE_PLUGIN_ROOT}" *), Bash(stackshot *)
 ---
 
 # stackshot

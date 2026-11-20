@@ -6,7 +6,7 @@
     {
       "name": "stackshot",
       "source": "./",
-      "version": "0.17.0",
+      "version": "0.17.1",
       "description": "Compose code snippets, screenshots, and images into multi-panel illustrations from Claude Code.",
       "category": "productivity"
     }
