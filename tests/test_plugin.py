@@ -51,3 +51,19 @@ def test_skill_only_documents_real_flags():
     documented = set(re.findall(r"(?<![\w-])--[a-z][a-z-]*", SKILL)) - uv_flags
     assert documented, "expected the skill to document CLI flags"
     assert documented <= known, f"unknown flags in SKILL.md: {documented - known}"
+
+
+def test_allowed_tools_matches_documented_command():
+    """Claude Code matches `allowed-tools` against the literal command,
+    quotes included. The skill tells Claude to quote the plugin root, so
+    the pre-approval pattern must quote it too, or every render prompts
+    for permission (and fails outright under `claude -p`)."""
+    allowed = re.search(r"^allowed-tools:(.*)$", SKILL, re.MULTILINE).group(1)
+    prefixes = [p[:-2] for p in re.findall(r"Bash\(([^)]*)\)", allowed)]
+    assert prefixes, "expected Bash(...) patterns in allowed-tools"
+    commands = re.findall(r"^\s*(uv run --project .*?)(?:\s\\)?$", SKILL, re.MULTILINE)
+    assert commands, "expected documented `uv run --project` commands"
+    for cmd in commands:
+        assert any(cmd.startswith(p) for p in prefixes), (
+            f"allowed-tools {allowed.strip()!r} doesn't cover {cmd!r}"
+        )
