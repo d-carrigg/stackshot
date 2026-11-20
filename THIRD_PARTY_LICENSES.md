@@ -10,7 +10,7 @@ stackshot is distributed under the MIT License (see `LICENSE`). The standalone b
 | prompt_toolkit | 3.0.53 | BSD-3-Clause | [https://github.com/prompt-toolkit/python-prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) |
 | Pygments | 2.21.0 | BSD-2-Clause | [https://pygments.org/](https://pygments.org/) |
 | wcwidth | 0.7.0 | MIT | [https://github.com/jquast/wcwidth](https://github.com/jquast/wcwidth) |
-| tkinterdnd2 | 0.6.4 | MIT | [https://github.com/Eliav2/tkinterdnd2](https://github.com/Eliav2/tkinterdnd2) |
+| tkinterdnd2 | 0.7.0 | MIT | [https://github.com/Eliav2/tkinterdnd2](https://github.com/Eliav2/tkinterdnd2) |
 | CPython (runtime) | 3.x | PSF-2.0 | [https://www.python.org/](https://www.python.org/) |
 | Tcl/Tk (runtime, where bundled) | 8.6 / 9.0 | TCL | [https://www.tcl-lang.org/](https://www.tcl-lang.org/) |
 | PyInstaller bootloader | 6.22.3 | GPL-2.0-or-later WITH Bootloader-exception | [https://pyinstaller.org/](https://pyinstaller.org/) |
@@ -1704,7 +1704,7 @@ for any purpose and without fee is hereby granted. The author
 disclaims all warranties with regard to this software.
 ```
 
-## tkinterdnd2 0.6.4
+## tkinterdnd2 0.7.0
 
 - License: MIT
 - Project: https://github.com/Eliav2/tkinterdnd2
