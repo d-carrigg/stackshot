@@ -19,6 +19,9 @@ All changes ship through feature branches. Never commit directly to `main`.
    - major (`0.x.y → 1.0.0`) for breaking changes.
    Every PR that ships user-visible change must bump the version. If
    there's no user-visible change (pure refactor, CI tweak, docs), no bump.
+   Also set the same version in `.claude-plugin/plugin.json` and in the
+   plugin entry of `.claude-plugin/marketplace.json`
+   (`tests/test_plugin.py` fails if they drift).
 4. **Update `CHANGELOG.md`** with a new section for the bumped version
    (Fixed / Changed / Added). Follow the existing format.
 5. **Open a PR to `main`.** CI (`test.yml`) runs pytest on 3.11 and 3.13.
@@ -64,6 +67,11 @@ already exists) and binaries aren't rebuilt. Bump and merge again to ship.
   intermediate `*.cast` files are gitignored — re-run the script to
   regenerate them.
 - `CHANGELOG.md` — keep in lockstep with version bumps.
+- `.claude-plugin/` + `skills/stackshot/SKILL.md` — the repo doubles as a
+  Claude Code plugin and marketplace. The skill runs the CLI via
+  `uv run --project "${CLAUDE_PLUGIN_ROOT}"`; keep its flag list in sync
+  with `cli.py` (`tests/test_plugin.py` checks it). Validate with
+  `claude plugin validate .`.
 
 ## Conventions
 

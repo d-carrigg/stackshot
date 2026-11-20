@@ -1,0 +1,10 @@
+{
+  "name": "stackshot",
+  "version": "0.17.0",
+  "description": "Compose code snippets, screenshots, and images into multi-panel illustrations from Claude Code.",
+  "author": { "name": "d-carrigg", "url": "https://github.com/d-carrigg" },
+  "homepage": "https://github.com/d-carrigg/stackshot",
+  "repository": "https://github.com/d-carrigg/stackshot",
+  "license": "MIT",
+  "keywords": ["screenshot", "code", "image", "illustration", "docs"]
+}
