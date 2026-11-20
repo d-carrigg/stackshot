@@ -33,6 +33,21 @@ uv tool install .       # install globally from source
 uv run stackshot --help   # or run without installing
 ```
 
+### As a Claude Code plugin
+
+In Claude Code:
+
+```text
+/plugin marketplace add d-carrigg/stackshot
+/plugin install stackshot@stackshot
+```
+
+Then ask for an illustration (e.g. "stackshot lines 10–40 of app.py next
+to screenshot.png") or run `/stackshot:stackshot`. The skill runs the CLI
+from the plugin's own copy of this repo via
+[`uv`](https://docs.astral.sh/uv/), so `uv` needs to be installed; a
+`stackshot` binary on `PATH` works as a fallback.
+
 ## Use
 
 ### Interactive

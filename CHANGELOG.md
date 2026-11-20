@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.0 — 2026-11-20
+
+### Added
+- **Claude Code plugin.** The repo is now a Claude Code plugin and its
+  own marketplace. Install with
+  `/plugin marketplace add d-carrigg/stackshot` then
+  `/plugin install stackshot@stackshot`. It adds a `stackshot` skill
+  that runs the bundled CLI through `uv`, so Claude can turn code,
+  line ranges and screenshots into illustrations on request.
+
 ## 0.16.0 — 2026-11-19
 
 ### Changed
