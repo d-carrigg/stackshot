@@ -76,7 +76,7 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
   #       with: { ref: ${{ needs.tag-version.outputs.tag }} }
-  #     - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+  #     - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
   #     - run: uv build
   #     - run: uv publish --trusted-publishing always
 
@@ -102,7 +102,7 @@ jobs:
           # write-scoped token in .git/config. The release action reads
           # its token from the job, not from git.
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       # --locked: build from uv.lock exactly (incl. the pinned pyinstaller
       # in the `build` group) so shipped binaries are reproducible.
       - run: uv sync --locked --group build
