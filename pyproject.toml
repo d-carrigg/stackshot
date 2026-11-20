@@ -1,10 +1,10 @@
 [project]
 name = "stackshot"
-version = "0.15.6"
+version = "0.16.0"
 description = "Compose code snippets, screenshots, and images into multi-panel illustrations — for READMEs, docs, blog posts, and tutorials"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{ name = "d-carrigg" }]
 keywords = ["screenshot", "code", "image", "syntax-highlight", "cli", "pygments", "markdown"]
 classifiers = [
@@ -14,7 +14,6 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -22,7 +21,7 @@ classifiers = [
   "Topic :: Software Development :: Documentation",
 ]
 dependencies = [
-  "pillow>=12.3.0",
+  "pillow>=13.0.0",
   "prompt-toolkit>=3.0.43",
   "pygments>=2.20.0",
 ]

@@ -21,7 +21,7 @@ All changes ship through feature branches. Never commit directly to `main`.
    there's no user-visible change (pure refactor, CI tweak, docs), no bump.
 4. **Update `CHANGELOG.md`** with a new section for the bumped version
    (Fixed / Changed / Added). Follow the existing format.
-5. **Open a PR to `main`.** CI (`test.yml`) runs pytest on 3.10 and 3.13.
+5. **Open a PR to `main`.** CI (`test.yml`) runs pytest on 3.11 and 3.13.
 6. **Merge.** On push to `main`, `release.yml` reads the version from
    `pyproject.toml`, pushes a `v<version>` tag if it doesn't exist, and
    then builds standalone binaries for Linux/macOS/Windows + attaches
@@ -67,7 +67,7 @@ already exists) and binaries aren't rebuilt. Bump and merge again to ship.
 
 ## Conventions
 
-- Python ≥ 3.10. Use `tomllib` (stdlib) for TOML, no `toml`/`tomli` deps.
+- Python ≥ 3.11. Use `tomllib` (stdlib) for TOML, no `toml`/`tomli` deps.
 - Don't add inline-shell verification (`printf | … && sleep && ls`). Write
   a pytest test instead.
 - Keep tests fast and real — exercise the actual contracts, not helpers,
